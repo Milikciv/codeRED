@@ -132,7 +132,7 @@ public class DataSeeder implements CommandLineRunner {
              "Paediatric surgery cases.", LocalDateTime.now().minusMinutes(32)},
             {"REQ-2107", ttsh, BloodType.B_POSITIVE, 10, Priority.MEDIUM, RequestStatus.PENDING,
              "Scheduled surgeries.", LocalDateTime.now().minusMinutes(32)},
-            {"REQ-2107", cgh, BloodType.O_NEGATIVE, 10, Priority.MEDIUM, RequestStatus.IN_TRANSIT,
+            {"REQ-2106", cgh, BloodType.O_NEGATIVE, 10, Priority.MEDIUM, RequestStatus.IN_TRANSIT,
              "Post Surgical Care", LocalDateTime.now().minusMinutes(32)},
         };
 
