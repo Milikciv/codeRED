@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans text-gray-800 bg-gray-50;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-xl border border-gray-100 shadow-sm;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-600 transition-colors;
+  }
+
+  .btn-outline {
+    @apply border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors;
+  }
+
+  .badge-critical {
+    @apply bg-red-100 text-red-700 text-xs font-semibold px-2 py-0.5 rounded-full;
+  }
+
+  .badge-high {
+    @apply bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-0.5 rounded-full;
+  }
+
+  .badge-medium {
+    @apply bg-yellow-100 text-yellow-700 text-xs font-semibold px-2 py-0.5 rounded-full;
+  }
+
+  .badge-low {
+    @apply bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full;
+  }
+
+  .dot-good {
+    @apply w-3 h-3 rounded-full bg-green-500;
+  }
+  .dot-low {
+    @apply w-3 h-3 rounded-full bg-yellow-400;
+  }
+  .dot-critical {
+    @apply w-3 h-3 rounded-full bg-red-500;
+  }
+  .dot-none {
+    @apply w-3 h-3 rounded-full bg-gray-300;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}

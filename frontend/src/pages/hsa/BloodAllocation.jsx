@@ -1,0 +1,333 @@
+import { useState, useEffect } from 'react'
+import PageLayout from '../../components/layout/PageLayout'
+import PriorityBadge from '../../components/common/PriorityBadge'
+import api from '../../api/axios'
+import { Filter, List, Building2, Clock, ArrowRight, Check } from 'lucide-react'
+
+const PRIORITY_TABS = ['All', 'Critical', 'High', 'Medium']
+
+function formatBloodType(bt) {
+  return bt?.replace('_POSITIVE', '+').replace('_NEGATIVE', '-') ?? bt
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return ''
+  const mins = Math.round((Date.now() - new Date(dateStr)) / 60000)
+  return mins < 60 ? `${mins} mins ago` : `${Math.round(mins / 60)}h ago`
+}
+
+export default function BloodAllocation() {
+  const [requests, setRequests] = useState([])
+  const [selected, setSelected]   = useState(null)
+  const [inventory, setInventory] = useState(null)
+  const [donorHospitals, setDonorHospitals] = useState([])
+  const [allocations, setAllocations] = useState({})
+  const [tab, setTab] = useState('All')
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [aiRecommended, setAiRecommended] = useState(false)
+
+  useEffect(() => {
+    api.get('/requests').then(r => setRequests(r.data)).catch(() => {})
+    api.get('/allocation/inventory').then(r => setInventory(r.data)).catch(() => {})
+  }, [])
+
+  const selectRequest = async (req) => {
+    setSelected(req)
+    setAllocations({})
+    setAiRecommended(false)
+    try {
+      const { data } = await api.get(`/allocation/donor-hospitals/${req.id}`)
+      setDonorHospitals(data)
+    } catch {
+      setDonorHospitals([])
+    }
+  }
+
+  const setUnits = (hospitalId, value) => {
+    setAllocations(prev => ({ ...prev, [hospitalId]: Math.max(0, value) }))
+  }
+
+  const totalAllocated = Object.values(allocations).reduce((a, b) => a + (b || 0), 0)
+  const needed = selected?.unitsRequested ?? 0
+
+  const handleRecommend = () => {
+    // Simple AI recommendation: fill from hospitals with "Yes" safe-to-transfer first
+    const safe = donorHospitals.filter(h => h.safeToTransfer === 'Yes')
+    const newAlloc = {}
+    let remaining = needed
+    for (const h of safe) {
+      if (remaining <= 0) break
+      const give = Math.min(h.maxSafeTransfer, remaining)
+      newAlloc[h.hospitalId] = give
+      remaining -= give
+    }
+    setAllocations(newAlloc)
+    setAiRecommended(true)
+  }
+
+  const handleApprove = async () => {
+    await api.post('/allocation/approve', { requestId: selected.id, allocations })
+    setShowSuccess(true)
+    setTimeout(() => setShowSuccess(false), 4000)
+  }
+
+  const filteredRequests = requests.filter(r =>
+    tab === 'All' ? true : r.priority?.toLowerCase() === tab.toLowerCase()
+  )
+
+  const safeColor = (s) => {
+    if (s === 'Yes') return 'text-green-600 bg-green-50'
+    if (s === 'Caution') return 'text-yellow-600 bg-yellow-50'
+    return 'text-red-600 bg-red-50'
+  }
+
+  return (
+    <PageLayout title="Blood Allocation" subtitle="Real time insights and alerts to help manage blood demand and supply">
+      {showSuccess && (
+        <div className="fixed top-5 right-5 z-50 bg-white border border-green-200 shadow-lg rounded-xl p-4 flex items-start gap-3 max-w-sm">
+          <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <div className="font-semibold text-green-800 text-sm">Success!</div>
+            <div className="text-xs text-gray-600">Blood units have been allocated and dispatch notification sent</div>
+          </div>
+          <button onClick={() => setShowSuccess(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+      )}
+
+      <div className="flex gap-4 h-full">
+        {/* Left: Incoming Requests */}
+        <div className="w-72 flex-shrink-0">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-sm text-gray-800">Incoming Requests</h3>
+            <div className="flex gap-1">
+              <button className="p-1 text-gray-400 hover:text-gray-600"><Filter className="w-4 h-4" /></button>
+              <button className="p-1 text-gray-400 hover:text-gray-600"><List className="w-4 h-4" /></button>
+            </div>
+          </div>
+
+          {/* Priority tabs */}
+          <div className="flex gap-1 mb-3 flex-wrap">
+            {PRIORITY_TABS.map(t => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                  tab === t
+                    ? t === 'All' ? 'bg-gray-800 text-white' : t === 'Critical' ? 'bg-red-600 text-white' : t === 'High' ? 'bg-orange-500 text-white' : 'bg-yellow-500 text-white'
+                    : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {t} {t === 'All' ? filteredRequests.length : requests.filter(r => r.priority?.toLowerCase() === t.toLowerCase()).length}
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+            {filteredRequests.map(req => (
+              <div
+                key={req.id}
+                onClick={() => selectRequest(req)}
+                className={`card p-3 cursor-pointer transition-all hover:border-primary/30 ${selected?.id === req.id ? 'border-primary ring-1 ring-primary/20' : ''}`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-primary">{req.requestId}</span>
+                  <span className="text-xs text-gray-400">{timeAgo(req.requestedAt)}</span>
+                </div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Building2 className="w-3 h-3 text-gray-400" />
+                  <span className="text-xs text-gray-700 font-medium truncate">{req.requestingHospital?.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-black text-primary">{formatBloodType(req.bloodType)}</span>
+                  <div>
+                    <div className="text-xs text-gray-500">{req.unitsRequested} units</div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-500">Priority</span>
+                      <PriorityBadge priority={req.priority} />
+                    </div>
+                  </div>
+                  <div className="ml-auto text-xs">
+                    <div className="text-gray-500">Current Stock</div>
+                    <div className="font-semibold text-gray-700">
+                      {req.requestingHospital?.code} <span className="text-red-500">●</span>
+                    </div>
+                  </div>
+                </div>
+                {req.reason && <p className="text-xs text-gray-500 mt-1 leading-tight">{req.reason}</p>}
+                <button className="text-xs text-primary font-medium mt-1">View Details</button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right: Allocation Workbench */}
+        <div className="flex-1">
+          {!selected ? (
+            <div className="card h-full flex flex-col items-center justify-center text-center p-8">
+              <div className="text-6xl mb-4 opacity-20">📋</div>
+              <h3 className="text-lg font-semibold text-gray-600">Please select one request to start allocating!</h3>
+              <p className="text-sm text-gray-400 mt-2">Choose a request from the left to view details and allocate blood units</p>
+            </div>
+          ) : (
+            <div className="card p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
+              <div className="flex items-center gap-2 mb-3">
+                <h3 className="font-semibold text-sm text-gray-800">Allocation Workbench</h3>
+                <span className="text-xs font-bold text-primary bg-primary-100 px-2 py-0.5 rounded">{selected.requestId}</span>
+                <PriorityBadge priority={selected.priority} />
+                <div className="ml-auto text-right">
+                  <div className="text-xs text-gray-500">Blood Type</div>
+                  <div className="text-xl font-black text-primary">{formatBloodType(selected.bloodType)}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-gray-500">Units Requested</div>
+                  <div className="text-xl font-black text-gray-800">{selected.unitsRequested}</div>
+                </div>
+              </div>
+
+              {/* National inventory */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-xs font-semibold text-gray-700">National Blood Inventory Overview</h4>
+                  <span className="text-xs text-gray-500">Total Stock: {inventory?.totalStock?.toLocaleString()}</span>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {inventory && Object.entries(inventory.byType ?? {}).map(([type, units]) => {
+                    const total = inventory.totalStock
+                    const pct = total ? Math.round(units / total * 100) : 0
+                    const isSelected = type === formatBloodType(selected.bloodType)
+                    return (
+                      <div key={type} className={`rounded-lg p-2 ${isSelected ? 'bg-primary text-white' : 'bg-gray-50'}`}>
+                        <div className={`text-xs font-bold ${isSelected ? 'text-white' : 'text-gray-800'}`}>{type}</div>
+                        <div className={`text-sm font-black ${isSelected ? 'text-white' : 'text-gray-900'}`}>{units} <span className="text-xs font-normal">units</span></div>
+                        <div className={`w-full rounded-full h-1 mt-1 ${isSelected ? 'bg-white/30' : 'bg-gray-200'}`}>
+                          <div className={`h-1 rounded-full ${isSelected ? 'bg-white' : pct > 60 ? 'bg-green-400' : pct > 30 ? 'bg-yellow-400' : 'bg-red-400'}`} style={{ width: `${pct}%` }} />
+                        </div>
+                        <div className={`text-xs mt-0.5 ${isSelected ? 'text-white/80' : 'text-gray-500'}`}>{pct}%</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Goal */}
+              <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mb-3 text-xs text-blue-700">
+                ⓘ Goal: Meet the requested units while keeping donor hospitals above safe stock threshold.
+                <span className="flex items-center gap-1 ml-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> Yes (Safe)
+                  <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block ml-1" /> Caution (Low)
+                  <span className="w-2 h-2 rounded-full bg-red-500 inline-block ml-1" /> No (Unsafe)
+                </span>
+              </div>
+
+              {/* Donor Hospitals table */}
+              <h4 className="text-xs font-semibold text-gray-700 mb-2">1. Select Donor Hospitals</h4>
+              <table className="w-full text-xs mb-4">
+                <thead>
+                  <tr className="text-gray-500 border-b border-gray-100">
+                    <th className="text-left pb-1.5 font-medium">Hospital</th>
+                    <th className="text-center pb-1.5 font-medium">Distance</th>
+                    <th className="text-center pb-1.5 font-medium">{formatBloodType(selected.bloodType)}-Stock (units)</th>
+                    <th className="text-center pb-1.5 font-medium">Safe to Transfer</th>
+                    <th className="text-center pb-1.5 font-medium">Max Safe Transfer</th>
+                    <th className="text-center pb-1.5 font-medium">Select Units</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {donorHospitals.map(h => (
+                    <tr key={h.hospitalId} className="border-b border-gray-50">
+                      <td className="py-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={!!(allocations[h.hospitalId])}
+                            onChange={e => setUnits(h.hospitalId, e.target.checked ? Math.min(h.maxSafeTransfer, needed - totalAllocated + (allocations[h.hospitalId] || 0)) : 0)}
+                            className="accent-primary"
+                          />
+                          <span className="font-medium text-gray-800">{h.hospitalName}</span>
+                        </label>
+                      </td>
+                      <td className="text-center text-gray-600">{h.distance}</td>
+                      <td className="text-center">
+                        <span className="text-green-700 font-semibold">{h.stock}</span>
+                        <span className="text-gray-400"> ({h.stockPct}%)</span>
+                      </td>
+                      <td className="text-center">
+                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${safeColor(h.safeToTransfer)}`}>
+                          {h.safeToTransfer}
+                        </span>
+                      </td>
+                      <td className="text-center text-gray-600">{h.maxSafeTransfer}</td>
+                      <td className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button onClick={() => setUnits(h.hospitalId, (allocations[h.hospitalId] || 0) - 1)} className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100">−</button>
+                          <span className="w-8 text-center font-medium">{allocations[h.hospitalId] || 0}</span>
+                          <button onClick={() => setUnits(h.hospitalId, (allocations[h.hospitalId] || 0) + 1)} className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100">+</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Total allocated */}
+              <div className={`flex items-center gap-2 text-sm font-semibold mb-4 ${totalAllocated >= needed ? 'text-green-600' : 'text-gray-600'}`}>
+                {totalAllocated >= needed ? <Check className="w-4 h-4" /> : <span className="w-4 h-4 rounded-full border-2 border-gray-400 flex-shrink-0" />}
+                Total Allocated {totalAllocated} / {needed} units
+              </div>
+
+              {/* Allocation Plan */}
+              {Object.keys(allocations).some(k => allocations[k] > 0) && (
+                <div className="mb-4">
+                  <h4 className="text-xs font-semibold text-gray-700 mb-2">2. Allocation Plan</h4>
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <div className="grid grid-cols-3 gap-4 items-center">
+                      <div>
+                        <div className="text-xs text-gray-500 font-medium mb-2">Donor Hospitals</div>
+                        <div className="space-y-2">
+                          {donorHospitals.filter(h => allocations[h.hospitalId] > 0).map(h => (
+                            <div key={h.hospitalId} className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700">{h.hospitalCode?.charAt(0)}</div>
+                              <span className="text-xs font-medium">{h.hospitalCode}</span>
+                              <span className="text-xs text-gray-500">{allocations[h.hospitalId]} units</span>
+                              <span className="text-gray-300">· · · · · · ·</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xs text-gray-500 mb-1">Estimated Delivery</div>
+                        <div className="text-sm font-bold text-gray-800">18 - 22 mins</div>
+                        <div className="text-xs text-primary font-medium mt-1">🚁 Priority Transport</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-gray-500 mb-1">Receiving Hospital</div>
+                        <div className="text-sm font-bold text-primary">{selected.requestingHospital?.code}</div>
+                        <div className="text-xs text-gray-500">{needed} units</div>
+                        <div className="text-xs text-gray-400 mt-1">Needed by {new Date(selected.neededBy).toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit' })}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-2 border-t border-gray-100">
+                <button className="btn-outline flex-1 text-sm">Save as Draft</button>
+                <button onClick={handleRecommend} className="flex-1 flex items-center justify-center gap-2 border border-primary text-primary px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-50 transition-colors">
+                  ⭐ Recommend Allocation
+                </button>
+                <button
+                  onClick={handleApprove}
+                  disabled={totalAllocated === 0}
+                  className="flex-1 btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  🚀 Approve &amp; Allocate
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </PageLayout>
+  )
+}
