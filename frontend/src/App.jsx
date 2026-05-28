@@ -6,8 +6,13 @@ import Login from './pages/Login'
 // HSA pages
 import HsaDashboard from './pages/hsa/Dashboard'
 import Forecasting from './pages/hsa/Forecasting'
+import BloodTypeAnalytics from './pages/hsa/forecasting/BloodTypeAnalytics'
+import Recommendations from './pages/hsa/forecasting/Recommendations'
 import BloodAllocation from './pages/hsa/BloodAllocation'
 import Hotspots from './pages/hsa/Hotspots'
+import HotspotInsights from './pages/hsa/hotspots/Insights'
+import BloodbankPerformance from './pages/hsa/hotspots/BloodbankPerformance'
+import DonorMap from './pages/hsa/hotspots/DonorMap'
 
 // Hospital pages
 import HospitalDashboard from './pages/hospital/Dashboard'
@@ -29,6 +34,14 @@ function RootRedirect() {
     : <Navigate to="/hospital/dashboard" replace />
 }
 
+function HSA({ children }) {
+  return <ProtectedRoute requiredRole="HSA">{children}</ProtectedRoute>
+}
+
+function Hospital({ children }) {
+  return <ProtectedRoute requiredRole="HOSPITAL_STAFF">{children}</ProtectedRoute>
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -38,29 +51,20 @@ export default function App() {
           <Route path="/" element={<RootRedirect />} />
 
           {/* HSA routes */}
-          <Route path="/hsa/dashboard" element={
-            <ProtectedRoute requiredRole="HSA"><HsaDashboard /></ProtectedRoute>
-          } />
-          <Route path="/hsa/forecasting" element={
-            <ProtectedRoute requiredRole="HSA"><Forecasting /></ProtectedRoute>
-          } />
-          <Route path="/hsa/allocation" element={
-            <ProtectedRoute requiredRole="HSA"><BloodAllocation /></ProtectedRoute>
-          } />
-          <Route path="/hsa/hotspots" element={
-            <ProtectedRoute requiredRole="HSA"><Hotspots /></ProtectedRoute>
-          } />
+          <Route path="/hsa/dashboard"   element={<HSA><HsaDashboard /></HSA>} />
+          <Route path="/hsa/forecasting" element={<HSA><Forecasting /></HSA>} />
+          <Route path="/hsa/forecasting/blood-type-analytics" element={<HSA><BloodTypeAnalytics /></HSA>} />
+          <Route path="/hsa/forecasting/recommendations"      element={<HSA><Recommendations /></HSA>} />
+          <Route path="/hsa/allocation"  element={<HSA><BloodAllocation /></HSA>} />
+          <Route path="/hsa/hotspots"    element={<HSA><Hotspots /></HSA>} />
+          <Route path="/hsa/hotspots/insights"              element={<HSA><HotspotInsights /></HSA>} />
+          <Route path="/hsa/hotspots/bloodbank-performance" element={<HSA><BloodbankPerformance /></HSA>} />
+          <Route path="/hsa/hotspots/map"                   element={<HSA><DonorMap /></HSA>} />
 
           {/* Hospital routes */}
-          <Route path="/hospital/dashboard" element={
-            <ProtectedRoute requiredRole="HOSPITAL_STAFF"><HospitalDashboard /></ProtectedRoute>
-          } />
-          <Route path="/hospital/request" element={
-            <ProtectedRoute requiredRole="HOSPITAL_STAFF"><RequestBlood /></ProtectedRoute>
-          } />
-          <Route path="/hospital/my-requests" element={
-            <ProtectedRoute requiredRole="HOSPITAL_STAFF"><MyRequests /></ProtectedRoute>
-          } />
+          <Route path="/hospital/dashboard"   element={<Hospital><HospitalDashboard /></Hospital>} />
+          <Route path="/hospital/request"     element={<Hospital><RequestBlood /></Hospital>} />
+          <Route path="/hospital/my-requests" element={<Hospital><MyRequests /></Hospital>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

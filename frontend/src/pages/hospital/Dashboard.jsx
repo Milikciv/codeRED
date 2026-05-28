@@ -66,7 +66,7 @@ export default function HospitalDashboard() {
   const expiringTotal = 231
 
   return (
-    <PageLayout title="Home" subtitle="Real time insights and alerts to help manage blood demand and supply">
+    <PageLayout title="Home" subtitle="Real time insights and alerts to help manage blood demand and supply" isHome>
       {/* Alert modal */}
       {showAlerts && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">

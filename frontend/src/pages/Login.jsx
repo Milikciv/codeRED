@@ -47,40 +47,19 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center relative overflow-hidden">
-      {/* Decorative illustrations (CSS) */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Top left decor */}
-        <div className="absolute top-8 left-8 w-3 h-3 bg-blue-400 rotate-45 opacity-60" />
-        <div className="absolute top-20 left-24 text-pink-400 text-2xl select-none">❤️</div>
-        <div className="absolute top-6 right-1/3 text-blue-300 text-xl select-none">✛</div>
-
-        {/* Singapore Flyer (top right) */}
-        <div className="absolute top-6 right-48 w-28 h-28 border-4 border-blue-300/50 rounded-full" />
-        {/* Gardens by the Bay supertrees */}
-        <div className="absolute top-4 right-10 flex items-end gap-3">
-          {[70, 90, 75].map((h, i) => (
-            <div key={i} className="flex flex-col items-center">
-              <div className="w-10 h-4 bg-pink-400/70 rounded-full -mb-1" />
-              <div className="w-2 bg-pink-400/70 rounded" style={{ height: h }} />
-            </div>
-          ))}
-        </div>
-
-        {/* Left side illustration area */}
-        <div className="absolute left-0 bottom-0 w-64 h-80 opacity-20">
-          <div className="w-full h-full bg-gradient-to-tr from-red-100 to-transparent rounded-tr-full" />
-        </div>
-
-        {/* Bottom flowers */}
-        <div className="absolute bottom-4 left-16 text-yellow-400 text-3xl select-none">🌸</div>
-        <div className="absolute bottom-8 left-4 text-blue-300 text-2xl select-none">✛</div>
-        <div className="absolute bottom-2 right-24 text-yellow-300 text-2xl select-none">🌼</div>
-        <div className="absolute bottom-6 right-6 text-red-400 text-2xl select-none">❤️</div>
-      </div>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+      {/* Full-screen background image */}
+      <img
+        src="/login-page.jpg"
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover object-center"
+        draggable={false}
+      />
+      {/* Subtle centre overlay so the form stands out */}
+      <div className="absolute inset-0 bg-white/30" />
 
       {/* Login Card */}
-      <div className="relative z-10 w-full max-w-sm">
+      <div className="relative z-10 w-full max-w-sm bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl px-8 py-8">
         <h1 className="text-4xl font-bold text-center text-primary mb-8">Login</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">

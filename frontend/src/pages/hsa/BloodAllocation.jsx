@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import PriorityBadge from '../../components/common/PriorityBadge'
+import Toast from '../../components/common/Toast'
+import ConfirmModal from '../../components/common/ConfirmModal'
 import api from '../../api/axios'
-import { Filter, List, Building2, Clock, ArrowRight, Check } from 'lucide-react'
+import { Filter, List, Building2, Check, X, Star } from 'lucide-react'
 
 const PRIORITY_TABS = ['All', 'Critical', 'High', 'Medium']
 
@@ -23,7 +25,9 @@ export default function BloodAllocation() {
   const [donorHospitals, setDonorHospitals] = useState([])
   const [allocations, setAllocations] = useState({})
   const [tab, setTab] = useState('All')
-  const [showSuccess, setShowSuccess] = useState(false)
+  const [toast, setToast] = useState(null)
+  const [showAiModal, setShowAiModal] = useState(false)
+  const [showConfirmApprove, setShowConfirmApprove] = useState(false)
   const [aiRecommended, setAiRecommended] = useState(false)
 
   useEffect(() => {
@@ -50,8 +54,7 @@ export default function BloodAllocation() {
   const totalAllocated = Object.values(allocations).reduce((a, b) => a + (b || 0), 0)
   const needed = selected?.unitsRequested ?? 0
 
-  const handleRecommend = () => {
-    // Simple AI recommendation: fill from hospitals with "Yes" safe-to-transfer first
+  const buildAiAlloc = () => {
     const safe = donorHospitals.filter(h => h.safeToTransfer === 'Yes')
     const newAlloc = {}
     let remaining = needed
@@ -61,14 +64,27 @@ export default function BloodAllocation() {
       newAlloc[h.hospitalId] = give
       remaining -= give
     }
-    setAllocations(newAlloc)
-    setAiRecommended(true)
+    return newAlloc
   }
 
-  const handleApprove = async () => {
+  const handleRecommend = () => {
+    setShowAiModal(true)
+  }
+
+  const applyAiAndClose = () => {
+    setAllocations(buildAiAlloc())
+    setAiRecommended(true)
+    setShowAiModal(false)
+  }
+
+  const handleApprove = () => {
+    setShowConfirmApprove(true)
+  }
+
+  const confirmApprove = async () => {
+    setShowConfirmApprove(false)
     await api.post('/allocation/approve', { requestId: selected.id, allocations })
-    setShowSuccess(true)
-    setTimeout(() => setShowSuccess(false), 4000)
+    setToast({ type: 'success', title: 'Success!', message: 'Blood units have been allocated and dispatch notification sent' })
   }
 
   const filteredRequests = requests.filter(r =>
@@ -83,14 +99,124 @@ export default function BloodAllocation() {
 
   return (
     <PageLayout title="Blood Allocation" subtitle="Real time insights and alerts to help manage blood demand and supply">
-      {showSuccess && (
-        <div className="fixed top-5 right-5 z-50 bg-white border border-green-200 shadow-lg rounded-xl p-4 flex items-start gap-3 max-w-sm">
-          <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <div className="font-semibold text-green-800 text-sm">Success!</div>
-            <div className="text-xs text-gray-600">Blood units have been allocated and dispatch notification sent</div>
+      {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+
+      {showConfirmApprove && (
+        <ConfirmModal
+          icon="warning"
+          title="Confirm approval and allocate?"
+          message="Once confirmed, hospitals will be notified accordingly."
+          confirmLabel="Confirm"
+          confirmClass="bg-amber-500 hover:bg-amber-600 text-white"
+          onCancel={() => setShowConfirmApprove(false)}
+          onConfirm={confirmApprove}
+        />
+      )}
+
+      {/* AI Recommendation Modal */}
+      {showAiModal && selected && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
+              <Star className="w-5 h-5 text-primary" />
+              <h2 className="font-bold text-gray-900">Recommend Allocation</h2>
+              <span className="text-xs text-gray-400 ml-1">AI powered recommendation based on inventory, demand and location</span>
+              <button onClick={() => setShowAiModal(false)} className="ml-auto text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5">
+              {/* Info banner */}
+              <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mb-4 text-xs text-blue-700">
+                ⓘ <span className="font-semibold">AI Recommended Allocation</span>
+                <span className="text-gray-500">— The allocation helps maintain safe stock levels at hospitals and ensures timely availability of blood units</span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                {/* Left: Request details */}
+                <div className="card p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-primary">{selected.requestId}</span>
+                    <span className="text-xs text-gray-400">17 mins ago</span>
+                  </div>
+                  <div className="flex items-center gap-1 mb-1">
+                    <Building2 className="w-3 h-3 text-gray-400" />
+                    <span className="text-xs text-gray-700 font-medium truncate">{selected.requestingHospital?.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-2xl font-black text-primary">{formatBloodType(selected.bloodType)}</span>
+                    <div>
+                      <div className="text-xs text-gray-500">{selected.unitsRequested} units</div>
+                      <PriorityBadge priority={selected.priority} />
+                    </div>
+                    <div className="ml-auto text-xs text-right">
+                      <div className="text-gray-400">Current Stock</div>
+                      <div className="font-semibold text-gray-700">12% <span className="text-red-500">●</span></div>
+                    </div>
+                  </div>
+                  {selected.reason && <p className="text-xs text-gray-500 mt-2 leading-tight">{selected.reason}</p>}
+                  <button className="text-xs text-primary font-medium mt-1">View Details</button>
+                </div>
+
+                {/* Right: AI allocation table */}
+                <div className="col-span-2">
+                  <table className="w-full text-xs mb-3">
+                    <thead>
+                      <tr className="text-gray-500 border-b border-gray-100">
+                        <th className="text-left pb-2 font-medium">Hospital</th>
+                        <th className="text-center pb-2 font-medium">Distance</th>
+                        <th className="text-center pb-2 font-medium">Units</th>
+                        <th className="text-center pb-2 font-medium">ETA</th>
+                        <th className="text-center pb-2 font-medium">Transport Type</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {donorHospitals.filter(h => h.safeToTransfer === 'Yes').slice(0, 3).map((h, i) => {
+                        const units = [10, 5, 5][i] ?? 0
+                        return (
+                          <tr key={h.hospitalId} className="border-b border-gray-50">
+                            <td className="py-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700">
+                                  {h.hospitalCode?.charAt(0)}
+                                </div>
+                                <span className="font-medium text-gray-800">{h.hospitalName}</span>
+                              </div>
+                            </td>
+                            <td className="py-2 text-center text-gray-600">{h.distance}</td>
+                            <td className="py-2 text-center font-bold text-gray-800">{units} units</td>
+                            <td className="py-2 text-center text-gray-600">20 Minutes</td>
+                            <td className="py-2 text-center">
+                              <span className="text-primary text-xs font-semibold">🚁 Priority Transport</span>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                  <div className="flex items-center justify-between bg-green-50 border border-green-100 rounded-lg px-3 py-2 text-xs">
+                    <div className="flex items-center gap-1 text-green-700 font-semibold">
+                      <Check className="w-4 h-4" /> Total Allocated {needed}/{needed} units
+                    </div>
+                    <div className="flex items-center gap-1 text-green-700 font-semibold">
+                      Meets Requirements <Check className="w-4 h-4" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-2 px-5 py-4 border-t border-gray-100">
+              <button onClick={applyAiAndClose} className="flex-1 btn-outline text-sm">Review and Edit</button>
+              <button onClick={() => { applyAiAndClose(); setShowConfirmApprove(true) }}
+                className="flex-1 btn-primary text-sm flex items-center justify-center gap-2">
+                🚀 Approve &amp; Allocate
+              </button>
+            </div>
           </div>
-          <button onClick={() => setShowSuccess(false)} className="text-gray-400 hover:text-gray-600">✕</button>
         </div>
       )}
 

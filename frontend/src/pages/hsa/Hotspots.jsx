@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout'
 import api from '../../api/axios'
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Legend
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 import { Calendar } from 'lucide-react'
 
 export default function Hotspots() {
+  const navigate = useNavigate()
   const [data, setData] = useState(null)
 
   useEffect(() => {
@@ -60,7 +62,7 @@ export default function Hotspots() {
         <div className="card p-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-semibold text-sm text-gray-800">Hotspot Insights and Suggestions</h3>
-            <button className="text-xs text-primary font-medium">View Detailed Map</button>
+            <button onClick={() => navigate('/hsa/hotspots/map')} className="text-xs text-primary font-medium">View Detailed Map</button>
           </div>
           <div className="bg-gray-100 rounded-xl h-56 flex items-center justify-center text-gray-400 text-sm relative overflow-hidden">
             <div className="absolute inset-0 opacity-10">
@@ -97,7 +99,7 @@ export default function Hotspots() {
         <div className="card p-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-semibold text-sm text-gray-800">Hotspot Insights and Suggestions</h3>
-            <button className="text-xs text-primary font-medium">View All</button>
+            <button onClick={() => navigate('/hsa/hotspots/insights')} className="text-xs text-primary font-medium">View All</button>
           </div>
           <div className="space-y-3">
             {data.insights?.map((ins, i) => (
@@ -152,7 +154,7 @@ export default function Hotspots() {
         <div className="card p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm text-gray-800">Top Performing Community Drives <span className="text-gray-400 font-normal text-xs">(3 Months Ago)</span></h3>
-            <button className="text-xs text-primary font-medium">View All</button>
+            <button onClick={() => navigate('/hsa/hotspots/bloodbank-performance')} className="text-xs text-primary font-medium">View All</button>
           </div>
           <table className="w-full text-xs">
             <thead>

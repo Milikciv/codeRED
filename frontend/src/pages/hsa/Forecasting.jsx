@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout'
 import api from '../../api/axios'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
-  Area, AreaChart, Legend
+  Area, AreaChart,
 } from 'recharts'
 import { TrendingUp, AlertTriangle, Calendar, Shield } from 'lucide-react'
 
@@ -17,6 +18,7 @@ const DRIVER_ICONS = {
 }
 
 export default function Forecasting() {
+  const navigate = useNavigate()
   const [data, setData] = useState(null)
 
   useEffect(() => {
@@ -118,7 +120,7 @@ export default function Forecasting() {
         <div className="card p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm text-gray-800">Forecast By Blood Type <span className="text-gray-400 font-normal text-xs">(Next 7 Days)</span></h3>
-            <button className="text-xs text-primary font-medium">View All</button>
+            <button onClick={() => navigate('/hsa/forecasting/blood-type-analytics')} className="text-xs text-primary font-medium">View All</button>
           </div>
           <table className="w-full text-xs">
             <thead>
@@ -167,7 +169,7 @@ export default function Forecasting() {
         <div className="card p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm text-gray-800">AI Early Warning</h3>
-            <button className="text-xs text-primary font-medium">View All</button>
+            <button onClick={() => navigate('/hsa/forecasting/recommendations')} className="text-xs text-primary font-medium">View All</button>
           </div>
           {data.earlyWarning && (
             <div className="flex gap-3 p-3 bg-red-50 border border-red-100 rounded-lg">

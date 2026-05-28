@@ -63,6 +63,7 @@ export default function HsaDashboard() {
     <PageLayout
       title="Home"
       subtitle="Real time insights and alerts to help manage blood demand and supply"
+      isHome
     >
       {/* Alert modal */}
       {showAlerts && (
