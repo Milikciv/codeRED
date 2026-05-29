@@ -1,50 +1,38 @@
+import 'leaflet/dist/leaflet.css'
+import { MapContainer, TileLayer, Circle, CircleMarker, Popup, Tooltip } from 'react-leaflet'
 import PageLayout from '../../../components/layout/PageLayout'
 
 const BLOODBANKS = [
-  { name: 'Bloodbank @ Westgate', x: 22, y: 55 },
-  { name: 'Bloodbank @ Dhoby Ghaut', x: 48, y: 52 },
-  { name: 'Bloodbank @ HSA', x: 50, y: 58 },
-  { name: 'Bloodbank @ Woodlands', x: 42, y: 12 },
-  { name: 'Bloodbank @ Punggol', x: 72, y: 20 },
+  { name: 'Bloodbank @ Westgate', pos: [1.3347, 103.7426] },
+  { name: 'Bloodbank @ Dhoby Ghaut', pos: [1.2993, 103.8458] },
+  { name: 'Bloodbank @ HSA', pos: [1.2943, 103.8351] },
+  { name: 'Bloodbank @ Woodlands', pos: [1.4382, 103.7891] },
+  { name: 'Bloodbank @ Punggol', pos: [1.4043, 103.9022] },
 ]
 
 const COMMUNITY_DRIVES = [
-  { name: 'Community Drive @ Boon Lay CC', x: 18, y: 52 },
-  { name: 'Community Drive @ Kranji CC', x: 30, y: 20 },
-  { name: 'Community Drive @ Commonwealth CC', x: 38, y: 55 },
-  { name: 'Community Drive @ Toa Payoh CC', x: 52, y: 35 },
-  { name: 'Community Drive @ Marine Parade CC', x: 68, y: 62 },
+  { name: 'Community Drive @ Boon Lay CC', pos: [1.3387, 103.7059] },
+  { name: 'Community Drive @ Kranji CC', pos: [1.4254, 103.7631] },
+  { name: 'Community Drive @ Commonwealth CC', pos: [1.3064, 103.7978] },
+  { name: 'Community Drive @ Toa Payoh CC', pos: [1.3343, 103.8496] },
+  { name: 'Community Drive @ Marine Parade CC', pos: [1.3038, 103.9062] },
 ]
 
 const HEATSPOTS = [
-  { x: 42, y: 18, color: '#EF4444', size: 60 },   // Woodlands — high
-  { x: 72, y: 22, color: '#EF4444', size: 55 },   // Punggol — high
-  { x: 68, y: 48, color: '#F59E0B', size: 50 },   // Tampines — medium
-  { x: 48, y: 52, color: '#EF4444', size: 65 },   // Central — high
-  { x: 22, y: 52, color: '#F59E0B', size: 45 },   // Boon Lay — medium
-  { x: 35, y: 58, color: '#EF4444', size: 58 },   // Bukit Merah — high
-  { x: 52, y: 65, color: '#F59E0B', size: 40 },   // Marine Parade
-  { x: 30, y: 42, color: '#22C55E', size: 35 },   // Choa Chu Kang — low
-  { x: 55, y: 38, color: '#22C55E', size: 30 },   // Toa Payoh — low
-  { x: 42, y: 45, color: '#EF4444', size: 50 },   // Jurong East — high
-  { x: 62, y: 28, color: '#F59E0B', size: 38 },   // Yishun — medium
+  { pos: [1.4382, 103.7891], color: '#EF4444', radius: 900, label: 'Woodlands — High' },
+  { pos: [1.4043, 103.9022], color: '#EF4444', radius: 800, label: 'Punggol — High' },
+  { pos: [1.2993, 103.8458], color: '#EF4444', radius: 950, label: 'Central — High' },
+  { pos: [1.2760, 103.8219], color: '#EF4444', radius: 850, label: 'Bukit Merah — High' },
+  { pos: [1.3333, 103.7420], color: '#EF4444', radius: 750, label: 'Jurong East — High' },
+  { pos: [1.3540, 103.9440], color: '#F59E0B', radius: 650, label: 'Tampines — Medium' },
+  { pos: [1.4290, 103.8350], color: '#F59E0B', radius: 600, label: 'Yishun — Medium' },
+  { pos: [1.3390, 103.7060], color: '#F59E0B', radius: 580, label: 'Boon Lay — Medium' },
+  { pos: [1.3840, 103.7470], color: '#22C55E', radius: 500, label: 'Choa Chu Kang — Low' },
+  { pos: [1.3343, 103.8496], color: '#22C55E', radius: 450, label: 'Toa Payoh — Low' },
+  { pos: [1.3038, 103.9062], color: '#F59E0B', radius: 520, label: 'Marine Parade — Medium' },
 ]
 
-const DISTRICT_LABELS = [
-  { name: 'Woodlands', x: 40, y: 10 },
-  { name: 'Yishun', x: 60, y: 16 },
-  { name: 'Kranji', x: 28, y: 22 },
-  { name: 'Punggol', x: 72, y: 14 },
-  { name: 'Choa Chu Kang', x: 22, y: 38 },
-  { name: 'Bishan', x: 48, y: 32 },
-  { name: 'Toa Payoh', x: 58, y: 34 },
-  { name: 'Tampines', x: 74, y: 44 },
-  { name: 'Boon Lay', x: 14, y: 50 },
-  { name: 'Jurong East', x: 32, y: 52 },
-  { name: 'Orchard', x: 48, y: 50 },
-  { name: 'Marine Parade', x: 66, y: 60 },
-  { name: 'Bukit Merah', x: 38, y: 64 },
-]
+const SG_CENTER = [1.3521, 103.8198]
 
 export default function DonorMap() {
   return (
@@ -53,102 +41,99 @@ export default function DonorMap() {
       subtitle="Monitor blood donation hotspots to plan donation drives more efficiently"
       breadcrumb={['Hotspots', 'Donor Hotspot Map']}
     >
-      {/* Bloodbank pills — top */}
+      {/* Bloodbank pills */}
       <div className="flex flex-wrap gap-2 mb-4">
         {BLOODBANKS.map(b => (
           <div key={b.name} className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm">
-            <span className="text-red-500">📍</span> {b.name}
+            <span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> {b.name}
           </div>
         ))}
       </div>
 
-      {/* Map */}
+      {/* Leaflet Map */}
       <div className="card p-2 mb-4">
-        <div className="relative bg-gradient-to-br from-sky-50 to-green-50 rounded-xl overflow-hidden" style={{ height: 480 }}>
-          {/* Singapore outline (simplified SVG) */}
-          <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full opacity-20">
-            <path
-              d="M15,40 Q18,25 30,18 Q40,12 55,14 Q70,16 78,24 Q85,32 82,48 Q80,58 72,65 Q62,72 50,70 Q35,70 25,62 Q15,55 15,40 Z"
-              fill="#93C5FD" stroke="#60A5FA" strokeWidth="0.5"
+        <div className="rounded-xl overflow-hidden" style={{ height: 480 }}>
+          <MapContainer center={SG_CENTER} zoom={12} style={{ height: '100%', width: '100%' }} scrollWheelZoom>
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-          </svg>
 
-          {/* Heatmap blobs */}
-          {HEATSPOTS.map((h, i) => (
-            <div
-              key={i}
-              className="absolute rounded-full blur-2xl opacity-50"
-              style={{
-                left: `${h.x}%`, top: `${h.y}%`,
-                width: h.size, height: h.size,
-                background: h.color,
-                transform: 'translate(-50%, -50%)',
-              }}
-            />
-          ))}
-
-          {/* District labels */}
-          {DISTRICT_LABELS.map(d => (
-            <div
-              key={d.name}
-              className="absolute text-gray-600 font-medium"
-              style={{ left: `${d.x}%`, top: `${d.y}%`, fontSize: 9, transform: 'translate(-50%,-50%)' }}
-            >
-              {d.name}
-            </div>
-          ))}
-
-          {/* Bloodbank pins */}
-          {BLOODBANKS.map(b => (
-            <div
-              key={b.name}
-              className="absolute flex flex-col items-center"
-              style={{ left: `${b.x}%`, top: `${b.y}%`, transform: 'translate(-50%,-100%)' }}
-            >
-              <span className="text-lg drop-shadow">🔴</span>
-            </div>
-          ))}
-
-          {/* Community Drive pins */}
-          {COMMUNITY_DRIVES.map(c => (
-            <div
-              key={c.name}
-              className="absolute flex flex-col items-center"
-              style={{ left: `${c.x}%`, top: `${c.y}%`, transform: 'translate(-50%,-100%)' }}
-            >
-              <span className="text-lg drop-shadow">🟢</span>
-            </div>
-          ))}
-
-          {/* Density legend */}
-          <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm rounded-lg p-2.5 shadow text-xs">
-            <div className="font-semibold text-gray-700 mb-1.5">Density</div>
-            {[['Low', '#22C55E'], ['Medium', '#F59E0B'], ['High', '#EF4444']].map(([l, c]) => (
-              <div key={l} className="flex items-center gap-1.5 mb-1">
-                <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: c }} />
-                <span className="text-gray-600">{l}</span>
-              </div>
+            {/* Heatspot density blobs */}
+            {HEATSPOTS.map((h, i) => (
+              <Circle
+                key={i}
+                center={h.pos}
+                radius={h.radius}
+                pathOptions={{ color: 'transparent', fillColor: h.color, fillOpacity: 0.35 }}
+              >
+                <Tooltip sticky>{h.label}</Tooltip>
+              </Circle>
             ))}
-            <div className="border-t border-gray-100 mt-2 pt-2">
-              <div className="font-semibold text-gray-700 mb-1">Legend</div>
-              <div className="flex items-center gap-1 mb-0.5"><span>🔴</span><span className="text-gray-600">Bloodbank (Collection Centre)</span></div>
-              <div className="flex items-center gap-1"><span>🟢</span><span className="text-gray-600">Community Blood Drives</span></div>
+
+            {/* Bloodbank markers — red */}
+            {BLOODBANKS.map(b => (
+              <CircleMarker
+                key={b.name}
+                center={b.pos}
+                radius={9}
+                pathOptions={{ color: '#991B1B', fillColor: '#EF4444', fillOpacity: 1, weight: 2 }}
+              >
+                <Popup><strong>{b.name}</strong></Popup>
+              </CircleMarker>
+            ))}
+
+            {/* Community drive markers — green */}
+            {COMMUNITY_DRIVES.map(c => (
+              <CircleMarker
+                key={c.name}
+                center={c.pos}
+                radius={8}
+                pathOptions={{ color: '#15803D', fillColor: '#22C55E', fillOpacity: 1, weight: 2 }}
+              >
+                <Popup><strong>{c.name}</strong></Popup>
+              </CircleMarker>
+            ))}
+          </MapContainer>
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="card px-4 py-3 mb-4">
+        <div className="flex items-center gap-8 text-xs flex-wrap">
+          <div>
+            <div className="font-semibold text-gray-700 mb-1.5">Donor Density</div>
+            <div className="flex gap-4">
+              {[['Low', '#22C55E'], ['Medium', '#F59E0B'], ['High', '#EF4444']].map(([l, c]) => (
+                <div key={l} className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full inline-block opacity-60" style={{ background: c }} />
+                  <span className="text-gray-600">{l}</span>
+                </div>
+              ))}
             </div>
           </div>
-
-          {/* Zoom controls */}
-          <div className="absolute bottom-3 right-3 flex flex-col gap-1">
-            <button className="w-7 h-7 bg-white border border-gray-200 rounded flex items-center justify-center text-gray-600 hover:bg-gray-50 shadow">+</button>
-            <button className="w-7 h-7 bg-white border border-gray-200 rounded flex items-center justify-center text-gray-600 hover:bg-gray-50 shadow">−</button>
+          <div className="w-px h-8 bg-gray-200" />
+          <div>
+            <div className="font-semibold text-gray-700 mb-1.5">Locations</div>
+            <div className="flex gap-4">
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full inline-block bg-red-500" />
+                <span className="text-gray-600">Bloodbank (Collection Centre)</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full inline-block bg-green-500" />
+                <span className="text-gray-600">Community Blood Drives</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Community Drive pills — bottom */}
+      {/* Community drive pills */}
       <div className="flex flex-wrap gap-2">
         {COMMUNITY_DRIVES.map(c => (
           <div key={c.name} className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm">
-            <span className="text-green-500">📍</span> {c.name}
+            <span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> {c.name}
           </div>
         ))}
       </div>

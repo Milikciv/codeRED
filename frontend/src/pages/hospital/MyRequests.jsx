@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import PriorityBadge from '../../components/common/PriorityBadge'
 import api from '../../api/axios'
-import { Check, Clock, ChevronRight, X } from 'lucide-react'
+import { Check, Clock, ChevronRight, X, ClipboardList } from 'lucide-react'
 
 const STATUS_STEPS = ['Requested', 'Approved', 'Preparing', 'In Transit', 'Delivered']
 const TRANSFER_STEPS = ['Acknowledge', 'Preparing', 'Ready', 'In Transit', 'Delivered']
@@ -43,7 +43,6 @@ function StepProgress({ steps, currentIndex, color = 'primary' }) {
   )
 }
 
-// Mock data matching the design
 const MOCK_REQUESTS = [
   { id: 1, requestId: 'REQ-2025-1003', date: '21 May 2025', time: '17:05', priority: 'CRITICAL', status: 'ACTIVE', statusLabel: 'Active', statusStep: 3, eta: '21 May 18:00' },
   { id: 2, requestId: 'REQ-2025-1003', date: '21 May 2025', time: '17:05', priority: 'MEDIUM', status: 'COMPLETED', statusLabel: 'Completed', statusStep: 4, eta: '21 May 18:00' },
@@ -95,17 +94,56 @@ const TRANSFER_DETAIL_MOCK = {
   ]
 }
 
+function TableSkeleton() {
+  return (
+    <div className="card overflow-hidden animate-pulse">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="bg-gray-50 border-b border-gray-100">
+            {['Request ID', 'Priority', 'Status', 'Progress', 'ETA', 'Actions'].map(h => (
+              <th key={h} className="text-left px-4 py-3">
+                <div className="h-3 bg-gray-200 rounded w-16" />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {[...Array(4)].map((_, i) => (
+            <tr key={i} className="border-b border-gray-50">
+              <td className="px-4 py-3 space-y-1.5">
+                <div className="h-3 bg-gray-200 rounded w-28" />
+                <div className="h-2.5 bg-gray-100 rounded w-20" />
+              </td>
+              <td className="px-4 py-3"><div className="h-5 bg-gray-200 rounded w-16" /></td>
+              <td className="px-4 py-3"><div className="h-4 bg-gray-100 rounded w-14" /></td>
+              <td className="px-4 py-3"><div className="h-5 bg-gray-100 rounded w-32" /></td>
+              <td className="px-4 py-3 space-y-1">
+                <div className="h-3 bg-gray-200 rounded w-20" />
+                <div className="h-2.5 bg-gray-100 rounded w-24" />
+              </td>
+              <td className="px-4 py-3"><div className="h-7 bg-gray-200 rounded w-20" /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 export default function MyRequests() {
-  const [tab, setTab]             = useState('requests') // 'requests' | 'transfers'
+  const [tab, setTab]             = useState('requests')
   const [filter, setFilter]       = useState('All')
   const [sortBy, setSortBy]       = useState('Latest')
   const [selected, setSelected]   = useState(null)
   const [requests, setRequests]   = useState([])
   const [transfers, setTransfers] = useState([])
+  const [loading, setLoading]     = useState(true)
 
   useEffect(() => {
-    api.get('/requests').then(r => setRequests(r.data)).catch(() => {})
-    api.get('/transfers').then(r => setTransfers(r.data)).catch(() => {})
+    Promise.allSettled([
+      api.get('/requests').then(r => setRequests(r.data)),
+      api.get('/transfers').then(r => setTransfers(r.data)),
+    ]).finally(() => setLoading(false))
   }, [])
 
   const REQUEST_FILTERS = ['All', 'Active', 'Pending', 'Fulfilled', 'Rejected']
@@ -159,74 +197,86 @@ export default function MyRequests() {
           </div>
 
           {/* Table */}
-          <div className="card overflow-hidden">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="bg-gray-50 text-gray-500 border-b border-gray-100">
-                  <th className="text-left px-4 py-3 font-medium">Request ID</th>
-                  <th className="text-left px-4 py-3 font-medium">Priority</th>
-                  <th className="text-left px-4 py-3 font-medium">Status</th>
-                  <th className="text-left px-4 py-3 font-medium">Progress</th>
-                  <th className="text-left px-4 py-3 font-medium">ETA</th>
-                  <th className="text-left px-4 py-3 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(row => (
-                  <tr
-                    key={row.id}
-                    className={`border-b border-gray-50 hover:bg-gray-50 cursor-pointer ${selected?.id === row.id ? 'bg-primary-50' : ''}`}
-                    onClick={() => setSelected(selected?.id === row.id ? null : row)}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-gray-800">{row[idField]}</div>
-                      <div className="text-gray-400">{row.date}</div>
-                      <div className="text-gray-400">{row.time}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <PriorityBadge priority={row.priority} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className={`flex items-center gap-1 text-xs font-medium ${
-                        row.status === 'COMPLETED' || row.status === 'Completed' ? 'text-green-600' :
-                        row.status === 'PENDING' || row.status === 'Pending' ? 'text-gray-500' :
-                        'text-blue-600'
-                      }`}>
-                        <span className="w-2 h-2 rounded-full bg-current" />
-                        {row.statusLabel ?? row.status}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <StepProgress
-                        steps={tab === 'requests' ? STATUS_STEPS : TRANSFER_STEPS}
-                        currentIndex={row.statusStep ?? row.step ?? 0}
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-gray-700">{row.eta}</div>
-                      <div className="text-gray-400">Updated 2 mins ago</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={e => { e.stopPropagation(); setSelected(selected?.id === row.id ? null : row) }}
-                        className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50"
-                      >
-                        View Details
-                      </button>
-                    </td>
+          {loading ? (
+            <TableSkeleton />
+          ) : rows.length === 0 ? (
+            <div className="card p-12 flex flex-col items-center justify-center text-center">
+              <ClipboardList className="w-10 h-10 text-gray-300 mb-3" />
+              <p className="font-medium text-gray-500">No {tab === 'requests' ? 'requests' : 'transfers'} found</p>
+              <p className="text-sm text-gray-400 mt-1">
+                {tab === 'requests' ? 'You have not made any blood requests yet.' : 'No outbound transfers at this time.'}
+              </p>
+            </div>
+          ) : (
+            <div className="card overflow-hidden">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-gray-50 text-gray-500 border-b border-gray-100">
+                    <th className="text-left px-4 py-3 font-medium">Request ID</th>
+                    <th className="text-left px-4 py-3 font-medium">Priority</th>
+                    <th className="text-left px-4 py-3 font-medium">Status</th>
+                    <th className="text-left px-4 py-3 font-medium">Progress</th>
+                    <th className="text-left px-4 py-3 font-medium">ETA</th>
+                    <th className="text-left px-4 py-3 font-medium">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="px-4 py-3 text-xs text-gray-500 border-t border-gray-100 flex items-center justify-between">
-              <span>Showing 1 to {rows.length} of {rows.length} {tab === 'requests' ? 'requests' : 'Transfers'}</span>
-              <div className="flex items-center gap-2">
-                <button className="px-2 py-1 border border-gray-200 rounded text-gray-500 hover:bg-gray-50">‹</button>
-                <span className="px-2 py-1 bg-gray-100 rounded font-medium">1</span>
-                <button className="px-2 py-1 border border-gray-200 rounded text-gray-500 hover:bg-gray-50">›</button>
+                </thead>
+                <tbody>
+                  {rows.map(row => (
+                    <tr
+                      key={row.id}
+                      className={`border-b border-gray-50 hover:bg-gray-50 cursor-pointer ${selected?.id === row.id ? 'bg-primary-50' : ''}`}
+                      onClick={() => setSelected(selected?.id === row.id ? null : row)}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-gray-800">{row[idField]}</div>
+                        <div className="text-gray-400">{row.date}</div>
+                        <div className="text-gray-400">{row.time}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <PriorityBadge priority={row.priority} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className={`flex items-center gap-1 text-xs font-medium ${
+                          row.status === 'COMPLETED' || row.status === 'Completed' ? 'text-green-600' :
+                          row.status === 'PENDING' || row.status === 'Pending' ? 'text-gray-500' :
+                          'text-blue-600'
+                        }`}>
+                          <span className="w-2 h-2 rounded-full bg-current" />
+                          {row.statusLabel ?? row.status}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <StepProgress
+                          steps={tab === 'requests' ? STATUS_STEPS : TRANSFER_STEPS}
+                          currentIndex={row.statusStep ?? row.step ?? 0}
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-gray-700">{row.eta}</div>
+                        <div className="text-gray-400">Updated 2 mins ago</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={e => { e.stopPropagation(); setSelected(selected?.id === row.id ? null : row) }}
+                          className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                          View Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="px-4 py-3 text-xs text-gray-500 border-t border-gray-100 flex items-center justify-between">
+                <span>Showing 1 to {rows.length} of {rows.length} {tab === 'requests' ? 'requests' : 'Transfers'}</span>
+                <div className="flex items-center gap-2">
+                  <button className="px-2 py-1 border border-gray-200 rounded text-gray-500 hover:bg-gray-50">‹</button>
+                  <span className="px-2 py-1 bg-gray-100 rounded font-medium">1</span>
+                  <button className="px-2 py-1 border border-gray-200 rounded text-gray-500 hover:bg-gray-50">›</button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Detail panel */}

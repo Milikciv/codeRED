@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout'
+import PageError from '../../components/common/PageError'
 import api from '../../api/axios'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
   Area, AreaChart,
 } from 'recharts'
 import { TrendingUp, AlertTriangle, Calendar, Shield } from 'lucide-react'
+import LoadingScreen from '../../components/common/LoadingScreen'
 
 const STATUS_COLOR = {
   Good: 'text-green-600', Medium: 'text-yellow-600',
@@ -17,17 +19,75 @@ const DRIVER_ICONS = {
   Seasonality: '☀️', 'Illness Trend': '🤧', 'Public Holidays': '📅', Events: '🎉',
 }
 
+function ForecastingSkeleton() {
+  return (
+    <div className="animate-pulse space-y-4">
+      <div className="flex justify-end gap-2">
+        <div className="h-9 w-32 bg-gray-200 rounded-lg" />
+        <div className="h-9 w-44 bg-gray-200 rounded-lg" />
+      </div>
+      <div className="grid grid-cols-4 gap-3">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="card p-4 space-y-2">
+            <div className="h-3 bg-gray-200 rounded w-3/4" />
+            <div className="h-7 bg-gray-200 rounded w-1/2" />
+            <div className="h-3 bg-gray-100 rounded w-2/3" />
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-3 gap-4">
+        <div className="col-span-2 card p-4">
+          <div className="h-4 bg-gray-200 rounded w-52 mb-4" />
+          <div className="h-56 bg-gray-100 rounded-lg" />
+          <div className="h-8 bg-gray-100 rounded mt-2" />
+        </div>
+        <div className="card p-4">
+          <div className="h-4 bg-gray-200 rounded w-40 mb-4" />
+          {[...Array(8)].map((_, i) => <div key={i} className="h-8 bg-gray-100 rounded mb-1" />)}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="card p-4">
+          <div className="h-4 bg-gray-200 rounded w-32 mb-3" />
+          <div className="grid grid-cols-4 gap-3">
+            {[...Array(4)].map((_, i) => <div key={i} className="h-24 bg-gray-100 rounded-xl" />)}
+          </div>
+        </div>
+        <div className="card p-4">
+          <div className="h-4 bg-gray-200 rounded w-32 mb-3" />
+          <div className="h-20 bg-gray-100 rounded-lg" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Forecasting() {
   const navigate = useNavigate()
-  const [data, setData] = useState(null)
+  const [data, setData]       = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState(false)
 
-  useEffect(() => {
-    api.get('/forecast').then(r => setData(r.data)).catch(() => {})
-  }, [])
+  const fetchData = () => {
+    setError(false)
+    setLoading(true)
+    api.get('/forecast')
+      .then(r => setData(r.data))
+      .catch(() => setError(true))
+      .finally(() => setLoading(false))
+  }
 
-  if (!data) return (
+  useEffect(() => { fetchData() }, [])
+
+  if (loading) return (
     <PageLayout title="Demand Forecasting" subtitle="AI powered predictions to stay ahead of shortages">
-      <div className="flex items-center justify-center h-64 text-gray-400">Loading forecast data…</div>
+      <LoadingScreen variant="forecasting" />
+    </PageLayout>
+  )
+
+  if (error) return (
+    <PageLayout title="Demand Forecasting" subtitle="AI powered predictions to stay ahead of shortages">
+      <PageError onRetry={fetchData} />
     </PageLayout>
   )
 
@@ -93,24 +153,28 @@ export default function Forecasting() {
             <span className="flex items-center gap-1"><span className="w-4 border-t border-gray-400 inline-block" />Lower Bound</span>
             <span className="flex items-center gap-1"><span className="w-4 h-3 bg-red-100 inline-block rounded" />Risk Threshold</span>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={data.chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="riskGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#FEE2E2" stopOpacity={0.9} />
-                  <stop offset="95%" stopColor="#FEE2E2" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="date" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
-              <Tooltip contentStyle={{ fontSize: 11 }} />
-              <ReferenceLine y={1200} stroke="#EF4444" strokeDasharray="4 2" strokeWidth={1.5} />
-              <Area type="monotone" dataKey="upper" stroke="#D1D5DB" strokeWidth={1} fill="url(#riskGrad)" dot={false} />
-              <Line type="monotone" dataKey="actual" stroke="#C41230" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="forecast" stroke="#C41230" strokeWidth={2} strokeDasharray="6 3" dot={false} />
-              <Line type="monotone" dataKey="lower" stroke="#D1D5DB" strokeWidth={1} dot={false} />
-            </AreaChart>
-          </ResponsiveContainer>
+          {data.chartData?.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={data.chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="riskGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#FEE2E2" stopOpacity={0.9} />
+                    <stop offset="95%" stopColor="#FEE2E2" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="date" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={{ fontSize: 11 }} />
+                <ReferenceLine y={1200} stroke="#EF4444" strokeDasharray="4 2" strokeWidth={1.5} />
+                <Area type="monotone" dataKey="upper" stroke="#D1D5DB" strokeWidth={1} fill="url(#riskGrad)" dot={false} />
+                <Line type="monotone" dataKey="actual" stroke="#C41230" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="forecast" stroke="#C41230" strokeWidth={2} strokeDasharray="6 3" dot={false} />
+                <Line type="monotone" dataKey="lower" stroke="#D1D5DB" strokeWidth={1} dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-52 flex items-center justify-center text-sm text-gray-400">No chart data available</div>
+          )}
           <div className="flex items-center gap-1.5 mt-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
             <span>◇</span> Demand expected to exceed supply on May 22–May 25
           </div>
@@ -122,26 +186,30 @@ export default function Forecasting() {
             <h3 className="font-semibold text-sm text-gray-800">Forecast By Blood Type <span className="text-gray-400 font-normal text-xs">(Next 7 Days)</span></h3>
             <button onClick={() => navigate('/hsa/forecasting/blood-type-analytics')} className="text-xs text-primary font-medium">View All</button>
           </div>
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-gray-500 border-b border-gray-100">
-                <th className="text-left pb-2 font-medium">Blood Type</th>
-                <th className="text-right pb-2 font-medium">Current Supply</th>
-                <th className="text-right pb-2 font-medium">Supply %</th>
-                <th className="text-right pb-2 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.byBloodType?.map(row => (
-                <tr key={row.bloodType} className="border-b border-gray-50">
-                  <td className="py-2 font-semibold">{row.bloodType}</td>
-                  <td className="py-2 text-right text-gray-600">{row.currentSupply}</td>
-                  <td className="py-2 text-right text-gray-600">{row.supplyPct}%</td>
-                  <td className={`py-2 text-right font-semibold ${STATUS_COLOR[row.status] ?? 'text-gray-600'}`}>{row.status}</td>
+          {data.byBloodType?.length > 0 ? (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-gray-500 border-b border-gray-100">
+                  <th className="text-left pb-2 font-medium">Blood Type</th>
+                  <th className="text-right pb-2 font-medium">Current Supply</th>
+                  <th className="text-right pb-2 font-medium">Supply %</th>
+                  <th className="text-right pb-2 font-medium">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {data.byBloodType.map(row => (
+                  <tr key={row.bloodType} className="border-b border-gray-50">
+                    <td className="py-2 font-semibold">{row.bloodType}</td>
+                    <td className="py-2 text-right text-gray-600">{row.currentSupply}</td>
+                    <td className="py-2 text-right text-gray-600">{row.supplyPct}%</td>
+                    <td className={`py-2 text-right font-semibold ${STATUS_COLOR[row.status] ?? 'text-gray-600'}`}>{row.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="text-sm text-gray-400 text-center py-8">No blood type data available</p>
+          )}
         </div>
       </div>
 
@@ -153,16 +221,20 @@ export default function Forecasting() {
             <h3 className="font-semibold text-sm text-gray-800">Demand Drivers</h3>
             <button className="text-xs text-primary font-medium">View All</button>
           </div>
-          <div className="grid grid-cols-4 gap-3">
-            {data.demandDrivers?.map(d => (
-              <div key={d.name} className="bg-gray-50 rounded-xl p-3 text-center">
-                <div className="text-2xl mb-1">{DRIVER_ICONS[d.name] ?? '📊'}</div>
-                <div className="text-xs font-semibold text-gray-800">{d.name}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{d.description}</div>
-                <div className="text-sm font-bold text-primary mt-1">↑ {d.change}%</div>
-              </div>
-            ))}
-          </div>
+          {data.demandDrivers?.length > 0 ? (
+            <div className="grid grid-cols-4 gap-3">
+              {data.demandDrivers.map(d => (
+                <div key={d.name} className="bg-gray-50 rounded-xl p-3 text-center">
+                  <div className="text-2xl mb-1">{DRIVER_ICONS[d.name] ?? '📊'}</div>
+                  <div className="text-xs font-semibold text-gray-800">{d.name}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">{d.description}</div>
+                  <div className="text-sm font-bold text-primary mt-1">↑ {d.change}%</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 text-center py-6">No demand drivers available</p>
+          )}
         </div>
 
         {/* AI Early Warning */}
@@ -171,7 +243,7 @@ export default function Forecasting() {
             <h3 className="font-semibold text-sm text-gray-800">AI Early Warning</h3>
             <button onClick={() => navigate('/hsa/forecasting/recommendations')} className="text-xs text-primary font-medium">View All</button>
           </div>
-          {data.earlyWarning && (
+          {data.earlyWarning ? (
             <div className="flex gap-3 p-3 bg-red-50 border border-red-100 rounded-lg">
               <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
               <div>
@@ -182,6 +254,10 @@ export default function Forecasting() {
                   {data.earlyWarning.recommendation}
                 </div>
               </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-20 text-center">
+              <p className="text-sm text-gray-400">No early warnings at this time</p>
             </div>
           )}
         </div>

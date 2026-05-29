@@ -1,23 +1,84 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout'
+import PageError from '../../components/common/PageError'
 import api from '../../api/axios'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 import { Calendar } from 'lucide-react'
 
+function HotspotsSkeleton() {
+  return (
+    <div className="animate-pulse space-y-4">
+      <div className="flex justify-end">
+        <div className="h-8 w-48 bg-gray-200 rounded-lg" />
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="card p-4 flex items-center gap-3">
+            <div className="w-10 h-10 bg-gray-200 rounded-lg flex-shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3 bg-gray-200 rounded w-3/4" />
+              <div className="h-6 bg-gray-200 rounded w-1/2" />
+              <div className="h-3 bg-gray-100 rounded w-2/3" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="card p-4">
+          <div className="h-4 bg-gray-200 rounded w-40 mb-3" />
+          <div className="h-56 bg-gray-100 rounded-xl" />
+          <div className="flex gap-4 mt-2">
+            {[...Array(2)].map((_, i) => <div key={i} className="flex-1 h-12 bg-gray-100 rounded" />)}
+          </div>
+        </div>
+        <div className="card p-4 space-y-3">
+          <div className="h-4 bg-gray-200 rounded w-48" />
+          {[...Array(3)].map((_, i) => <div key={i} className="h-20 bg-gray-100 rounded-xl" />)}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="card p-4">
+          <div className="h-4 bg-gray-200 rounded w-44 mb-3" />
+          <div className="h-48 bg-gray-100 rounded" />
+        </div>
+        <div className="card p-4">
+          <div className="h-4 bg-gray-200 rounded w-56 mb-3" />
+          {[...Array(5)].map((_, i) => <div key={i} className="h-8 bg-gray-100 rounded mb-1" />)}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Hotspots() {
   const navigate = useNavigate()
-  const [data, setData] = useState(null)
+  const [data, setData]       = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState(false)
 
-  useEffect(() => {
-    api.get('/hotspots').then(r => setData(r.data)).catch(() => {})
-  }, [])
+  const fetchData = () => {
+    setError(false)
+    setLoading(true)
+    api.get('/hotspots')
+      .then(r => setData(r.data))
+      .catch(() => setError(true))
+      .finally(() => setLoading(false))
+  }
 
-  if (!data) return (
+  useEffect(() => { fetchData() }, [])
+
+  if (loading) return (
     <PageLayout title="Hotspots" subtitle="Monitor blood donation hotspots to plan donation drives more efficiently">
-      <div className="flex items-center justify-center h-64 text-gray-400">Loading…</div>
+      <HotspotsSkeleton />
+    </PageLayout>
+  )
+
+  if (error) return (
+    <PageLayout title="Hotspots" subtitle="Monitor blood donation hotspots to plan donation drives more efficiently">
+      <PageError onRetry={fetchData} />
     </PageLayout>
   )
 
@@ -66,7 +127,6 @@ export default function Hotspots() {
           </div>
           <div className="bg-gray-100 rounded-xl h-56 flex items-center justify-center text-gray-400 text-sm relative overflow-hidden">
             <div className="absolute inset-0 opacity-10">
-              {/* Heatmap blobs */}
               {[
                 { top: '30%', left: '40%', size: 60, color: '#EF4444' },
                 { top: '50%', left: '55%', size: 45, color: '#EF4444' },
@@ -101,23 +161,30 @@ export default function Hotspots() {
             <h3 className="font-semibold text-sm text-gray-800">Hotspot Insights and Suggestions</h3>
             <button onClick={() => navigate('/hsa/hotspots/insights')} className="text-xs text-primary font-medium">View All</button>
           </div>
-          <div className="space-y-3">
-            {data.insights?.map((ins, i) => (
-              <div key={i} className={`rounded-xl p-3 border ${i === 0 ? 'bg-red-50 border-red-100' : 'bg-orange-50 border-orange-100'}`}>
-                <div className={`font-semibold text-sm mb-1 ${i === 0 ? 'text-primary' : 'text-orange-600'}`}>
-                  📍 {ins.name}
+          {data.insights?.length > 0 ? (
+            <div className="space-y-3">
+              {data.insights.map((ins, i) => (
+                <div key={i} className={`rounded-xl p-3 border ${i === 0 ? 'bg-red-50 border-red-100' : 'bg-orange-50 border-orange-100'}`}>
+                  <div className={`font-semibold text-sm mb-1 ${i === 0 ? 'text-primary' : 'text-orange-600'}`}>
+                    📍 {ins.name}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-2">
+                    <div><div className="text-gray-400">Potential Donors</div><div className="font-semibold">{ins.potentialDonors}</div></div>
+                    <div><div className="text-gray-400">Age Group</div><div className="font-semibold">{ins.ageGroup}</div></div>
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    <span className="font-medium">Recommendation: </span>
+                    <span className={i === 0 ? 'text-primary underline cursor-pointer' : ''}>{ins.recommendation}</span>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-2">
-                  <div><div className="text-gray-400">Potential Donors</div><div className="font-semibold">{ins.potentialDonors}</div></div>
-                  <div><div className="text-gray-400">Age Group</div><div className="font-semibold">{ins.ageGroup}</div></div>
-                </div>
-                <div className="text-xs text-gray-600">
-                  <span className="font-medium">Recommendation: </span>
-                  <span className={i === 0 ? 'text-primary underline cursor-pointer' : ''}>{ins.recommendation}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-48 text-center">
+              <span className="text-3xl mb-2">📍</span>
+              <p className="text-sm text-gray-500">No hotspot insights available</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -130,18 +197,22 @@ export default function Hotspots() {
               Bloodbank @ HSA ▾
             </button>
           </div>
-          <ResponsiveContainer width="100%" height={180}>
-            <LineChart data={data.ageGroupData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-              <XAxis dataKey="month" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
-              <Tooltip contentStyle={{ fontSize: 11 }} />
-              <ReferenceLine y={500} stroke="#EF4444" strokeDasharray="4 2" />
-              <Line type="monotone" dataKey="total" stroke="#111827" strokeWidth={2} dot={false} name="Total" />
-              <Line type="monotone" dataKey="age16to30" stroke="#14B8A6" strokeWidth={2} dot={false} name="16-30 Years" />
-              <Line type="monotone" dataKey="age31to50" stroke="#F59E0B" strokeWidth={2} dot={false} name="31-50 Years" />
-              <Line type="monotone" dataKey="above50" stroke="#EF4444" strokeWidth={1.5} dot={false} name="Above 50" />
-            </LineChart>
-          </ResponsiveContainer>
+          {data.ageGroupData?.length > 0 ? (
+            <ResponsiveContainer width="100%" height={180}>
+              <LineChart data={data.ageGroupData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <XAxis dataKey="month" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={{ fontSize: 11 }} />
+                <ReferenceLine y={500} stroke="#EF4444" strokeDasharray="4 2" />
+                <Line type="monotone" dataKey="total" stroke="#111827" strokeWidth={2} dot={false} name="Total" />
+                <Line type="monotone" dataKey="age16to30" stroke="#14B8A6" strokeWidth={2} dot={false} name="16-30 Years" />
+                <Line type="monotone" dataKey="age31to50" stroke="#F59E0B" strokeWidth={2} dot={false} name="31-50 Years" />
+                <Line type="monotone" dataKey="above50" stroke="#EF4444" strokeWidth={1.5} dot={false} name="Above 50" />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-48 flex items-center justify-center text-sm text-gray-400">No chart data available</div>
+          )}
           <div className="flex gap-3 mt-1 text-xs text-gray-500 justify-center">
             <span className="flex items-center gap-1"><span className="w-3 border-t-2 border-gray-900 inline-block" />Total</span>
             <span className="flex items-center gap-1"><span className="w-3 border-t-2 border-teal-400 inline-block" />16-30</span>
@@ -156,24 +227,30 @@ export default function Hotspots() {
             <h3 className="font-semibold text-sm text-gray-800">Top Performing Community Drives <span className="text-gray-400 font-normal text-xs">(3 Months Ago)</span></h3>
             <button onClick={() => navigate('/hsa/hotspots/bloodbank-performance')} className="text-xs text-primary font-medium">View All</button>
           </div>
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-gray-500 border-b border-gray-100">
-                <th className="text-left pb-1.5 font-medium">Community Drive</th>
-                <th className="text-right pb-1.5 font-medium">No. of Donors</th>
-                <th className="text-right pb-1.5 font-medium">Last Community Drive</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.communityDrives?.map((d, i) => (
-                <tr key={i} className="border-b border-gray-50">
-                  <td className="py-1.5 text-gray-700">{d.name}</td>
-                  <td className="py-1.5 text-right font-semibold text-gray-800">{d.donors.toLocaleString()}</td>
-                  <td className="py-1.5 text-right text-gray-500">{d.lastDrive}</td>
+          {data.communityDrives?.length > 0 ? (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-gray-500 border-b border-gray-100">
+                  <th className="text-left pb-1.5 font-medium">Community Drive</th>
+                  <th className="text-right pb-1.5 font-medium">No. of Donors</th>
+                  <th className="text-right pb-1.5 font-medium">Last Community Drive</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {data.communityDrives.map((d, i) => (
+                  <tr key={i} className="border-b border-gray-50">
+                    <td className="py-1.5 text-gray-700">{d.name}</td>
+                    <td className="py-1.5 text-right font-semibold text-gray-800">{d.donors.toLocaleString()}</td>
+                    <td className="py-1.5 text-right text-gray-500">{d.lastDrive}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-32 text-center">
+              <p className="text-sm text-gray-400">No community drives to display</p>
+            </div>
+          )}
         </div>
       </div>
     </PageLayout>

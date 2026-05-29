@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageLayout from '../../../components/layout/PageLayout'
 import Toast from '../../../components/common/Toast'
 import ConfirmModal from '../../../components/common/ConfirmModal'
+import LoadingScreen from '../../../components/common/LoadingScreen'
 import { AlertTriangle, X, ArrowRight, Info } from 'lucide-react'
 
 const INITIAL_ALERTS = [
@@ -78,11 +79,17 @@ export default function Recommendations() {
   const navigate = useNavigate()
   const [alerts, setAlerts] = useState(INITIAL_ALERTS)
   const [completedActions, setCompletedActions] = useState([])
+  const [loading, setLoading] = useState(true)
 
   // Modals
   const [dismissTarget, setDismissTarget] = useState(null)
   const [notifyConfirm, setNotifyConfirm] = useState(false)
   const [toast, setToast] = useState(null)
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 1800)
+    return () => clearTimeout(t)
+  }, [])
 
   const confirmDismiss = () => {
     setAlerts(prev => prev.filter(a => a.id !== dismissTarget))
@@ -102,6 +109,12 @@ export default function Recommendations() {
       navigate('/hsa/allocation')
     }
   }
+
+  if (loading) return (
+    <PageLayout title="Recommendations" subtitle="AI powered recommendations to prevent blood shortages">
+      <LoadingScreen variant="recommendation" />
+    </PageLayout>
+  )
 
   return (
     <PageLayout

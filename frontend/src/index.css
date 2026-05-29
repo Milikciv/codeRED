@@ -62,3 +62,21 @@
   background: #d1d5db;
   border-radius: 3px;
 }
+
+/* LoadingScreen animations */
+@keyframes cr-bob         { 0%,100%{transform:translateY(0)}   50%{transform:translateY(-14px)} }
+@keyframes cr-run         { 0%,100%{transform:translateX(0)}   50%{transform:translateX(22px)} }
+@keyframes cr-armswing-l  { 0%,100%{transform:rotate(-15deg)} 50%{transform:rotate(25deg)} }
+@keyframes cr-armswing-r  { 0%,100%{transform:rotate(15deg)}  50%{transform:rotate(-25deg)} }
+@keyframes cr-magswing    { 0%,100%{transform:rotate(-18deg)} 50%{transform:rotate(12deg)} }
+@keyframes cr-blink       { 0%,90%,100%{transform:scaleY(1)}  95%{transform:scaleY(0.05)} }
+@keyframes cr-typebounce  { 0%,100%{transform:translateY(0)}  50%{transform:translateY(-5px)} }
+@keyframes cr-heartpop    { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.6)} }
+@keyframes cr-shimmer     { 0%,100%{opacity:0.45} 50%{opacity:1} }
+@keyframes cr-progress    { from{width:10%} to{width:70%} }
+@keyframes cr-chart-draw  {
+  0%   { stroke-dashoffset: 200; }
+  60%  { stroke-dashoffset: 0; }
+  80%  { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: 200; }
+}

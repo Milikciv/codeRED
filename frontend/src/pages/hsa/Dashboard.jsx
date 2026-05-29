@@ -8,7 +8,8 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
   PieChart, Pie, Cell
 } from 'recharts'
-import { Droplets, Clock, AlertTriangle, Users, ArrowRight } from 'lucide-react'
+import { Droplets, Clock, AlertTriangle, Users } from 'lucide-react'
+import LoadingScreen from '../../components/common/LoadingScreen'
 
 const BLOOD_TYPES = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']
 const HOSPITALS = ['SGH', 'NUH', 'KKH', 'CGH', 'NGH', 'TTSH']
@@ -26,18 +27,64 @@ const EXPIRING = [
   { name: '6-7 Days', value: 13, color: '#22C55E' },
 ]
 
+function DashboardSkeleton() {
+  return (
+    <div className="animate-pulse">
+      <div className="grid grid-cols-5 gap-3 mb-4">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="card p-4 space-y-2">
+            <div className="h-3 bg-gray-200 rounded w-3/4" />
+            <div className="h-8 bg-gray-200 rounded w-1/2" />
+            <div className="h-3 bg-gray-200 rounded w-2/3" />
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-3 gap-4">
+        <div className="card p-4">
+          <div className="h-4 bg-gray-200 rounded w-40 mb-3" />
+          {[...Array(6)].map((_, i) => <div key={i} className="h-7 bg-gray-100 rounded mb-1.5" />)}
+        </div>
+        <div className="space-y-4">
+          <div className="card p-4">
+            <div className="h-4 bg-gray-200 rounded w-32 mb-2" />
+            <div className="h-36 bg-gray-100 rounded-lg" />
+          </div>
+          <div className="card p-4">
+            <div className="h-4 bg-gray-200 rounded w-40 mb-2" />
+            <div className="h-28 bg-gray-100 rounded" />
+          </div>
+        </div>
+        <div className="space-y-4">
+          <div className="card p-4">
+            <div className="h-4 bg-gray-200 rounded w-24 mb-3" />
+            {[...Array(3)].map((_, i) => <div key={i} className="h-14 bg-gray-100 rounded mb-2" />)}
+          </div>
+          <div className="card p-4 h-28" />
+          <div className="card p-4">
+            <div className="h-4 bg-gray-200 rounded w-32 mb-2" />
+            {[...Array(2)].map((_, i) => <div key={i} className="h-14 bg-gray-100 rounded mb-2" />)}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function HsaDashboard() {
-  const [stock, setStock]     = useState({})
-  const [alerts, setAlerts]   = useState([])
+  const [stock, setStock]       = useState({})
+  const [alerts, setAlerts]     = useState([])
   const [requests, setRequests] = useState([])
-  const [summary, setSummary] = useState({ percentage: 85, criticalTypeCount: 3, totalUnits: 0 })
+  const [summary, setSummary]   = useState({ percentage: 85, criticalTypeCount: 3, totalUnits: 0 })
   const [showAlerts, setShowAlerts] = useState(false)
+  const [loading, setLoading]   = useState(true)
 
   useEffect(() => {
-    api.get('/blood-stock').then(r => setStock(r.data)).catch(() => {})
-    api.get('/alerts').then(r => setAlerts(r.data)).catch(() => {})
-    api.get('/requests').then(r => setRequests(r.data)).catch(() => {})
-    api.get('/blood-stock/summary').then(r => setSummary(r.data)).catch(() => {})
+    Promise.allSettled([
+      api.get('/blood-stock').then(r => setStock(r.data)),
+      api.get('/alerts').then(r => setAlerts(r.data)),
+      api.get('/requests').then(r => setRequests(r.data)),
+      api.get('/blood-stock/summary').then(r => setSummary(r.data)),
+    ]).finally(() => setLoading(false))
   }, [])
 
   const dismissAlert = async (id) => {
@@ -45,7 +92,6 @@ export default function HsaDashboard() {
     setAlerts(alerts.filter(a => a.id !== id))
   }
 
-  // Build stock table data per hospital per blood type
   const getPct = (hospitalCode, bloodTypeLabel) => {
     const hospitalStock = stock[hospitalCode]
     if (!Array.isArray(hospitalStock)) return null
@@ -58,6 +104,12 @@ export default function HsaDashboard() {
   const criticalTypes = ['A-', 'B+', 'B-']
   const activeRequests = requests.filter(r => r.status === 'PENDING').length
   const expiringTotal = 1081
+
+  if (loading) return (
+    <PageLayout title="Home" subtitle="Real time insights and alerts to help manage blood demand and supply" isHome>
+      <LoadingScreen variant="general" />
+    </PageLayout>
+  )
 
   return (
     <PageLayout
@@ -157,7 +209,9 @@ export default function HsaDashboard() {
               </tbody>
             </table>
           </div>
-          {/* Legend */}
+          {Object.keys(stock).length === 0 && (
+            <p className="text-xs text-gray-400 text-center py-3">No stock data available</p>
+          )}
           <div className="flex items-center gap-4 mt-3 pt-2 border-t border-gray-100">
             {[['dot-good', 'Good (70%-100%)'], ['dot-low', 'Low (40%-69%)'], ['dot-critical', 'Critical (0%-39%)'], ['dot-none', 'No Data']].map(([cls, label]) => (
               <div key={label} className="flex items-center gap-1">
@@ -215,7 +269,10 @@ export default function HsaDashboard() {
                 <AlertCard key={a.id} alert={a} onDismiss={dismissAlert} />
               ))}
               {alerts.length === 0 && (
-                <p className="text-xs text-gray-500 text-center py-4">No active alerts</p>
+                <div className="flex flex-col items-center py-5 text-center">
+                  <span className="text-2xl mb-1">✅</span>
+                  <p className="text-xs text-gray-500">No active alerts</p>
+                </div>
               )}
             </div>
           </div>
@@ -251,21 +308,25 @@ export default function HsaDashboard() {
               <h3 className="font-semibold text-sm text-gray-800">Recent Requests</h3>
               <button className="text-xs text-primary font-medium">View All</button>
             </div>
-            <div className="space-y-2">
-              {requests.slice(0, 2).map(r => (
-                <div key={r.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                  <Droplets className="w-4 h-4 text-primary flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-semibold text-gray-800 truncate">
-                      {r.bloodType?.replace('_POSITIVE', '+').replace('_NEGATIVE', '-')} Blood Needed
+            {requests.length > 0 ? (
+              <div className="space-y-2">
+                {requests.slice(0, 2).map(r => (
+                  <div key={r.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                    <Droplets className="w-4 h-4 text-primary flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-gray-800 truncate">
+                        {r.bloodType?.replace('_POSITIVE', '+').replace('_NEGATIVE', '-')} Blood Needed
+                      </div>
+                      <div className="text-xs text-gray-500 truncate">{r.requestingHospital?.name}</div>
+                      <div className="text-xs text-gray-400">{r.unitsRequested} Units • 5 mins ago</div>
                     </div>
-                    <div className="text-xs text-gray-500 truncate">{r.requestingHospital?.name}</div>
-                    <div className="text-xs text-gray-400">{r.unitsRequested} Units • 5 mins ago</div>
+                    <button className="btn-primary text-xs px-2 py-1">Respond</button>
                   </div>
-                  <button className="btn-primary text-xs px-2 py-1">Respond</button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 text-center py-4">No recent requests</p>
+            )}
           </div>
         </div>
       </div>
