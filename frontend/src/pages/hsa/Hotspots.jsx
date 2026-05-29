@@ -7,6 +7,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 import { Calendar } from 'lucide-react'
+import DateRangePicker, { formatDateRange } from '../../components/common/DateRangePicker'
 
 function HotspotsSkeleton() {
   return (
@@ -53,11 +54,17 @@ function HotspotsSkeleton() {
   )
 }
 
+const LOCATION_OPTIONS = ['Bloodbank @ HSA', 'SGH', 'NUH', 'KKH', 'CGH', 'TTSH', 'NGH']
+
 export default function Hotspots() {
   const navigate = useNavigate()
-  const [data, setData]       = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState(false)
+  const [data, setData]               = useState(null)
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState(false)
+  const [openDropdown, setOpenDropdown] = useState(null)
+  const [dateStart, setDateStart]     = useState(new Date(2026, 1, 18))
+  const [dateEnd, setDateEnd]         = useState(new Date(2026, 4, 17))
+  const [location, setLocation]       = useState('Bloodbank @ HSA')
 
   const fetchData = () => {
     setError(false)
@@ -86,9 +93,26 @@ export default function Hotspots() {
     <PageLayout title="Hotspots" subtitle="Monitor blood donation hotspots to plan donation drives more efficiently">
       {/* Date filter */}
       <div className="flex justify-end mb-4">
-        <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white">
-          <Calendar className="w-3.5 h-3.5 text-gray-500" /> Feb 18 - May 17, 2026 <span className="text-gray-400">▾</span>
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white hover:bg-gray-50"
+          >
+            <Calendar className="w-3.5 h-3.5 text-gray-500" />
+            {formatDateRange(dateStart, dateEnd)}
+            <span className="text-gray-400">▾</span>
+          </button>
+          {openDropdown === 'date' && (
+            <div className="absolute right-0 top-full mt-1 z-20">
+              <DateRangePicker
+                start={dateStart}
+                end={dateEnd}
+                onChange={(s, e) => { setDateStart(s); setDateEnd(e) }}
+                onClose={() => setOpenDropdown(null)}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* KPI cards */}
@@ -193,9 +217,27 @@ export default function Hotspots() {
         <div className="card p-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-semibold text-sm text-gray-800">Blood Donors by Age Group</h3>
-            <button className="flex items-center gap-1.5 px-2 py-1 border border-gray-300 rounded text-xs bg-white">
-              Bloodbank @ HSA ▾
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setOpenDropdown(openDropdown === 'location' ? null : 'location')}
+                className="flex items-center gap-1.5 px-2 py-1 border border-gray-300 rounded text-xs bg-white hover:bg-gray-50"
+              >
+                {location} ▾
+              </button>
+              {openDropdown === 'location' && (
+                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-36">
+                  {LOCATION_OPTIONS.map(l => (
+                    <button
+                      key={l}
+                      onClick={() => { setLocation(l); setOpenDropdown(null) }}
+                      className={`w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 ${location === l ? 'text-primary font-medium' : 'text-gray-700'}`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           {data.ageGroupData?.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>

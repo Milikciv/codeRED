@@ -322,15 +322,43 @@ export default function BloodAllocation() {
         </div>
 
         {/* Right: Allocation Workbench */}
-        <div className="flex-1">
+        <div className="flex-1 flex flex-col gap-4">
+          {/* National inventory — always visible */}
+          <div className="card p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-semibold text-gray-700">National Blood Inventory Overview</h4>
+              <span className="text-xs text-gray-500">Total Stock: {inventory?.totalStock?.toLocaleString()}</span>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {inventory && Object.entries(inventory.byType ?? {}).map(([type, units]) => {
+                const total = inventory.totalStock
+                const pct = total ? Math.round(units / total * 100) : 0
+                const highlighted = selected && type === formatBloodType(selected.bloodType)
+                return (
+                  <div key={type} className={`rounded-lg p-2 ${highlighted ? 'bg-primary text-white' : 'bg-gray-50'}`}>
+                    <div className={`text-xs font-bold ${highlighted ? 'text-white' : 'text-gray-800'}`}>{type}</div>
+                    <div className={`text-sm font-black ${highlighted ? 'text-white' : 'text-gray-900'}`}>{units} <span className="text-xs font-normal">units</span></div>
+                    <div className={`w-full rounded-full h-1 mt-1 ${highlighted ? 'bg-white/30' : 'bg-gray-200'}`}>
+                      <div className={`h-1 rounded-full ${highlighted ? 'bg-white' : pct > 60 ? 'bg-green-400' : pct > 30 ? 'bg-yellow-400' : 'bg-red-400'}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <div className={`text-xs mt-0.5 ${highlighted ? 'text-white/80' : 'text-gray-500'}`}>{pct}%</div>
+                  </div>
+                )
+              })}
+              {!inventory && (
+                <div className="col-span-4 text-xs text-gray-400 text-center py-4">Inventory data unavailable</div>
+              )}
+            </div>
+          </div>
+
           {!selected ? (
-            <div className="card h-full flex flex-col items-center justify-center text-center p-8">
+            <div className="card flex-1 flex flex-col items-center justify-center text-center p-8">
               <div className="text-6xl mb-4 opacity-20">📋</div>
               <h3 className="text-lg font-semibold text-gray-600">Please select one request to start allocating!</h3>
               <p className="text-sm text-gray-400 mt-2">Choose a request from the left to view details and allocate blood units</p>
             </div>
           ) : (
-            <div className="card p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
+            <div className="card p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 340px)' }}>
               <div className="flex items-center gap-2 mb-3">
                 <h3 className="font-semibold text-sm text-gray-800">Allocation Workbench</h3>
                 <span className="text-xs font-bold text-primary bg-primary-100 px-2 py-0.5 rounded">{selected.requestId}</span>
@@ -342,34 +370,6 @@ export default function BloodAllocation() {
                 <div className="text-right">
                   <div className="text-xs text-gray-500">Units Requested</div>
                   <div className="text-xl font-black text-gray-800">{selected.unitsRequested}</div>
-                </div>
-              </div>
-
-              {/* National inventory */}
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-xs font-semibold text-gray-700">National Blood Inventory Overview</h4>
-                  <span className="text-xs text-gray-500">Total Stock: {inventory?.totalStock?.toLocaleString()}</span>
-                </div>
-                <div className="grid grid-cols-4 gap-2">
-                  {inventory && Object.entries(inventory.byType ?? {}).map(([type, units]) => {
-                    const total = inventory.totalStock
-                    const pct = total ? Math.round(units / total * 100) : 0
-                    const isSelected = type === formatBloodType(selected.bloodType)
-                    return (
-                      <div key={type} className={`rounded-lg p-2 ${isSelected ? 'bg-primary text-white' : 'bg-gray-50'}`}>
-                        <div className={`text-xs font-bold ${isSelected ? 'text-white' : 'text-gray-800'}`}>{type}</div>
-                        <div className={`text-sm font-black ${isSelected ? 'text-white' : 'text-gray-900'}`}>{units} <span className="text-xs font-normal">units</span></div>
-                        <div className={`w-full rounded-full h-1 mt-1 ${isSelected ? 'bg-white/30' : 'bg-gray-200'}`}>
-                          <div className={`h-1 rounded-full ${isSelected ? 'bg-white' : pct > 60 ? 'bg-green-400' : pct > 30 ? 'bg-yellow-400' : 'bg-red-400'}`} style={{ width: `${pct}%` }} />
-                        </div>
-                        <div className={`text-xs mt-0.5 ${isSelected ? 'text-white/80' : 'text-gray-500'}`}>{pct}%</div>
-                      </div>
-                    )
-                  })}
-                  {!inventory && (
-                    <div className="col-span-4 text-xs text-gray-400 text-center py-4">Inventory data unavailable</div>
-                  )}
                 </div>
               </div>
 
@@ -499,3 +499,4 @@ export default function BloodAllocation() {
     </PageLayout>
   )
 }
+

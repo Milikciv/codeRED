@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout'
 import StatCard from '../../components/common/StatCard'
 import AlertCard from '../../components/common/AlertCard'
@@ -99,6 +100,7 @@ export default function HospitalDashboard() {
     return Math.round((entry.currentUnits / entry.idealUnits) * 100)
   }
 
+  const navigate = useNavigate()
   const criticalTypes = stock.filter(s => s.currentUnits / s.idealUnits < 0.4)
     .map(s => formatBloodType(s.bloodType)).slice(0, 3).join(', ') || 'A-, B+, B-'
 
@@ -143,6 +145,7 @@ export default function HospitalDashboard() {
           value={`${summary.percentage}%`}
           sub="Of Ideal"
           linkText="View Details"
+          onLink={() => navigate('/hospital/request')}
           highlight
         />
         <StatCard
@@ -163,6 +166,7 @@ export default function HospitalDashboard() {
           label="Active Requests"
           value={activeRequests || 1}
           linkText="View Requests"
+          onLink={() => navigate('/hospital/my-requests')}
         />
       </div>
 
@@ -279,7 +283,7 @@ export default function HospitalDashboard() {
             <div className="card p-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-sm text-gray-800">Recent Requests</h3>
-                <button className="text-xs text-primary font-medium">View All</button>
+                <button onClick={() => navigate('/hospital/my-requests')} className="text-xs text-primary font-medium">View All</button>
               </div>
               {requests.length > 0 ? (
                 requests.slice(0, 1).map(r => (

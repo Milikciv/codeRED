@@ -3,6 +3,10 @@ export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
+      fontSize: {
+        'xs': ['13px', { lineHeight: '1.25rem' }],  // was 12px
+        'sm': ['15px', { lineHeight: '1.5rem'  }],  // was 14px
+      },
       colors: {
         primary: {
           DEFAULT: '#C20000',

@@ -6,6 +6,7 @@ import {
   ReferenceLine, Area, AreaChart,
 } from 'recharts'
 import { ChevronDown, Calendar } from 'lucide-react'
+import DateRangePicker, { formatDateRange } from '../../../components/common/DateRangePicker'
 
 const BLOOD_TYPES = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']
 
@@ -53,10 +54,16 @@ const HOSPITAL_DEMAND = [
   { type: 'AB-', demand: 90,  surplus: -10,  risk: 'Medium',    riskColor: 'text-yellow-600' },
 ]
 
+const HOSPITAL_OPTIONS = ['All hospitals', 'SGH', 'NUH', 'KKH', 'CGH', 'TTSH', 'NGH']
+
 export default function BloodTypeAnalytics() {
   const navigate = useNavigate()
   const [selectedType, setSelectedType] = useState('O-')
-  const [viewMode, setViewMode] = useState('units') // 'units' | 'percentage'
+  const [viewMode, setViewMode]         = useState('units')
+  const [openDropdown, setOpenDropdown] = useState(null)
+  const [hospital, setHospital]         = useState('All hospitals')
+  const [dateStart, setDateStart]       = useState(new Date(2026, 4, 14))
+  const [dateEnd, setDateEnd]           = useState(new Date(2026, 4, 17))
 
   const chartData = CHART_DATA[selectedType] ?? DEFAULT_DATA
 
@@ -68,28 +75,73 @@ export default function BloodTypeAnalytics() {
     >
       {/* Filters */}
       <div className="flex items-center gap-3 mb-4">
-        <div>
+        <div className="relative">
           <label className="block text-xs text-gray-500 mb-1">Select Blood Type</label>
-          <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm cursor-pointer min-w-32">
+          <button
+            onClick={() => setOpenDropdown(openDropdown === 'bloodType' ? null : 'bloodType')}
+            className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:bg-gray-50 min-w-32"
+          >
             <span className="text-primary">🩸</span>
             <span className="font-medium">{selectedType}</span>
             <ChevronDown className="w-4 h-4 text-gray-400 ml-auto" />
-          </div>
+          </button>
+          {openDropdown === 'bloodType' && (
+            <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-32">
+              {BLOOD_TYPES.map(t => (
+                <button
+                  key={t}
+                  onClick={() => { setSelectedType(t); setOpenDropdown(null) }}
+                  className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${selectedType === t ? 'text-primary font-medium' : 'text-gray-700'}`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-        <div>
+        <div className="relative">
           <label className="block text-xs text-gray-500 mb-1">Hospital</label>
-          <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm cursor-pointer min-w-36">
-            <span>All hospitals</span>
+          <button
+            onClick={() => setOpenDropdown(openDropdown === 'hospital' ? null : 'hospital')}
+            className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:bg-gray-50 min-w-36"
+          >
+            <span>{hospital}</span>
             <ChevronDown className="w-4 h-4 text-gray-400 ml-auto" />
-          </div>
+          </button>
+          {openDropdown === 'hospital' && (
+            <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-36">
+              {HOSPITAL_OPTIONS.map(h => (
+                <button
+                  key={h}
+                  onClick={() => { setHospital(h); setOpenDropdown(null) }}
+                  className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${hospital === h ? 'text-primary font-medium' : 'text-gray-700'}`}
+                >
+                  {h}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-        <div>
+        <div className="relative">
           <label className="block text-xs text-gray-500 mb-1">Time Range</label>
-          <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm cursor-pointer">
+          <button
+            onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
+            className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:bg-gray-50"
+          >
             <Calendar className="w-4 h-4 text-gray-500" />
-            <span>May 14 - May 17, 2026</span>
+            <span>{formatDateRange(dateStart, dateEnd)}</span>
             <ChevronDown className="w-4 h-4 text-gray-400 ml-auto" />
-          </div>
+          </button>
+          {openDropdown === 'date' && (
+            <div className="absolute left-0 top-full mt-1 z-20">
+              <DateRangePicker
+                start={dateStart}
+                end={dateEnd}
+                onChange={(s, e) => { setDateStart(s); setDateEnd(e) }}
+                onClose={() => setOpenDropdown(null)}
+              />
+            </div>
+          )}
         </div>
       </div>
 

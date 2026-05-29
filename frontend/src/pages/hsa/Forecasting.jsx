@@ -9,6 +9,7 @@ import {
 } from 'recharts'
 import { TrendingUp, AlertTriangle, Calendar, Shield } from 'lucide-react'
 import LoadingScreen from '../../components/common/LoadingScreen'
+import DateRangePicker, { formatDateRange } from '../../components/common/DateRangePicker'
 
 const STATUS_COLOR = {
   Good: 'text-green-600', Medium: 'text-yellow-600',
@@ -62,11 +63,17 @@ function ForecastingSkeleton() {
   )
 }
 
+const BLOOD_TYPE_OPTIONS = ['All Blood Types', 'O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']
+
 export default function Forecasting() {
   const navigate = useNavigate()
-  const [data, setData]       = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState(false)
+  const [data, setData]               = useState(null)
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState(false)
+  const [openDropdown, setOpenDropdown] = useState(null)
+  const [bloodType, setBloodType]     = useState('All Blood Types')
+  const [dateStart, setDateStart]     = useState(new Date(2026, 4, 14))
+  const [dateEnd, setDateEnd]         = useState(new Date(2026, 4, 17))
 
   const fetchData = () => {
     setError(false)
@@ -95,12 +102,47 @@ export default function Forecasting() {
     <PageLayout title="Demand Forecasting" subtitle="AI powered predictions to stay ahead of shortages">
       {/* Filters */}
       <div className="flex justify-end gap-2 mb-4">
-        <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white">
-          <span>🩸</span> All Blood Types <span className="text-gray-400">▾</span>
-        </button>
-        <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white">
-          <Calendar className="w-3.5 h-3.5 text-gray-500" /> May 14 - May 17, 2026 <span className="text-gray-400">▾</span>
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setOpenDropdown(openDropdown === 'bloodType' ? null : 'bloodType')}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white hover:bg-gray-50"
+          >
+            <span>🩸</span> {bloodType} <span className="text-gray-400">▾</span>
+          </button>
+          {openDropdown === 'bloodType' && (
+            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-36">
+              {BLOOD_TYPE_OPTIONS.map(t => (
+                <button
+                  key={t}
+                  onClick={() => { setBloodType(t); setOpenDropdown(null) }}
+                  className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${bloodType === t ? 'text-primary font-medium' : 'text-gray-700'}`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="relative">
+          <button
+            onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white hover:bg-gray-50"
+          >
+            <Calendar className="w-3.5 h-3.5 text-gray-500" />
+            {formatDateRange(dateStart, dateEnd)}
+            <span className="text-gray-400">▾</span>
+          </button>
+          {openDropdown === 'date' && (
+            <div className="absolute right-0 top-full mt-1 z-20">
+              <DateRangePicker
+                start={dateStart}
+                end={dateEnd}
+                onChange={(s, e) => { setDateStart(s); setDateEnd(e) }}
+                onClose={() => setOpenDropdown(null)}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* KPI cards */}

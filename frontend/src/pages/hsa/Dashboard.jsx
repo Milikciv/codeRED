@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout'
 import StatCard from '../../components/common/StatCard'
 import AlertCard from '../../components/common/AlertCard'
@@ -101,6 +102,7 @@ export default function HsaDashboard() {
     return Math.round((entry.currentUnits / entry.idealUnits) * 100)
   }
 
+  const navigate = useNavigate()
   const criticalTypes = ['A-', 'B+', 'B-']
   const activeRequests = requests.filter(r => r.status === 'PENDING').length
   const expiringTotal = 1081
@@ -147,6 +149,7 @@ export default function HsaDashboard() {
           value={`${summary.percentage}%`}
           sub="Of Ideal"
           linkText="View Details"
+          onLink={() => navigate('/hsa/allocation')}
           highlight
         />
         <StatCard
@@ -161,6 +164,7 @@ export default function HsaDashboard() {
           label="Hospitals in Critical State"
           value="2"
           linkText="View Hospitals"
+          onLink={() => navigate('/hsa/forecasting/blood-type-analytics')}
         />
         <StatCard
           icon={<Clock className="w-5 h-5 text-orange-400" />}
@@ -173,6 +177,7 @@ export default function HsaDashboard() {
           label="Active Requests"
           value={activeRequests || 2}
           linkText="View Requests"
+          onLink={() => navigate('/hsa/allocation')}
         />
       </div>
 
@@ -241,7 +246,7 @@ export default function HsaDashboard() {
           <div className="card p-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-semibold text-sm text-gray-800">Demand Forecast (Next 7 Days)</h3>
-              <button className="text-xs text-primary font-medium">View All</button>
+              <button onClick={() => navigate('/hsa/forecasting')} className="text-xs text-primary font-medium">View All</button>
             </div>
             <ResponsiveContainer width="100%" height={120}>
               <LineChart data={FORECAST_DATA} margin={{ top: 5, right: 5, left: -30, bottom: 0 }}>
@@ -306,7 +311,7 @@ export default function HsaDashboard() {
           <div className="card p-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-semibold text-sm text-gray-800">Recent Requests</h3>
-              <button className="text-xs text-primary font-medium">View All</button>
+              <button onClick={() => navigate('/hsa/allocation')} className="text-xs text-primary font-medium">View All</button>
             </div>
             {requests.length > 0 ? (
               <div className="space-y-2">
