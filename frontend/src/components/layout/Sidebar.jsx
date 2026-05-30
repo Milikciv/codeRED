@@ -1,15 +1,16 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
-  Home, TrendingUp, Droplets, MapPin,
+  Home, TrendingUp, Droplets, MapPin, ArrowRightLeft,
   Settings, HelpCircle, LogOut
 } from 'lucide-react'
 
 const HSA_NAV = [
-  { to: '/hsa/dashboard',   icon: Home,       label: 'Home' },
-  { to: '/hsa/forecasting', icon: TrendingUp,  label: 'Forecasting' },
-  { to: '/hsa/allocation',  icon: Droplets,    label: 'Blood Allocation' },
-  { to: '/hsa/hotspots',    icon: MapPin,      label: 'Hotspots' },
+  { to: '/hsa/dashboard',   icon: Home,             label: 'Home' },
+  { to: '/hsa/forecasting', icon: TrendingUp,        label: 'Forecasting' },
+  { to: '/hsa/allocation',  icon: Droplets,          label: 'Blood Allocation' },
+  { to: '/hsa/requests',    icon: ArrowRightLeft,    label: 'Transfers' },
+  { to: '/hsa/hotspots',    icon: MapPin,            label: 'Hotspots' },
 ]
 
 const HOSPITAL_NAV = [

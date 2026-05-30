@@ -13,6 +13,7 @@ import Hotspots from './pages/hsa/Hotspots'
 import HotspotInsights from './pages/hsa/hotspots/Insights'
 import BloodbankPerformance from './pages/hsa/hotspots/BloodbankPerformance'
 import DonorMap from './pages/hsa/hotspots/DonorMap'
+import HsaRequests from './pages/hsa/Requests'
 
 // Hospital pages
 import HospitalDashboard from './pages/hospital/Dashboard'
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="/hsa/forecasting/blood-type-analytics" element={<HSA><BloodTypeAnalytics /></HSA>} />
           <Route path="/hsa/forecasting/recommendations"      element={<HSA><Recommendations /></HSA>} />
           <Route path="/hsa/allocation"  element={<HSA><BloodAllocation /></HSA>} />
+          <Route path="/hsa/requests"    element={<HSA><HsaRequests /></HSA>} />
           <Route path="/hsa/hotspots"    element={<HSA><Hotspots /></HSA>} />
           <Route path="/hsa/hotspots/insights"              element={<HSA><HotspotInsights /></HSA>} />
           <Route path="/hsa/hotspots/bloodbank-performance" element={<HSA><BloodbankPerformance /></HSA>} />
