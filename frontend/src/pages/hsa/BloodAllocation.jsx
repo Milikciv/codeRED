@@ -10,6 +10,29 @@ import { informationCircleOutline, airplaneOutline, rocketOutline, starOutline, 
 import LoadingScreen from '../../components/common/LoadingScreen'
 
 const PRIORITY_TABS = ['All', 'Critical', 'High', 'Medium']
+const STATUS_FILTER_TABS = ['All', 'Pending', 'Active', 'Completed', 'Rejected']
+
+const STATUS_LABELS = {
+  PENDING: 'Pending', APPROVED: 'Approved', PREPARING: 'Preparing',
+  IN_TRANSIT: 'In Transit', DELIVERED: 'Delivered', COMPLETED: 'Completed', REJECTED: 'Rejected'
+}
+
+function getStatusColor(status) {
+  if (['DELIVERED', 'COMPLETED'].includes(status)) return 'text-green-600 bg-green-50'
+  if (status === 'REJECTED') return 'text-red-600 bg-red-50'
+  if (status === 'PENDING') return 'text-gray-600 bg-gray-100'
+  return 'text-blue-600 bg-blue-50'
+}
+
+function formatDate(dt) {
+  if (!dt) return '—'
+  return new Date(dt).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function formatTime(dt) {
+  if (!dt) return ''
+  return new Date(dt).toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit' })
+}
 
 function formatBloodType(bt) {
   return bt?.replace('_POSITIVE', '+').replace('_NEGATIVE', '-') ?? bt
@@ -51,6 +74,7 @@ export default function BloodAllocation() {
   const [hsaAlloc, setHsaAlloc]       = useState(0)      // units allocated from HSA
   const [allocations, setAllocations] = useState({})     // units allocated from hospitals
   const [tab, setTab]                 = useState('All')
+  const [statusFilter, setStatusFilter] = useState('Pending')
   const [toast, setToast]             = useState(null)
   const [showAiModal, setShowAiModal] = useState(false)
   const [showConfirmApprove, setShowConfirmApprove] = useState(false)
@@ -71,10 +95,10 @@ export default function BloodAllocation() {
     setAllocations({})
     setHsaAlloc(0)
     setAiRecommended(false)
+    if (req.status !== 'PENDING') return
     try {
       const { data } = await api.get(`/allocation/assess/${req.id}`)
       setAssessment(data)
-      // Pre-fill HSA units if HSA is the recommended source
       if (data.recommendedSource === 'HSA') {
         setHsaAlloc(Math.min(data.hsaUnitsAvailable, req.unitsRequested))
       }
@@ -119,7 +143,8 @@ export default function BloodAllocation() {
     const payload = { requestId: selected.id, hsaUnits: hsaAlloc, allocations }
     const { data } = await api.post('/allocation/approve', payload)
     setToast({ type: 'success', title: 'Success!', message: data.message })
-    setRequests(prev => prev.filter(r => r.id !== selected.id))
+    const newStatus = hsaAlloc > 0 && hospitalAllocTotal === 0 ? 'IN_TRANSIT' : 'APPROVED'
+    setRequests(prev => prev.map(r => r.id === selected.id ? { ...r, status: newStatus } : r))
     setSelected(null)
     setAssessment(null)
   }
@@ -130,9 +155,30 @@ export default function BloodAllocation() {
     setToast({ type: 'success', title: 'Appeal Triggered', message: data.message })
   }
 
-  const filteredRequests = requests.filter(r =>
-    tab === 'All' ? true : r.priority?.toLowerCase() === tab.toLowerCase()
-  )
+  const filteredRequests = requests.filter(r => {
+    const matchesPriority = tab === 'All' || r.priority?.toLowerCase() === tab.toLowerCase()
+    const s = r.status?.toUpperCase()
+    const matchesStatus =
+      statusFilter === 'All'       ? true :
+      statusFilter === 'Pending'   ? s === 'PENDING' :
+      statusFilter === 'Active'    ? ['APPROVED', 'PREPARING', 'IN_TRANSIT'].includes(s) :
+      statusFilter === 'Completed' ? ['DELIVERED', 'COMPLETED'].includes(s) :
+      statusFilter === 'Rejected'  ? s === 'REJECTED' : true
+    return matchesPriority && matchesStatus
+  })
+
+  const statusFilterCount = (f) => {
+    const s = f
+    return requests.filter(r => {
+      const rs = r.status?.toUpperCase()
+      if (s === 'All') return true
+      if (s === 'Pending') return rs === 'PENDING'
+      if (s === 'Active') return ['APPROVED', 'PREPARING', 'IN_TRANSIT'].includes(rs)
+      if (s === 'Completed') return ['DELIVERED', 'COMPLETED'].includes(rs)
+      if (s === 'Rejected') return rs === 'REJECTED'
+      return false
+    }).length
+  }
 
   const safeColor = (s) => {
     if (s === 'Yes') return 'text-green-600 bg-green-50'
@@ -155,8 +201,8 @@ export default function BloodAllocation() {
       {showConfirmApprove && (
         <ConfirmModal
           icon="warning"
-          title={source === 'HSA' ? 'Dispatch HSA delivery?' : 'Confirm inter-hospital transfer?'}
-          message={source === 'HSA'
+          title={hsaAlloc > 0 && hospitalAllocTotal === 0 ? 'Dispatch HSA delivery?' : 'Confirm inter-hospital transfer?'}
+          message={hsaAlloc > 0 && hospitalAllocTotal === 0
             ? `HSA Blood Services will dispatch ${needed} units to ${selected?.requestingHospital?.name}.`
             : 'Donor hospitals will be notified to prepare and ship the allocated units.'}
           confirmLabel="Confirm"
@@ -276,31 +322,47 @@ export default function BloodAllocation() {
       )}
 
       <div className="flex gap-4 h-full">
-        {/* Left: Incoming Requests */}
+        {/* Left: Requests */}
         <div className="w-72 flex-shrink-0">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold text-sm text-gray-800">Incoming Requests</h3>
+            <h3 className="font-semibold text-sm text-gray-800">Requests</h3>
             <div className="flex gap-1">
               <button className="p-1 text-gray-400 hover:text-gray-600"><Filter className="w-4 h-4" /></button>
               <button className="p-1 text-gray-400 hover:text-gray-600"><List className="w-4 h-4" /></button>
             </div>
           </div>
 
-          <div className="flex gap-1 mb-3 flex-wrap">
-            {PRIORITY_TABS.map(t => (
+          {/* Status filter */}
+          <div className="flex gap-1 mb-2 flex-wrap">
+            {STATUS_FILTER_TABS.map(f => (
               <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                  tab === t
-                    ? t === 'All' ? 'bg-gray-800 text-white' : t === 'Critical' ? 'bg-red-600 text-white' : t === 'High' ? 'bg-orange-500 text-white' : 'bg-yellow-500 text-white'
-                    : 'bg-gray-100 text-gray-600'
-                }`}
+                key={f}
+                onClick={() => { setStatusFilter(f); setSelected(null); setAssessment(null) }}
+                className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusFilter === f ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
               >
-                {t} {t === 'All' ? filteredRequests.length : requests.filter(r => r.priority?.toLowerCase() === t.toLowerCase()).length}
+                {f} {statusFilterCount(f)}
               </button>
             ))}
           </div>
+
+          {/* Priority filter — only relevant for Pending/All */}
+          {(statusFilter === 'Pending' || statusFilter === 'All') && (
+            <div className="flex gap-1 mb-3 flex-wrap">
+              {PRIORITY_TABS.map(t => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                    tab === t
+                      ? t === 'All' ? 'bg-gray-600 text-white' : t === 'Critical' ? 'bg-red-600 text-white' : t === 'High' ? 'bg-orange-500 text-white' : 'bg-yellow-500 text-white'
+                      : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="space-y-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
             {loading ? (
@@ -309,9 +371,7 @@ export default function BloodAllocation() {
               <div className="flex flex-col items-center py-12 text-center">
                 <ClipboardList className="w-8 h-8 text-gray-300 mb-2" />
                 <p className="text-sm font-medium text-gray-500">No requests</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  {tab === 'All' ? 'No incoming blood requests at this time.' : `No ${tab.toLowerCase()} priority requests.`}
-                </p>
+                <p className="text-xs text-gray-400 mt-1">No {statusFilter.toLowerCase()} requests at this time.</p>
               </div>
             ) : (
               filteredRequests.map(req => (
@@ -322,7 +382,9 @@ export default function BloodAllocation() {
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-bold text-primary">{req.requestId}</span>
-                    <span className="text-xs text-gray-400">{timeAgo(req.requestedAt)}</span>
+                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${getStatusColor(req.status)}`}>
+                      {STATUS_LABELS[req.status] ?? req.status}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1.5 mb-1">
                     <Building2 className="w-3 h-3 text-gray-400" />
@@ -337,9 +399,8 @@ export default function BloodAllocation() {
                         <PriorityBadge priority={req.priority} />
                       </div>
                     </div>
-                    <div className="ml-auto text-xs">
-                      <div className="text-gray-500">Stock</div>
-                      <div className="font-semibold text-gray-700">{req.requestingHospital?.code}</div>
+                    <div className="ml-auto text-xs text-right">
+                      <div className="text-gray-400">{timeAgo(req.requestedAt)}</div>
                     </div>
                   </div>
                   {req.reason && <p className="text-xs text-gray-500 mt-1 leading-tight">{req.reason}</p>}
@@ -380,8 +441,44 @@ export default function BloodAllocation() {
           {!selected ? (
             <div className="card flex-1 flex flex-col items-center justify-center text-center p-8">
               <IonIcon icon={clipboardOutline} style={{ fontSize: '3.75rem', marginBottom: '1rem', opacity: 0.2 }} />
-              <h3 className="text-lg font-semibold text-gray-600">Select a request to start allocating</h3>
-              <p className="text-sm text-gray-400 mt-2">Blood will be sourced from HSA national inventory first</p>
+              <h3 className="text-lg font-semibold text-gray-600">Select a request to view details</h3>
+              <p className="text-sm text-gray-400 mt-2">{statusFilter === 'Pending' ? 'Blood will be sourced from HSA national inventory first' : 'Select any request from the list to see its details'}</p>
+            </div>
+          ) : selected.status !== 'PENDING' ? (
+            <div className="card p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <h3 className="font-semibold text-sm text-gray-800">Request Details</h3>
+                <span className="text-xs font-bold text-primary bg-primary-100 px-2 py-0.5 rounded">{selected.requestId}</span>
+                <PriorityBadge priority={selected.priority} />
+                <span className={`ml-auto text-xs font-semibold px-2 py-0.5 rounded ${getStatusColor(selected.status)}`}>
+                  {STATUS_LABELS[selected.status] ?? selected.status}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="card p-3 bg-gray-50">
+                  <div className="text-gray-500 mb-1">Blood Type</div>
+                  <div className="text-2xl font-black text-primary">{formatBloodType(selected.bloodType)}</div>
+                </div>
+                <div className="card p-3 bg-gray-50">
+                  <div className="text-gray-500 mb-1">Units Requested</div>
+                  <div className="text-2xl font-black text-gray-800">{selected.unitsRequested}</div>
+                </div>
+              </div>
+              <div className="mt-3 space-y-2 text-xs">
+                {[
+                  ['Hospital', selected.requestingHospital?.name],
+                  ['Requested By', selected.requestedByName],
+                  ['Designation', selected.requestedByDesignation],
+                  ['Requested On', selected.requestedAt ? `${formatDate(selected.requestedAt)}, ${formatTime(selected.requestedAt)}` : '—'],
+                  ['Needed By', selected.neededBy ? `${formatDate(selected.neededBy)}, ${formatTime(selected.neededBy)}` : '—'],
+                  ...(selected.remarks ? [['Remarks', selected.remarks]] : []),
+                ].map(([k, v]) => (
+                  <div key={k} className="flex justify-between gap-2">
+                    <span className="text-gray-500 flex-shrink-0">{k}</span>
+                    <span className="font-medium text-gray-800 text-right">{v ?? '—'}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="card p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 340px)' }}>

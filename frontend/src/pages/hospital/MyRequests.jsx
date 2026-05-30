@@ -7,22 +7,22 @@ import { IonIcon } from '@ionic/react'
 import { clipboardOutline, refreshOutline } from 'ionicons/icons'
 
 const STATUS_STEPS = ['Requested', 'Approved', 'Preparing', 'In Transit', 'Delivered']
-const TRANSFER_STEPS = ['Acknowledge', 'Preparing', 'Ready', 'In Transit', 'Delivered']
+const TRANSFER_STEPS = ['Pending', 'Acknowledged', 'Ready', 'In Transit', 'Delivered']
 
 const STATUS_INDEX = {
   PENDING: 0, APPROVED: 1, PREPARING: 2, IN_TRANSIT: 3, DELIVERED: 4, COMPLETED: 4, REJECTED: 0
 }
 
 const TRANSFER_STATUS_INDEX = {
-  PENDING: 0, ACKNOWLEDGED: 1, PREPARING: 2, READY: 3, IN_TRANSIT: 3, DELIVERED: 4
+  PENDING: 0, ACKNOWLEDGED: 1, PREPARING: 1, READY: 2, IN_TRANSIT: 3, DELIVERED: 4
 }
 
 const TRANSFER_TIMELINE_ACTIVE = {
-  PENDING: 1, ACKNOWLEDGED: 2, PREPARING: 3, READY: 4, IN_TRANSIT: 4, DELIVERED: 5
+  PENDING: 1, ACKNOWLEDGED: 2, PREPARING: 2, READY: 3, IN_TRANSIT: 4, DELIVERED: 5
 }
 
 const STATUS_LABELS = {
-  PENDING: 'Pending', APPROVED: 'Approved', PREPARING: 'Preparing',
+  PENDING: 'Pending', APPROVED: 'Approved', PREPARING: 'Acknowledged',
   IN_TRANSIT: 'In Transit', DELIVERED: 'Delivered', COMPLETED: 'Completed',
   REJECTED: 'Rejected', ACKNOWLEDGED: 'Acknowledged', READY: 'Ready'
 }
@@ -39,8 +39,8 @@ const REQUEST_STATUS_NOTES = {
 
 const TRANSFER_STATUS_NOTES = {
   PENDING: 'HSA has requested a blood transfer. Please acknowledge to proceed.',
-  ACKNOWLEDGED: 'Transfer acknowledged. Begin preparing the blood units.',
-  PREPARING: 'Blood is being prepared for pickup.',
+  ACKNOWLEDGED: 'Transfer acknowledged — preparing blood units for pickup.',
+  PREPARING: 'Transfer acknowledged — preparing blood units for pickup.',
   READY: 'Blood is ready and awaiting collection.',
   IN_TRANSIT: 'Blood is on its way to the receiving hospital.',
   DELIVERED: 'Transfer has been delivered successfully.'
@@ -77,7 +77,7 @@ function buildTransferTimeline(transfer) {
   return [
     { label: 'Requested by HSA', note: formatDateTime(transfer.createdAt) },
     { label: 'Pending Acknowledgment', note: 'Awaiting acknowledgement' },
-    { label: 'Preparing', note: 'Prepare blood for transfer' },
+    { label: 'Acknowledged', note: 'Preparing blood for transfer' },
     { label: 'Ready for Pickup', note: 'Blood is ready and awaiting collection' },
     { label: 'In Transit', note: 'Blood is on its way' },
     { label: 'Delivered', note: 'Transfer completed' },
@@ -93,11 +93,11 @@ function matchesFilter(row, filter, tab) {
     if (filter === 'Fulfilled') return ['DELIVERED', 'COMPLETED'].includes(s)
     if (filter === 'Rejected') return s === 'REJECTED'
   } else {
-    if (filter === 'In Transit') return s === 'IN_TRANSIT'
-    if (filter === 'Preparing') return s === 'PREPARING'
-    if (filter === 'Ready') return s === 'READY'
-    if (filter === 'Completed') return s === 'DELIVERED'
-    if (filter === 'Pending') return s === 'PENDING'
+    if (filter === 'Pending')      return s === 'PENDING'
+    if (filter === 'Acknowledged') return ['ACKNOWLEDGED', 'PREPARING'].includes(s)
+    if (filter === 'Ready')        return ['READY', 'READY_FOR_PICKUP'].includes(s)
+    if (filter === 'In Transit')   return s === 'IN_TRANSIT'
+    if (filter === 'Completed')    return ['DELIVERED', 'COMPLETED'].includes(s)
   }
   return false
 }
@@ -199,7 +199,7 @@ export default function MyRequests() {
   }
 
   const REQUEST_FILTERS = ['All', 'Active', 'Pending', 'Fulfilled', 'Rejected']
-  const TRANSFER_FILTERS = ['All', 'In Transit', 'Preparing', 'Ready', 'Completed', 'Pending']
+  const TRANSFER_FILTERS = ['All', 'Pending', 'Acknowledged', 'Ready', 'In Transit', 'Completed']
 
   const filters = tab === 'requests' ? REQUEST_FILTERS : TRANSFER_FILTERS
   const rows = tab === 'requests' ? requests : transfers
@@ -268,7 +268,6 @@ export default function MyRequests() {
                     <th className="text-left px-4 py-3 font-medium">Request ID</th>
                     <th className="text-left px-4 py-3 font-medium">Priority</th>
                     <th className="text-left px-4 py-3 font-medium">Status</th>
-                    <th className="text-left px-4 py-3 font-medium">Progress</th>
                     <th className="text-left px-4 py-3 font-medium">ETA</th>
                     <th className="text-left px-4 py-3 font-medium">Actions</th>
                   </tr>
@@ -277,9 +276,6 @@ export default function MyRequests() {
                   {displayedRows.map(row => {
                     const rowDate = tab === 'requests' ? row.requestedAt : row.createdAt
                     const rowEta  = tab === 'requests' ? row.neededBy : row.estimatedDelivery
-                    const stepIndex = tab === 'requests'
-                      ? (STATUS_INDEX[row.status] ?? 0)
-                      : (TRANSFER_STATUS_INDEX[row.status] ?? 0)
                     return (
                       <tr
                         key={row.id}
@@ -299,12 +295,6 @@ export default function MyRequests() {
                             <span className="w-2 h-2 rounded-full bg-current" />
                             {STATUS_LABELS[row.status] ?? row.status}
                           </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <StepProgress
-                            steps={tab === 'requests' ? STATUS_STEPS : TRANSFER_STEPS}
-                            currentIndex={stepIndex}
-                          />
                         </td>
                         <td className="px-4 py-3">
                           <div className="text-gray-700">{formatDate(rowEta)}</div>
