@@ -560,7 +560,14 @@ export default function BloodAllocation() {
                         <td className="text-center">
                           <div className="flex items-center justify-center gap-1">
                             <button onClick={() => setHsaAlloc(v => Math.max(0, v - 1))} className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100">−</button>
-                            <span className="w-8 text-center font-medium">{hsaAlloc}</span>
+                            <input
+                              type="number"
+                              min={0}
+                              max={assessment.hsaUnitsAvailable}
+                              value={hsaAlloc}
+                              onChange={e => setHsaAlloc(Math.min(assessment.hsaUnitsAvailable, Math.max(0, parseInt(e.target.value) || 0)))}
+                              className="w-12 text-center font-medium border border-gray-200 rounded px-1 py-0.5 text-xs focus:outline-none focus:border-primary"
+                            />
                             <button onClick={() => setHsaAlloc(v => Math.min(assessment.hsaUnitsAvailable, v + 1))} className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100">+</button>
                           </div>
                         </td>
@@ -590,7 +597,14 @@ export default function BloodAllocation() {
                           <td className="text-center">
                             <div className="flex items-center justify-center gap-1">
                               <button onClick={() => setUnits(h.hospitalId, (allocations[h.hospitalId] || 0) - 1)} className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100">−</button>
-                              <span className="w-8 text-center font-medium">{allocations[h.hospitalId] || 0}</span>
+                              <input
+                                type="number"
+                                min={0}
+                                max={h.maxSafeTransfer}
+                                value={allocations[h.hospitalId] || 0}
+                                onChange={e => setUnits(h.hospitalId, Math.min(h.maxSafeTransfer, Math.max(0, parseInt(e.target.value) || 0)))}
+                                className="w-12 text-center font-medium border border-gray-200 rounded px-1 py-0.5 text-xs focus:outline-none focus:border-primary"
+                              />
                               <button onClick={() => setUnits(h.hospitalId, (allocations[h.hospitalId] || 0) + 1)} className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100">+</button>
                             </div>
                           </td>
@@ -599,12 +613,18 @@ export default function BloodAllocation() {
                     </tbody>
                   </table>
 
-                  <div className={`flex items-center gap-2 text-sm font-semibold mb-4 ${totalAllocated >= needed ? 'text-green-600' : 'text-gray-600'}`}>
-                    {totalAllocated >= needed ? <Check className="w-4 h-4" /> : <span className="w-4 h-4 rounded-full border-2 border-gray-400 flex-shrink-0" />}
-                    Total Allocated {totalAllocated} / {needed} units
+                  <div className="flex items-center justify-end gap-2 text-sm font-semibold mb-4">
                     {hsaAlloc > 0 && hospitalAllocTotal > 0 && (
-                      <span className="text-xs font-normal text-gray-500 ml-1">({hsaAlloc} HSA + {hospitalAllocTotal} hospitals)</span>
+                      <span className="text-xs font-normal text-gray-500">({hsaAlloc} HSA + {hospitalAllocTotal} hospitals)</span>
                     )}
+                    <span className={totalAllocated > needed ? 'text-red-600' : totalAllocated === needed ? 'text-green-600' : 'text-gray-600'}>
+                      Total Allocated {totalAllocated} / {needed} units
+                    </span>
+                    {totalAllocated > needed
+                      ? <X className="w-4 h-4 text-red-600" />
+                      : totalAllocated === needed
+                        ? <Check className="w-4 h-4 text-green-600" />
+                        : <span className="w-4 h-4 rounded-full border-2 border-gray-400 flex-shrink-0" />}
                   </div>
 
                   {/* Actions */}
