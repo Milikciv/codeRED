@@ -24,7 +24,8 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (hospitalRepository.count() > 0) return;
+        ensureHsaExists();
+        if (hospitalRepository.count() > 1) return;  // already fully seeded
         seedHospitals();
         seedUsers();
         seedBloodStock();
@@ -33,14 +34,39 @@ public class DataSeeder implements CommandLineRunner {
         seedTransfers();
     }
 
+    /** Adds HSA hospital + stock if missing, without touching any existing data. */
+    private void ensureHsaExists() {
+        if (hospitalRepository.findByCode("HSA").isPresent()) return;
+
+        Hospital hsa = new Hospital();
+        hsa.setCode("HSA");
+        hsa.setName("HSA Blood Services");
+        hsa.setAddress("11 Outram Road, Singapore 169078");
+        hospitalRepository.save(hsa);
+
+        int[] hsaStock = {1200, 600, 1500, 400, 700, 500, 900, 250};
+        int[] hsaIdeal = {3000, 1500, 4000, 1000, 2000, 1200, 2000, 600};
+        BloodType[] types = BloodType.values();
+        for (int j = 0; j < types.length; j++) {
+            BloodStock stock = new BloodStock();
+            stock.setHospital(hsa);
+            stock.setBloodType(types[j]);
+            stock.setCurrentUnits(hsaStock[j]);
+            stock.setIdealUnits(hsaIdeal[j]);
+            stock.setUpdatedAt(LocalDateTime.now());
+            bloodStockRepository.save(stock);
+        }
+    }
+
     private void seedHospitals() {
         String[][] hospitals = {
-            {"SGH", "Singapore General Hospital", "Outram Rd, Singapore 169608"},
-            {"NUH", "National University Hospital", "5 Lower Kent Ridge Rd, Singapore 119074"},
-            {"KKH", "KK Women's and Children's Hospital", "100 Bukit Timah Rd, Singapore 229899"},
-            {"CGH", "Changi General Hospital", "2 Simei Street 3, Singapore 529889"},
-            {"NGH", "Ng Teng Fong General Hospital", "1 Jurong East St 21, Singapore 609606"},
-            {"TTSH", "Tan Tock Seng Hospital", "11 Jln Tan Tock Seng, Singapore 308433"}
+            {"HSA",  "HSA Blood Services",                  "11 Outram Road, Singapore 169078"},
+            {"SGH",  "Singapore General Hospital",          "Outram Rd, Singapore 169608"},
+            {"NUH",  "National University Hospital",        "5 Lower Kent Ridge Rd, Singapore 119074"},
+            {"KKH",  "KK Women's and Children's Hospital",  "100 Bukit Timah Rd, Singapore 229899"},
+            {"CGH",  "Changi General Hospital",             "2 Simei Street 3, Singapore 529889"},
+            {"NGH",  "Ng Teng Fong General Hospital",       "1 Jurong East St 21, Singapore 609606"},
+            {"TTSH", "Tan Tock Seng Hospital",              "11 Jln Tan Tock Seng, Singapore 308433"}
         };
         for (String[] h : hospitals) {
             Hospital hospital = new Hospital();
@@ -86,24 +112,26 @@ public class DataSeeder implements CommandLineRunner {
 
     private void seedBloodStock() {
         int[][] stockData = {
-            // O+, O-, A+, A-, B+, B-, AB+, AB-  (current units)
-            {320, 220, 420, 80,  135, 180, 300, 80},   // SGH
-            {280, 150, 380, 90,  120, 160, 260, 70},   // NUH
-            {200, 100, 300, 60,  90,  120, 200, 50},   // KKH
-            {250, 130, 350, 70,  100, 140, 230, 60},   // CGH
-            {180, 90,  270, 55,  80,  100, 180, 45},   // NGH
-            {210, 110, 310, 65,  95,  130, 210, 55}    // TTSH
+            // O+,   O-,   A+,   A-,  B+,  B-,  AB+, AB-  (current units)
+            {1200,  600, 1500, 400,  700, 500, 900, 250},  // HSA national inventory
+            { 320,  220,  420,  80,  135, 180, 300,  80},  // SGH
+            { 280,  150,  380,  90,  120, 160, 260,  70},  // NUH
+            { 200,  100,  300,  60,   90, 120, 200,  50},  // KKH
+            { 250,  130,  350,  70,  100, 140, 230,  60},  // CGH
+            { 180,   90,  270,  55,   80, 100, 180,  45},  // NGH
+            { 210,  110,  310,  65,   95, 130, 210,  55},  // TTSH
         };
         int[][] idealData = {
-            {400, 300, 500, 200, 300, 350, 400, 200},  // SGH
-            {380, 280, 470, 190, 280, 330, 370, 190},  // NUH
-            {300, 220, 380, 150, 220, 260, 290, 150},  // KKH
-            {340, 250, 430, 170, 250, 300, 330, 170},  // CGH
-            {280, 200, 360, 140, 200, 240, 270, 140},  // NGH
-            {310, 230, 400, 160, 230, 280, 310, 160}   // TTSH
+            {3000, 1500, 4000, 1000, 2000, 1200, 2000, 600},  // HSA
+            { 400,  300,  500,  200,  300,  350,  400, 200},  // SGH
+            { 380,  280,  470,  190,  280,  330,  370, 190},  // NUH
+            { 300,  220,  380,  150,  220,  260,  290, 150},  // KKH
+            { 340,  250,  430,  170,  250,  300,  330, 170},  // CGH
+            { 280,  200,  360,  140,  200,  240,  270, 140},  // NGH
+            { 310,  230,  400,  160,  230,  280,  310, 160},  // TTSH
         };
 
-        String[] hospitalCodes = {"SGH", "NUH", "KKH", "CGH", "NGH", "TTSH"};
+        String[] hospitalCodes = {"HSA", "SGH", "NUH", "KKH", "CGH", "NGH", "TTSH"};
         BloodType[] types = BloodType.values();
 
         for (int i = 0; i < hospitalCodes.length; i++) {
