@@ -23,6 +23,9 @@ export default {
       },
       fontFamily: {
         sans: ['Funnel Sans', 'Inter', 'system-ui', 'sans-serif'],
+      },
+      zIndex: {
+        60: '60',
       }
     }
   },
