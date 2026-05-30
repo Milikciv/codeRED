@@ -24,6 +24,7 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        if (hospitalRepository.count() > 0) return;
         seedHospitals();
         seedUsers();
         seedBloodStock();
