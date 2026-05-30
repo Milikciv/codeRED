@@ -10,6 +10,8 @@ import {
   PieChart, Pie, Cell
 } from 'recharts'
 import { Droplets, Clock, Users, AlertTriangle } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { waterOutline, checkmarkCircleOutline, warningOutline } from 'ionicons/icons'
 import LoadingScreen from '../../components/common/LoadingScreen'
 
 const BLOOD_TYPES = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']
@@ -149,7 +151,7 @@ export default function HospitalDashboard() {
           highlight
         />
         <StatCard
-          icon={<span className="text-2xl">🩸</span>}
+          icon={<IonIcon icon={waterOutline} style={{ fontSize: '1.5rem', color: '#C41230' }} />}
           label="Critical Blood Types"
           value={summary.criticalTypeCount}
           sub={criticalTypes}
@@ -212,7 +214,7 @@ export default function HospitalDashboard() {
               <p className="text-xs text-gray-400 text-center py-3">No stock data available</p>
             )}
             <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 mt-2 text-xs text-yellow-700">
-              ⚠️ 2 Blood types are currently below the safety threshold! Total Deficit: 46 Units
+              <IonIcon icon={warningOutline} style={{ fontSize: '1rem', flexShrink: 0 }} /> 2 Blood types are currently below the safety threshold! Total Deficit: 46 Units
             </div>
             <button className="mt-2 w-full btn-primary text-xs py-2">Request for stock</button>
           </div>
@@ -247,7 +249,7 @@ export default function HospitalDashboard() {
               ))}
               {alerts.length === 0 && (
                 <div className="flex flex-col items-center py-6 text-center">
-                  <span className="text-2xl mb-1">✅</span>
+                  <IonIcon icon={checkmarkCircleOutline} style={{ fontSize: '1.5rem', color: '#22c55e', marginBottom: '0.25rem' }} />
                   <p className="text-xs text-gray-500">No active alerts</p>
                 </div>
               )}

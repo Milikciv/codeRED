@@ -5,6 +5,8 @@ import Toast from '../../components/common/Toast'
 import ConfirmModal from '../../components/common/ConfirmModal'
 import api from '../../api/axios'
 import { Filter, List, Building2, Check, X, Star, ClipboardList } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { informationCircleOutline, airplaneOutline, rocketOutline, starOutline, clipboardOutline } from 'ionicons/icons'
 import LoadingScreen from '../../components/common/LoadingScreen'
 
 const PRIORITY_TABS = ['All', 'Critical', 'High', 'Medium']
@@ -156,7 +158,7 @@ export default function BloodAllocation() {
 
             <div className="flex-1 overflow-y-auto p-5">
               <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mb-4 text-xs text-blue-700">
-                ⓘ <span className="font-semibold">AI Recommended Allocation</span>
+                <IonIcon icon={informationCircleOutline} style={{ fontSize: '1rem', flexShrink: 0 }} /> <span className="font-semibold">AI Recommended Allocation</span>
                 <span className="text-gray-500">— The allocation helps maintain safe stock levels at hospitals and ensures timely availability of blood units</span>
               </div>
 
@@ -213,7 +215,7 @@ export default function BloodAllocation() {
                             <td className="py-2 text-center font-bold text-gray-800">{units} units</td>
                             <td className="py-2 text-center text-gray-600">20 Minutes</td>
                             <td className="py-2 text-center">
-                              <span className="text-primary text-xs font-semibold">🚁 Priority Transport</span>
+                              <span className="text-primary text-xs font-semibold flex items-center gap-1"><IonIcon icon={airplaneOutline} style={{ fontSize: '0.875rem' }} /> Priority Transport</span>
                             </td>
                           </tr>
                         )
@@ -236,7 +238,7 @@ export default function BloodAllocation() {
               <button onClick={applyAiAndClose} className="flex-1 btn-outline text-sm">Review and Edit</button>
               <button onClick={() => { applyAiAndClose(); setShowConfirmApprove(true) }}
                 className="flex-1 btn-primary text-sm flex items-center justify-center gap-2">
-                🚀 Approve &amp; Allocate
+                <IonIcon icon={rocketOutline} style={{ fontSize: '1rem' }} /> Approve &amp; Allocate
               </button>
             </div>
           </div>
@@ -353,7 +355,7 @@ export default function BloodAllocation() {
 
           {!selected ? (
             <div className="card flex-1 flex flex-col items-center justify-center text-center p-8">
-              <div className="text-6xl mb-4 opacity-20">📋</div>
+              <IonIcon icon={clipboardOutline} style={{ fontSize: '3.75rem', marginBottom: '1rem', opacity: 0.2 }} />
               <h3 className="text-lg font-semibold text-gray-600">Please select one request to start allocating!</h3>
               <p className="text-sm text-gray-400 mt-2">Choose a request from the left to view details and allocate blood units</p>
             </div>
@@ -375,7 +377,7 @@ export default function BloodAllocation() {
 
               {/* Goal */}
               <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mb-3 text-xs text-blue-700">
-                ⓘ Goal: Meet the requested units while keeping donor hospitals above safe stock threshold.
+                <IonIcon icon={informationCircleOutline} style={{ fontSize: '1rem', flexShrink: 0 }} /> Goal: Meet the requested units while keeping donor hospitals above safe stock threshold.
                 <span className="flex items-center gap-1 ml-2">
                   <span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> Yes (Safe)
                   <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block ml-1" /> Caution (Low)
@@ -465,7 +467,7 @@ export default function BloodAllocation() {
                       <div className="text-center">
                         <div className="text-xs text-gray-500 mb-1">Estimated Delivery</div>
                         <div className="text-sm font-bold text-gray-800">18 - 22 mins</div>
-                        <div className="text-xs text-primary font-medium mt-1">🚁 Priority Transport</div>
+                        <div className="text-xs text-primary font-medium mt-1 flex items-center gap-1"><IonIcon icon={airplaneOutline} style={{ fontSize: '0.875rem' }} /> Priority Transport</div>
                       </div>
                       <div className="text-right">
                         <div className="text-xs text-gray-500 mb-1">Receiving Hospital</div>
@@ -482,14 +484,14 @@ export default function BloodAllocation() {
               <div className="flex gap-2 pt-2 border-t border-gray-100">
                 <button className="btn-outline flex-1 text-sm">Save as Draft</button>
                 <button onClick={handleRecommend} className="flex-1 flex items-center justify-center gap-2 border border-primary text-primary px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-50 transition-colors">
-                  ⭐ Recommend Allocation
+                  <IonIcon icon={starOutline} style={{ fontSize: '1rem' }} /> Recommend Allocation
                 </button>
                 <button
                   onClick={handleApprove}
                   disabled={totalAllocated === 0}
                   className="flex-1 btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  🚀 Approve &amp; Allocate
+                  <IonIcon icon={rocketOutline} style={{ fontSize: '1rem' }} /> Approve &amp; Allocate
                 </button>
               </div>
             </div>

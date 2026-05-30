@@ -3,6 +3,8 @@ import PageLayout from '../../../components/layout/PageLayout'
 import ConfirmModal from '../../../components/common/ConfirmModal'
 import Toast from '../../../components/common/Toast'
 import { X, MapPin, Calendar } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { mapOutline } from 'ionicons/icons'
 
 const INITIAL_INSIGHTS = [
   {
@@ -110,7 +112,7 @@ export default function HotspotInsights() {
                 <div className="absolute inset-0 opacity-60">
                   <div className="absolute top-1/2 left-1/2 w-12 h-12 rounded-full blur-lg -translate-x-1/2 -translate-y-1/2" style={{ background: ins.heatColor }} />
                 </div>
-                <span className="text-xs text-gray-400 relative z-10">🗺️</span>
+                <IonIcon icon={mapOutline} style={{ fontSize: '0.75rem', color: '#9ca3af', position: 'relative', zIndex: 10 }} />
               </div>
 
               {/* Content */}

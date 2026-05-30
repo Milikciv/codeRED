@@ -4,6 +4,8 @@ import PageLayout from '../../components/layout/PageLayout'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../api/axios'
 import { Send, Droplets, AlertTriangle } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { checkmarkCircleOutline, mailOutline, notificationsOutline } from 'ionicons/icons'
 
 const BLOOD_TYPES = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']
 const PRIORITIES = ['Critical', 'High', 'Medium', 'Low']
@@ -56,7 +58,7 @@ export default function RequestBlood() {
     return (
       <PageLayout title="Request Blood" subtitle="Submit a blood request during crisis.">
         <div className="flex flex-col items-center justify-center h-64 gap-4">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-3xl">✅</div>
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center"><IonIcon icon={checkmarkCircleOutline} style={{ fontSize: '2rem', color: '#22c55e' }} /></div>
           <h2 className="text-xl font-bold text-gray-800">Request Submitted!</h2>
           <p className="text-sm text-gray-500">Redirecting to your requests…</p>
         </div>
@@ -239,12 +241,12 @@ export default function RequestBlood() {
             <h4 className="font-semibold text-sm text-gray-800 mb-3">How It Works</h4>
             <div className="space-y-3">
               {[
-                { icon: '📧', label: '1. Submit Request' },
-                { icon: '🔔', label: '2. System Alerts' },
-                { icon: '✅', label: '3. System Alerts' },
+                { icon: mailOutline, label: '1. Submit Request' },
+                { icon: notificationsOutline, label: '2. System Alerts' },
+                { icon: checkmarkCircleOutline, label: '3. System Alerts' },
               ].map(s => (
                 <div key={s.label} className="flex items-center gap-2 text-sm text-gray-600">
-                  <span className="text-lg">{s.icon}</span>
+                  <IonIcon icon={s.icon} style={{ fontSize: '1.25rem' }} />
                   <span>{s.label}</span>
                 </div>
               ))}

@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { ChevronDown, Eye, EyeOff } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { businessOutline, medkitOutline } from 'ionicons/icons'
 
 const ROLES = [
-  { value: 'HSA', label: 'Health Sciences Authority', icon: '🏛️' },
-  { value: 'HOSPITAL_STAFF', label: 'Hospital Staff', icon: '🏥' },
+  { value: 'HSA', label: 'Health Sciences Authority', icon: businessOutline },
+  { value: 'HOSPITAL_STAFF', label: 'Hospital Staff', icon: medkitOutline },
 ]
 
 const CREDENTIALS = {
@@ -72,7 +74,7 @@ export default function Login() {
                 onClick={() => setShowRoles(!showRoles)}
                 className="w-full flex items-center gap-2 px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-800 hover:border-gray-400 transition-colors"
               >
-                <span className="text-base">{role.icon}</span>
+                <IonIcon icon={role.icon} style={{ fontSize: '1rem' }} />
                 <span className="flex-1 text-left">{role.label}</span>
                 <ChevronDown className="w-4 h-4 text-gray-400" />
               </button>
@@ -85,7 +87,7 @@ export default function Login() {
                       onClick={() => handleRoleSelect(r)}
                       className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg"
                     >
-                      <span>{r.icon}</span>
+                      <IonIcon icon={r.icon} style={{ fontSize: '1rem' }} />
                       <span>{r.label}</span>
                     </button>
                   ))}

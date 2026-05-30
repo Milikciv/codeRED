@@ -6,6 +6,8 @@ import {
   ReferenceLine, Area, AreaChart,
 } from 'recharts'
 import { ChevronDown, Calendar } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { waterOutline } from 'ionicons/icons'
 import DateRangePicker, { formatDateRange } from '../../../components/common/DateRangePicker'
 
 const BLOOD_TYPES = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']
@@ -81,7 +83,7 @@ export default function BloodTypeAnalytics() {
             onClick={() => setOpenDropdown(openDropdown === 'bloodType' ? null : 'bloodType')}
             className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:bg-gray-50 min-w-32"
           >
-            <span className="text-primary">🩸</span>
+            <IonIcon icon={waterOutline} style={{ fontSize: '1rem', color: '#C41230' }} />
             <span className="font-medium">{selectedType}</span>
             <ChevronDown className="w-4 h-4 text-gray-400 ml-auto" />
           </button>
@@ -216,7 +218,7 @@ export default function BloodTypeAnalytics() {
             {CRITICAL_TYPES.map((ct, i) => (
               <div key={i}>
                 <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-xl">🩸</span>
+                  <IonIcon icon={waterOutline} style={{ fontSize: '1.25rem', color: '#C41230' }} />
                   <div>
                     <div className="text-base font-bold text-gray-900">{ct.type}</div>
                     <div className="text-xs font-semibold" style={{ color: ct.color }}>{ct.label}</div>

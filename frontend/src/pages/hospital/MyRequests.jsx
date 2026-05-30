@@ -3,6 +3,8 @@ import PageLayout from '../../components/layout/PageLayout'
 import PriorityBadge from '../../components/common/PriorityBadge'
 import api from '../../api/axios'
 import { Check, ChevronRight, X, ClipboardList } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { clipboardOutline, refreshOutline } from 'ionicons/icons'
 
 const STATUS_STEPS = ['Requested', 'Approved', 'Preparing', 'In Transit', 'Delivered']
 const TRANSFER_STEPS = ['Acknowledge', 'Preparing', 'Ready', 'In Transit', 'Delivered']
@@ -215,13 +217,13 @@ export default function MyRequests() {
               onClick={() => { setTab('requests'); setFilter('All'); setSelected(null) }}
               className={`pb-2 text-sm font-medium border-b-2 transition-colors ${tab === 'requests' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
             >
-              📋 My Requests
+              <IonIcon icon={clipboardOutline} style={{ fontSize: '1rem' }} /> My Requests
             </button>
             <button
               onClick={() => { setTab('transfers'); setFilter('All'); setSelected(null) }}
               className={`pb-2 text-sm font-medium border-b-2 transition-colors ${tab === 'transfers' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
             >
-              🔄 Transfers Out
+              <IonIcon icon={refreshOutline} style={{ fontSize: '1rem' }} /> Transfers Out
             </button>
           </div>
 

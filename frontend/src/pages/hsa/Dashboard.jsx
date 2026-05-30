@@ -10,6 +10,8 @@ import {
   PieChart, Pie, Cell
 } from 'recharts'
 import { Droplets, Clock, AlertTriangle, Users } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { waterOutline, medkitOutline, checkmarkCircleOutline, mapOutline } from 'ionicons/icons'
 import LoadingScreen from '../../components/common/LoadingScreen'
 
 const BLOOD_TYPES = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']
@@ -153,14 +155,14 @@ export default function HsaDashboard() {
           highlight
         />
         <StatCard
-          icon={<span className="text-2xl">🩸</span>}
+          icon={<IonIcon icon={waterOutline} style={{ fontSize: '1.5rem', color: '#C41230' }} />}
           label="Critical Blood Types"
           value={summary.criticalTypeCount}
           sub={criticalTypes.join(', ')}
           highlight
         />
         <StatCard
-          icon={<span className="text-2xl">🏥</span>}
+          icon={<IonIcon icon={medkitOutline} style={{ fontSize: '1.5rem', color: '#6366f1' }} />}
           label="Hospitals in Critical State"
           value="2"
           linkText="View Hospitals"
@@ -233,7 +235,7 @@ export default function HsaDashboard() {
           <div className="card p-4">
             <h3 className="font-semibold text-sm text-gray-800 mb-2">Donor Hotspots</h3>
             <div className="bg-gray-100 rounded-lg h-36 flex items-center justify-center text-gray-400 text-xs">
-              🗺️ Singapore Map — Hotspot Heatmap
+              <IonIcon icon={mapOutline} style={{ fontSize: '1.25rem', marginRight: '0.25rem' }} /> Singapore Map — Hotspot Heatmap
             </div>
             <div className="flex gap-3 mt-2 text-xs text-gray-500">
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 inline-block" />Low</span>
@@ -275,7 +277,7 @@ export default function HsaDashboard() {
               ))}
               {alerts.length === 0 && (
                 <div className="flex flex-col items-center py-5 text-center">
-                  <span className="text-2xl mb-1">✅</span>
+                  <IonIcon icon={checkmarkCircleOutline} style={{ fontSize: '1.5rem', color: '#22c55e', marginBottom: '0.25rem' }} />
                   <p className="text-xs text-gray-500">No active alerts</p>
                 </div>
               )}

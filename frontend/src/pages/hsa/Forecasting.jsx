@@ -8,6 +8,8 @@ import {
   Area, AreaChart,
 } from 'recharts'
 import { TrendingUp, AlertTriangle, Calendar, Shield } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { sunnyOutline, bandageOutline, calendarOutline, giftOutline, statsChartOutline, waterOutline, trendingDownOutline, informationCircleOutline } from 'ionicons/icons'
 import LoadingScreen from '../../components/common/LoadingScreen'
 import DateRangePicker, { formatDateRange } from '../../components/common/DateRangePicker'
 
@@ -17,7 +19,7 @@ const STATUS_COLOR = {
 }
 
 const DRIVER_ICONS = {
-  Seasonality: '☀️', 'Illness Trend': '🤧', 'Public Holidays': '📅', Events: '🎉',
+  Seasonality: sunnyOutline, 'Illness Trend': bandageOutline, 'Public Holidays': calendarOutline, Events: giftOutline,
 }
 
 function ForecastingSkeleton() {
@@ -107,7 +109,7 @@ export default function Forecasting() {
             onClick={() => setOpenDropdown(openDropdown === 'bloodType' ? null : 'bloodType')}
             className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white hover:bg-gray-50"
           >
-            <span>🩸</span> {bloodType} <span className="text-gray-400">▾</span>
+            <IonIcon icon={waterOutline} style={{ fontSize: '1rem', color: '#C41230' }} /> {bloodType} <span className="text-gray-400">▾</span>
           </button>
           {openDropdown === 'bloodType' && (
             <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-36">
@@ -165,7 +167,7 @@ export default function Forecasting() {
         </div>
         <div className="card p-4">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-base">📉</span>
+            <IonIcon icon={trendingDownOutline} style={{ fontSize: '1rem' }} />
             <span className="text-xs text-gray-500">Expected Shortfall</span>
           </div>
           <div className="text-2xl font-bold text-gray-900">{data.expectedShortfall} <span className="text-sm font-normal text-gray-500">units</span></div>
@@ -186,7 +188,7 @@ export default function Forecasting() {
         <div className="card p-4 col-span-2">
           <div className="flex items-center gap-2 mb-3">
             <h3 className="font-semibold text-sm text-gray-800">Overall Blood Demand Forecast</h3>
-            <span className="text-gray-400 text-xs">ⓘ</span>
+            <IonIcon icon={informationCircleOutline} style={{ fontSize: '0.875rem', color: '#9ca3af' }} />
           </div>
           <div className="flex items-center gap-4 mb-3 text-xs text-gray-500">
             <span className="flex items-center gap-1"><span className="w-4 border-t-2 border-primary inline-block" />Actual</span>
@@ -267,7 +269,7 @@ export default function Forecasting() {
             <div className="grid grid-cols-4 gap-3">
               {data.demandDrivers.map(d => (
                 <div key={d.name} className="bg-gray-50 rounded-xl p-3 text-center">
-                  <div className="text-2xl mb-1">{DRIVER_ICONS[d.name] ?? '📊'}</div>
+                  <IonIcon icon={DRIVER_ICONS[d.name] ?? statsChartOutline} style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }} />
                   <div className="text-xs font-semibold text-gray-800">{d.name}</div>
                   <div className="text-xs text-gray-500 mt-0.5">{d.description}</div>
                   <div className="text-sm font-bold text-primary mt-1">↑ {d.change}%</div>

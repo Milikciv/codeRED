@@ -7,6 +7,8 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 import { Calendar } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { peopleOutline, locationOutline, statsChartOutline, mapOutline, pinOutline } from 'ionicons/icons'
 import DateRangePicker, { formatDateRange } from '../../components/common/DateRangePicker'
 
 function HotspotsSkeleton() {
@@ -118,7 +120,7 @@ export default function Hotspots() {
       {/* KPI cards */}
       <div className="grid grid-cols-3 gap-3 mb-4">
         <div className="card p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center text-2xl">👥</div>
+          <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center"><IonIcon icon={peopleOutline} style={{ fontSize: '1.5rem', color: '#f97316' }} /></div>
           <div>
             <div className="text-xs text-gray-500">Most Active Age Group</div>
             <div className="text-2xl font-bold text-primary">{data.mostActiveAgeGroup}</div>
@@ -126,14 +128,14 @@ export default function Hotspots() {
           </div>
         </div>
         <div className="card p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center text-2xl">📍</div>
+          <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center"><IonIcon icon={locationOutline} style={{ fontSize: '1.5rem', color: '#a855f7' }} /></div>
           <div>
             <div className="text-xs text-gray-500">Active Hotspots</div>
             <div className="text-2xl font-bold text-primary">{data.activeHotspots} areas</div>
           </div>
         </div>
         <div className="card p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center text-2xl">📊</div>
+          <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center"><IonIcon icon={statsChartOutline} style={{ fontSize: '1.5rem', color: '#ef4444' }} /></div>
           <div>
             <div className="text-xs text-gray-500">Highest Donor Zone</div>
             <div className="text-2xl font-bold text-primary">{data.highestDonorZone}</div>
@@ -162,7 +164,7 @@ export default function Hotspots() {
                      style={{ top: b.top, left: b.left, width: b.size, height: b.size, background: b.color, transform: 'translate(-50%,-50%)' }} />
               ))}
             </div>
-            <span>🗺️ Singapore Donor Heatmap</span>
+            <IonIcon icon={mapOutline} style={{ fontSize: '1rem', marginRight: '0.25rem' }} /> Singapore Donor Heatmap
           </div>
           <div className="flex gap-4 mt-2 text-xs text-gray-500">
             <div>
@@ -173,8 +175,8 @@ export default function Hotspots() {
             </div>
             <div>
               <div className="font-semibold text-gray-700 mb-1">Legend</div>
-              <div className="flex items-center gap-1">📍 Bloodbank (Collection Centre)</div>
-              <div className="flex items-center gap-1">📌 Community Blood Drives</div>
+              <div className="flex items-center gap-1"><IonIcon icon={locationOutline} style={{ fontSize: '1rem' }} /> Bloodbank (Collection Centre)</div>
+              <div className="flex items-center gap-1"><IonIcon icon={pinOutline} style={{ fontSize: '1rem' }} /> Community Blood Drives</div>
             </div>
           </div>
         </div>
@@ -190,7 +192,7 @@ export default function Hotspots() {
               {data.insights.map((ins, i) => (
                 <div key={i} className={`rounded-xl p-3 border ${i === 0 ? 'bg-red-50 border-red-100' : 'bg-orange-50 border-orange-100'}`}>
                   <div className={`font-semibold text-sm mb-1 ${i === 0 ? 'text-primary' : 'text-orange-600'}`}>
-                    📍 {ins.name}
+                    <IonIcon icon={locationOutline} style={{ fontSize: '1rem', marginRight: '0.25rem' }} /> {ins.name}
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-2">
                     <div><div className="text-gray-400">Potential Donors</div><div className="font-semibold">{ins.potentialDonors}</div></div>
@@ -205,7 +207,7 @@ export default function Hotspots() {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-48 text-center">
-              <span className="text-3xl mb-2">📍</span>
+              <IonIcon icon={locationOutline} style={{ fontSize: '1.75rem', marginBottom: '0.5rem', color: '#9ca3af' }} />
               <p className="text-sm text-gray-500">No hotspot insights available</p>
             </div>
           )}
