@@ -13,6 +13,7 @@ import { Droplets, Clock, AlertTriangle, Users } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { waterOutline, medkitOutline, checkmarkCircleOutline, mapOutline } from 'ionicons/icons'
 import LoadingScreen from '../../components/common/LoadingScreen'
+import ConfirmModal from '../../components/common/ConfirmModal'
 
 const BLOOD_TYPES = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']
 const HOSPITALS = ['SGH', 'NUH', 'KKH', 'CGH', 'NGH', 'TTSH']
@@ -80,6 +81,7 @@ export default function HsaDashboard() {
   const [summary, setSummary]   = useState({ percentage: 85, criticalTypeCount: 3, totalUnits: 0 })
   const [showAlerts, setShowAlerts] = useState(false)
   const [loading, setLoading]   = useState(true)
+  const [dismissTarget, setDismissTarget] = useState(null)
 
   useEffect(() => {
     Promise.allSettled([
@@ -90,9 +92,10 @@ export default function HsaDashboard() {
     ]).finally(() => setLoading(false))
   }, [])
 
-  const dismissAlert = async (id) => {
-    await api.patch(`/alerts/${id}/dismiss`)
-    setAlerts(alerts.filter(a => a.id !== id))
+  const confirmDismiss = async () => {
+    await api.patch(`/alerts/${dismissTarget}/dismiss`)
+    setAlerts(alerts.filter(a => a.id !== dismissTarget))
+    setDismissTarget(null)
   }
 
   const getPct = (hospitalCode, bloodTypeLabel) => {
@@ -121,6 +124,16 @@ export default function HsaDashboard() {
       subtitle="Real time insights and alerts to help manage blood demand and supply"
       isHome
     >
+      {dismissTarget && (
+        <ConfirmModal
+          icon="warning"
+          title="Dismiss this alert?"
+          onCancel={() => setDismissTarget(null)}
+          onConfirm={confirmDismiss}
+          confirmLabel="Dismiss"
+          confirmClass="bg-amber-500 hover:bg-amber-600 text-white"
+        />
+      )}
       {/* Alert modal */}
       {showAlerts && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -136,7 +149,7 @@ export default function HsaDashboard() {
               <button onClick={() => setShowAlerts(false)} className="ml-auto text-gray-400 hover:text-gray-600 text-xl">✕</button>
             </div>
             <div className="p-4 space-y-3 overflow-y-auto">
-              {alerts.map(a => <AlertCard key={a.id} alert={a} onDismiss={dismissAlert} />)}
+              {alerts.map(a => <AlertCard key={a.id} alert={a} onDismiss={setDismissTarget} />)}
               {alerts.length === 0 && <p className="text-sm text-gray-500 text-center py-8">No active alerts</p>}
             </div>
           </div>
@@ -273,7 +286,7 @@ export default function HsaDashboard() {
             </div>
             <div className="space-y-2">
               {alerts.slice(0, 3).map(a => (
-                <AlertCard key={a.id} alert={a} onDismiss={dismissAlert} />
+                <AlertCard key={a.id} alert={a} onDismiss={setDismissTarget} />
               ))}
               {alerts.length === 0 && (
                 <div className="flex flex-col items-center py-5 text-center">

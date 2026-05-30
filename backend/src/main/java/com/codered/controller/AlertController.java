@@ -1,10 +1,7 @@
 package com.codered.controller;
 
 import com.codered.model.Alert;
-import com.codered.model.User;
-import com.codered.model.enums.UserRole;
-import com.codered.repository.AlertRepository;
-import com.codered.repository.UserRepository;
+import com.codered.service.AlertService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,25 +15,16 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AlertController {
 
-    private final AlertRepository alertRepository;
-    private final UserRepository userRepository;
+    private final AlertService alertService;
 
     @GetMapping
     public ResponseEntity<List<Alert>> getAlerts(@AuthenticationPrincipal UserDetails userDetails) {
-        User user = userRepository.findByEmail(userDetails.getUsername()).orElseThrow();
-
-        if (user.getRole() == UserRole.HSA) {
-            return ResponseEntity.ok(alertRepository.findByDismissedFalseOrderByCreatedAtDesc());
-        } else {
-            return ResponseEntity.ok(alertRepository.findByHospitalAndDismissedFalseOrderByCreatedAtDesc(user.getHospital()));
-        }
+        return ResponseEntity.ok(alertService.getAlerts(userDetails.getUsername()));
     }
 
     @PatchMapping("/{id}/dismiss")
     public ResponseEntity<Void> dismissAlert(@PathVariable Long id) {
-        Alert alert = alertRepository.findById(id).orElseThrow();
-        alert.setDismissed(true);
-        alertRepository.save(alert);
+        alertService.dismissAlert(id);
         return ResponseEntity.ok().build();
     }
 }
