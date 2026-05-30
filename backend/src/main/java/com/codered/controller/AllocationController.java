@@ -104,6 +104,20 @@ public class AllocationController {
         ));
     }
 
+    @GetMapping("/donor-hospitals/{requestId}")
+    public ResponseEntity<List<Map<String, Object>>> getDonorHospitals(@PathVariable Long requestId) {
+        BloodRequest request = bloodRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found"));
+
+        List<Map<String, Object>> result = hospitalRepository.findAll().stream()
+                .filter(h -> !h.getCode().equals(HSA_CODE)
+                        && !h.getId().equals(request.getRequestingHospital().getId()))
+                .map(h -> buildHospitalOption(h, request))
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(result);
+    }
+
     /**
      * Approves a mixed allocation: any combination of HSA units and hospital units.
      * Payload: { requestId, hsaUnits?: int, allocations?: { hospitalId: units } }
