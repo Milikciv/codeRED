@@ -9,4 +9,5 @@ import java.util.List;
 public interface BloodTransferRepository extends JpaRepository<BloodTransfer, Long> {
     List<BloodTransfer> findByDonorHospitalOrderByCreatedAtDesc(Hospital donorHospital);
     List<BloodTransfer> findByReceivingHospitalOrderByCreatedAtDesc(Hospital receivingHospital);
+    List<BloodTransfer> findAllByOrderByCreatedAtDesc();
 }

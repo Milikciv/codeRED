@@ -1,1 +1,12 @@
 node_modules/
+.env
+.env.local
+*.properties
+!**/src/main/resources/application-*.properties
+backend/target/
+.DS_Store
+*.log
+.idea/
+.vscode/
+dist/
+build/
