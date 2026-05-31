@@ -47,18 +47,18 @@ function RequestCardSkeleton() {
   return (
     <div className="card p-3 animate-pulse space-y-2">
       <div className="flex justify-between">
-        <div className="h-3 bg-gray-200 rounded w-20" />
-        <div className="h-3 bg-gray-100 rounded w-12" />
+        <div className="h-3 bg-red-100 rounded w-20" />
+        <div className="h-3 bg-red-50 rounded w-12" />
       </div>
       <div className="flex items-center gap-1">
-        <div className="w-3 h-3 bg-gray-200 rounded" />
-        <div className="h-3 bg-gray-200 rounded w-32" />
+        <div className="w-3 h-3 bg-red-100 rounded" />
+        <div className="h-3 bg-red-100 rounded w-32" />
       </div>
       <div className="flex items-center gap-2">
-        <div className="h-8 w-8 bg-gray-200 rounded" />
+        <div className="h-8 w-8 bg-red-100 rounded" />
         <div className="space-y-1">
-          <div className="h-3 bg-gray-100 rounded w-16" />
-          <div className="h-4 bg-gray-200 rounded w-12" />
+          <div className="h-3 bg-red-50 rounded w-16" />
+          <div className="h-4 bg-red-100 rounded w-12" />
         </div>
       </div>
     </div>

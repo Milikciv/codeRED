@@ -5,6 +5,7 @@ import api from '../../api/axios'
 import { ChevronDown, X, ClipboardList, ArrowRightLeft } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { clipboardOutline, refreshOutline, checkmarkOutline, cogOutline, cubeOutline, sendOutline } from 'ionicons/icons'
+import LoadingScreen from '../../components/common/LoadingScreen'
 
 const STATUS_INDEX = {
   PENDING: 0, APPROVED: 1, PREPARING: 2, IN_TRANSIT: 3, DELIVERED: 4, COMPLETED: 4, REJECTED: 0,
@@ -107,41 +108,6 @@ function matchesFilter(row, filter, tab) {
   return false
 }
 
-function TableSkeleton() {
-  return (
-    <div className="card overflow-hidden animate-pulse">
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="bg-gray-50 border-b border-gray-100">
-            {['Request ID', 'Priority', 'Status', 'Progress', 'ETA', 'Actions'].map(h => (
-              <th key={h} className="text-left px-4 py-3">
-                <div className="h-3 bg-gray-200 rounded w-16" />
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {[...Array(4)].map((_, i) => (
-            <tr key={i} className="border-b border-gray-50">
-              <td className="px-4 py-3 space-y-1.5">
-                <div className="h-3 bg-gray-200 rounded w-28" />
-                <div className="h-2.5 bg-gray-100 rounded w-20" />
-              </td>
-              <td className="px-4 py-3"><div className="h-5 bg-gray-200 rounded w-16" /></td>
-              <td className="px-4 py-3"><div className="h-4 bg-gray-100 rounded w-14" /></td>
-              <td className="px-4 py-3"><div className="h-5 bg-gray-100 rounded w-32" /></td>
-              <td className="px-4 py-3 space-y-1">
-                <div className="h-3 bg-gray-200 rounded w-20" />
-                <div className="h-2.5 bg-gray-100 rounded w-24" />
-              </td>
-              <td className="px-4 py-3"><div className="h-7 bg-gray-200 rounded w-20" /></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
 
 export default function MyRequests() {
   const [tab, setTab]                             = useState('requests')
@@ -171,6 +137,12 @@ export default function MyRequests() {
       api.get('/transfers/outbound').then(r => { if (r.data?.length) setOutboundTransfers(r.data) }),
     ]).finally(() => setLoading(false))
   }, [])
+
+  if (loading) return (
+    <PageLayout title="My Requests" subtitle="Track all requests and transfers in real time">
+      <LoadingScreen variant="general" />
+    </PageLayout>
+  )
 
   function applyTransferUpdate(id, newStatus) {
     const patch = t => t.id === id ? { ...t, status: newStatus } : t
@@ -437,9 +409,7 @@ export default function MyRequests() {
           </div>
 
           {/* Table */}
-          {loading ? (
-            <TableSkeleton />
-          ) : displayedRows.length === 0 ? (
+          {displayedRows.length === 0 ? (
             <div className="card p-12 flex flex-col items-center justify-center text-center">
               <ClipboardList className="w-10 h-10 text-gray-300 mb-3" />
               <p className="font-medium text-gray-500">No {tab === 'requests' ? 'requests' : 'transfers'} found</p>

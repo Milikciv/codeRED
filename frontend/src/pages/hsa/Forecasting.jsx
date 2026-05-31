@@ -26,39 +26,39 @@ function ForecastingSkeleton() {
   return (
     <div className="animate-pulse space-y-4">
       <div className="flex justify-end gap-2">
-        <div className="h-9 w-32 bg-gray-200 rounded-lg" />
-        <div className="h-9 w-44 bg-gray-200 rounded-lg" />
+        <div className="h-9 w-32 bg-red-100 rounded-lg" />
+        <div className="h-9 w-44 bg-red-100 rounded-lg" />
       </div>
       <div className="grid grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="card p-4 space-y-2">
-            <div className="h-3 bg-gray-200 rounded w-3/4" />
-            <div className="h-7 bg-gray-200 rounded w-1/2" />
-            <div className="h-3 bg-gray-100 rounded w-2/3" />
+            <div className="h-3 bg-red-100 rounded w-3/4" />
+            <div className="h-7 bg-red-100 rounded w-1/2" />
+            <div className="h-3 bg-red-50 rounded w-2/3" />
           </div>
         ))}
       </div>
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-2 card p-4">
-          <div className="h-4 bg-gray-200 rounded w-52 mb-4" />
-          <div className="h-56 bg-gray-100 rounded-lg" />
-          <div className="h-8 bg-gray-100 rounded mt-2" />
+          <div className="h-4 bg-red-100 rounded w-52 mb-4" />
+          <div className="h-56 bg-red-50 rounded-lg" />
+          <div className="h-8 bg-red-50 rounded mt-2" />
         </div>
         <div className="card p-4">
-          <div className="h-4 bg-gray-200 rounded w-40 mb-4" />
-          {[...Array(8)].map((_, i) => <div key={i} className="h-8 bg-gray-100 rounded mb-1" />)}
+          <div className="h-4 bg-red-100 rounded w-40 mb-4" />
+          {[...Array(8)].map((_, i) => <div key={i} className="h-8 bg-red-50 rounded mb-1" />)}
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="card p-4">
-          <div className="h-4 bg-gray-200 rounded w-32 mb-3" />
+          <div className="h-4 bg-red-100 rounded w-32 mb-3" />
           <div className="grid grid-cols-4 gap-3">
-            {[...Array(4)].map((_, i) => <div key={i} className="h-24 bg-gray-100 rounded-xl" />)}
+            {[...Array(4)].map((_, i) => <div key={i} className="h-24 bg-red-50 rounded-xl" />)}
           </div>
         </div>
         <div className="card p-4">
-          <div className="h-4 bg-gray-200 rounded w-32 mb-3" />
-          <div className="h-20 bg-gray-100 rounded-lg" />
+          <div className="h-4 bg-red-100 rounded w-32 mb-3" />
+          <div className="h-20 bg-red-50 rounded-lg" />
         </div>
       </div>
     </div>

@@ -5,6 +5,7 @@ import api from '../../api/axios'
 import { X, ArrowRightLeft } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { checkmarkOutline } from 'ionicons/icons'
+import LoadingScreen from '../../components/common/LoadingScreen'
 
 const STATUS_LABELS = {
   PENDING: 'Pending', ACKNOWLEDGED: 'Acknowledged', PREPARING: 'Acknowledged',
@@ -133,33 +134,6 @@ function StepProgress({ steps, currentIndex }) {
   )
 }
 
-function TableSkeleton() {
-  return (
-    <div className="card overflow-hidden animate-pulse">
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="bg-gray-50 border-b border-gray-100">
-            {['ID', 'Type', 'Route', 'Blood Type', 'Priority', 'Status', 'ETA', 'Actions'].map(h => (
-              <th key={h} className="text-left px-4 py-3">
-                <div className="h-3 bg-gray-200 rounded w-16" />
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {[...Array(4)].map((_, i) => (
-            <tr key={i} className="border-b border-gray-50">
-              {[...Array(8)].map((_, j) => (
-                <td key={j} className="px-4 py-3"><div className="h-3 bg-gray-200 rounded w-20" /></td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
 export default function HsaTransfers() {
   const [statusFilter, setStatusFilter] = useState('All')
   const [typeFilter, setTypeFilter]     = useState('All')
@@ -170,6 +144,12 @@ export default function HsaTransfers() {
   useEffect(() => {
     api.get('/transfers').then(r => setTransfers(r.data)).finally(() => setLoading(false))
   }, [])
+
+  if (loading) return (
+    <PageLayout title="Transfers" subtitle="Monitor all blood deliveries and inter-hospital transfers">
+      <LoadingScreen variant="general" />
+    </PageLayout>
+  )
 
   const displayed = transfers.filter(r =>
     matchesStatusFilter(r, statusFilter) && matchesTypeFilter(r, typeFilter)
@@ -284,9 +264,7 @@ export default function HsaTransfers() {
           </div>
 
           {/* Table */}
-          {loading ? (
-            <TableSkeleton />
-          ) : displayed.length === 0 ? (
+          {displayed.length === 0 ? (
             <div className="card p-12 flex flex-col items-center justify-center text-center">
               <ArrowRightLeft className="w-10 h-10 text-gray-300 mb-3" />
               <p className="font-medium text-gray-500">No transfers found</p>
