@@ -20,27 +20,33 @@ import HospitalDashboard from './pages/hospital/Dashboard'
 import RequestBlood from './pages/hospital/RequestBlood'
 import MyRequests from './pages/hospital/MyRequests'
 
-function ProtectedRoute({ children, requiredRole }) {
+// Shared pages
+import UserManagement from './pages/UserManagement'
+
+function ProtectedRoute({ children, requiredRoles }) {
   const { user } = useAuth()
   if (!user) return <Navigate to="/login" replace />
-  if (requiredRole && user.role !== requiredRole) return <Navigate to="/" replace />
+  if (requiredRoles && !requiredRoles.includes(user.role)) return <Navigate to="/" replace />
   return children
 }
 
 function RootRedirect() {
   const { user } = useAuth()
   if (!user) return <Navigate to="/login" replace />
-  return user.role === 'HSA'
-    ? <Navigate to="/hsa/dashboard" replace />
-    : <Navigate to="/hospital/dashboard" replace />
+  if (user.role === 'HSA') return <Navigate to="/hsa/dashboard" replace />
+  return <Navigate to="/hospital/dashboard" replace />
 }
 
 function HSA({ children }) {
-  return <ProtectedRoute requiredRole="HSA">{children}</ProtectedRoute>
+  return <ProtectedRoute requiredRoles={['HSA']}>{children}</ProtectedRoute>
 }
 
 function Hospital({ children }) {
-  return <ProtectedRoute requiredRole="HOSPITAL_STAFF">{children}</ProtectedRoute>
+  return <ProtectedRoute requiredRoles={['HOSPITAL_STAFF', 'HOSPITAL_ADMIN']}>{children}</ProtectedRoute>
+}
+
+function AdminOnly({ children }) {
+  return <ProtectedRoute requiredRoles={['HSA', 'HOSPITAL_ADMIN']}>{children}</ProtectedRoute>
 }
 
 export default function App() {
@@ -67,6 +73,10 @@ export default function App() {
           <Route path="/hospital/dashboard"   element={<Hospital><HospitalDashboard /></Hospital>} />
           <Route path="/hospital/request"     element={<Hospital><RequestBlood /></Hospital>} />
           <Route path="/hospital/my-requests" element={<Hospital><MyRequests /></Hospital>} />
+
+          {/* User management */}
+          <Route path="/hsa/users"      element={<HSA><UserManagement /></HSA>} />
+          <Route path="/hospital/users" element={<AdminOnly><UserManagement /></AdminOnly>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

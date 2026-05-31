@@ -7,11 +7,13 @@ import { businessOutline, medkitOutline } from 'ionicons/icons'
 
 const ROLES = [
   { value: 'HSA', label: 'Health Sciences Authority', icon: businessOutline },
+  { value: 'HOSPITAL_ADMIN', label: 'Hospital Administrator', icon: businessOutline },
   { value: 'HOSPITAL_STAFF', label: 'Hospital Staff', icon: medkitOutline },
 ]
 
 const CREDENTIALS = {
   HSA: { email: 'winnie@hsa.gov.sg', password: 'password123' },
+  HOSPITAL_ADMIN: { email: 'admin@SGH.sg', password: 'password123' },
   HOSPITAL_STAFF: { email: 'winnieKoh@SGH.sg', password: 'password123' },
 }
 
