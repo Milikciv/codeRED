@@ -6,9 +6,11 @@ import com.codered.model.User;
 import com.codered.repository.UserRepository;
 import com.codered.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -26,10 +28,25 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+        return buildResponse(user);
+    }
 
+    public LoginResponse refresh(String refreshToken) {
+        if (!jwtUtil.isRefreshToken(refreshToken)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
+        }
+        String email = jwtUtil.extractEmail(refreshToken);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+        return buildResponse(user);
+    }
+
+    private LoginResponse buildResponse(User user) {
+        String accessToken  = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
         return new LoginResponse(
-                token,
+                accessToken,
+                refreshToken,
                 user.getRole().name(),
                 user.getName(),
                 user.getEmail(),

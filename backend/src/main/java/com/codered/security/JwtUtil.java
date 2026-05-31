@@ -22,6 +22,9 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private long expiration;
 
+    @Value("${jwt.refresh-expiration}")
+    private long refreshExpiration;
+
     private SecretKey getKey() {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
@@ -29,11 +32,24 @@ public class JwtUtil {
     public String generateToken(String email, String role) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", role);
+        claims.put("type", "ACCESS");
         return Jwts.builder()
                 .claims(claims)
                 .subject(email)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(getKey())
+                .compact();
+    }
+
+    public String generateRefreshToken(String email) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("type", "REFRESH");
+        return Jwts.builder()
+                .claims(claims)
+                .subject(email)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + refreshExpiration))
                 .signWith(getKey())
                 .compact();
     }
@@ -46,9 +62,13 @@ public class JwtUtil {
         return (String) extractClaims(token).get("role");
     }
 
+    public boolean isRefreshToken(String token) {
+        return "REFRESH".equals(extractClaims(token).get("type"));
+    }
+
     public boolean isTokenValid(String token, UserDetails userDetails) {
         String email = extractEmail(token);
-        return email.equals(userDetails.getUsername()) && !isTokenExpired(token);
+        return email.equals(userDetails.getUsername()) && !isTokenExpired(token) && !isRefreshToken(token);
     }
 
     private boolean isTokenExpired(String token) {
