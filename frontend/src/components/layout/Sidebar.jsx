@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
   Home, TrendingUp, Droplets, MapPin, ArrowRightLeft,
-  Settings, HelpCircle, LogOut
+  Settings, HelpCircle, LogOut, Users
 } from 'lucide-react'
 
 const HSA_NAV = [
@@ -11,6 +11,7 @@ const HSA_NAV = [
   { to: '/hsa/allocation',  icon: Droplets,          label: 'Blood Allocation' },
   { to: '/hsa/requests',    icon: ArrowRightLeft,    label: 'Transfers' },
   { to: '/hsa/hotspots',    icon: MapPin,            label: 'Hotspots' },
+  { to: '/hsa/users',       icon: Users,             label: 'Users' },
 ]
 
 const HOSPITAL_NAV = [
@@ -19,10 +20,21 @@ const HOSPITAL_NAV = [
   { to: '/hospital/my-requests', icon: TrendingUp, label: 'My Requests' },
 ]
 
+const HOSPITAL_ADMIN_NAV = [
+  { to: '/hospital/dashboard',   icon: Home,       label: 'Home' },
+  { to: '/hospital/request',     icon: Droplets,   label: 'Request Blood' },
+  { to: '/hospital/my-requests', icon: TrendingUp, label: 'My Requests' },
+  { to: '/hospital/users',       icon: Users,      label: 'Users' },
+]
+
 export default function Sidebar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const navItems = user?.role === 'HSA' ? HSA_NAV : HOSPITAL_NAV
+  const navItems = user?.role === 'HSA'
+    ? HSA_NAV
+    : user?.role === 'HOSPITAL_ADMIN'
+    ? HOSPITAL_ADMIN_NAV
+    : HOSPITAL_NAV
 
   const handleLogout = () => {
     logout()

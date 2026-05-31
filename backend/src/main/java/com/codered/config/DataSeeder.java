@@ -108,6 +108,17 @@ public class DataSeeder implements CommandLineRunner {
         james.setContactNumber("+65 9627 6354");
         james.setHospital(sgh);
         userRepository.save(james);
+
+        // Hospital admin
+        User admin = new User();
+        admin.setEmail("admin@SGH.sg");
+        admin.setPassword(passwordEncoder.encode("password123"));
+        admin.setName("Sarah Lim");
+        admin.setRole(UserRole.HOSPITAL_ADMIN);
+        admin.setDesignation("Hospital Administrator");
+        admin.setContactNumber("+65 9123 4567");
+        admin.setHospital(sgh);
+        userRepository.save(admin);
     }
 
     private void seedBloodStock() {
@@ -150,6 +161,7 @@ public class DataSeeder implements CommandLineRunner {
 
     private void seedRequests() {
         Hospital sgh = hospitalRepository.findByCode("SGH").orElseThrow();
+        Hospital nuh = hospitalRepository.findByCode("NUH").orElseThrow();
         Hospital kkh = hospitalRepository.findByCode("KKH").orElseThrow();
         Hospital ttsh = hospitalRepository.findByCode("TTSH").orElseThrow();
         Hospital cgh = hospitalRepository.findByCode("CGH").orElseThrow();
@@ -163,6 +175,8 @@ public class DataSeeder implements CommandLineRunner {
              "Scheduled surgeries.", LocalDateTime.now().minusMinutes(32)},
             {"REQ-2106", cgh, BloodType.O_NEGATIVE, 10, Priority.MEDIUM, RequestStatus.IN_TRANSIT,
              "Post Surgical Care", LocalDateTime.now().minusMinutes(32)},
+            {"REQ-2105", nuh, BloodType.O_POSITIVE, 20, Priority.CRITICAL, RequestStatus.APPROVED,
+             "Urgent supply for emergency surgeries.", LocalDateTime.now().minusMinutes(45)},
         };
 
         for (Object[] r : requests) {
@@ -221,19 +235,21 @@ public class DataSeeder implements CommandLineRunner {
     private void seedTransfers() {
         Hospital sgh = hospitalRepository.findByCode("SGH").orElseThrow();
         Hospital nuh = hospitalRepository.findByCode("NUH").orElseThrow();
+        BloodRequest nuhRequest = bloodRequestRepository.findByRequestId("REQ-2105").orElseThrow();
 
         BloodTransfer t1 = new BloodTransfer();
         t1.setTransferId("TRF-2025-3001");
         t1.setDonorHospital(sgh);
         t1.setReceivingHospital(nuh);
+        t1.setBloodRequest(nuhRequest);
         t1.setBloodType(BloodType.O_POSITIVE);
         t1.setUnits(20);
         t1.setPriority(Priority.CRITICAL);
         t1.setStatus("PENDING");
-        t1.setPurposeNotes("Urgent Transfer for surgery");
+        t1.setPurposeNotes("Inter-hospital transfer for REQ-2105");
         t1.setRequestedPickupDate(LocalDateTime.now().plusHours(1));
-        t1.setEstimatedDelivery(LocalDateTime.now().plusHours(2));
-        t1.setCreatedAt(LocalDateTime.now().minusHours(1));
+        t1.setEstimatedDelivery(LocalDateTime.now().plusHours(4));
+        t1.setCreatedAt(LocalDateTime.now().minusMinutes(30));
         t1.setUpdatedAt(LocalDateTime.now());
         bloodTransferRepository.save(t1);
     }
