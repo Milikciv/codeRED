@@ -87,6 +87,7 @@ export default function BloodAllocation() {
   const [loading, setLoading]               = useState(true)
   const [successInfo, setSuccessInfo]       = useState(null)   // { requestId, transfers: [{bloodType, units, source}] }
   const [countdown, setCountdown]           = useState(5)
+  const [expiryDismissed, setExpiryDismissed] = useState({})
 
   useEffect(() => {
     Promise.allSettled([
@@ -109,6 +110,7 @@ export default function BloodAllocation() {
     setHsaAllocByType({})
     setAiRecommended(false)
     setRequestTransfers([])
+    setExpiryDismissed({})
 
     const items = getBloodItems(req)
     const firstType = items[0]?.bloodType ?? req.bloodType
@@ -172,22 +174,68 @@ export default function BloodAllocation() {
   const needed = activeItem?.units ?? selected?.unitsRequested ?? 0
   const donorHospitals = assessment?.hospitalOptions ?? []
 
+  // Hardcoded expiring stock data: hospitalCode -> bloodType -> { expiringUnits, daysUntilExpiry }
+  const EXPIRING_STOCK = {
+    SGH:  { O_POSITIVE: { expiringUnits: 40, daysUntilExpiry: 2 } },
+    NUH:  { B_POSITIVE: { expiringUnits: 25, daysUntilExpiry: 1 } },
+    TTSH: { A_NEGATIVE: { expiringUnits: 15, daysUntilExpiry: 3 } },
+  }
+
+  const expiryRec = (() => {
+    if (!activeBloodType || !donorHospitals.length) return null
+    for (const h of donorHospitals) {
+      const rec = EXPIRING_STOCK[h.hospitalCode]?.[activeBloodType]
+      if (rec) return { ...rec, hospitalName: h.hospitalName, hospitalCode: h.hospitalCode, hospitalId: h.hospitalId, maxSafeTransfer: h.maxSafeTransfer, suggestedUnits: Math.min(rec.expiringUnits, needed, h.maxSafeTransfer) }
+    }
+    return null
+  })()
+
+  const expiryKey = `${selected?.id}-${activeBloodType}`
+  const showExpiryBanner = expiryRec && !expiryDismissed[expiryKey]
+
+  const acceptExpiryRec = () => {
+    const give = expiryRec.suggestedUnits
+    setAllocationsByType(prev => ({
+      ...prev,
+      [activeBloodType]: { ...(prev[activeBloodType] ?? {}), [expiryRec.hospitalId]: give }
+    }))
+    setHsaAllocByType(prev => ({
+      ...prev,
+      [activeBloodType]: Math.max(0, (prev[activeBloodType] ?? 0) - give)
+    }))
+    setExpiryDismissed(prev => ({ ...prev, [expiryKey]: true }))
+  }
+
   const buildAiAlloc = () => {
-    let remaining = needed - hsaAlloc
+    let remaining = needed
     const newAlloc = {}
-    const safe = donorHospitals.filter(h => h.safeToTransfer === 'Yes')
+
+    // Prioritise expiring hospital first
+    if (expiryRec) {
+      const give = expiryRec.suggestedUnits
+      newAlloc[expiryRec.hospitalId] = give
+      remaining -= give
+    }
+
+    // Fill remainder from other safe hospitals
+    const safe = donorHospitals.filter(h => h.safeToTransfer === 'Yes' && h.hospitalCode !== expiryRec?.hospitalCode)
     for (const h of safe) {
       if (remaining <= 0) break
       const give = Math.min(h.maxSafeTransfer, remaining)
       newAlloc[h.hospitalId] = give
       remaining -= give
     }
-    return newAlloc
+
+    // Any leftover comes from HSA
+    const newHsaAlloc = remaining > 0 ? remaining : 0
+    return { newAlloc, newHsaAlloc }
   }
 
   const handleRecommend = () => setShowAiModal(true)
   const applyAiAndClose = () => {
-    setAllocationsByType(prev => ({ ...prev, [activeBloodType]: buildAiAlloc() }))
+    const { newAlloc, newHsaAlloc } = buildAiAlloc()
+    setAllocationsByType(prev => ({ ...prev, [activeBloodType]: newAlloc }))
+    setHsaAllocByType(prev => ({ ...prev, [activeBloodType]: newHsaAlloc }))
     setAiRecommended(true)
     setShowAiModal(false)
   }
@@ -353,11 +401,24 @@ export default function BloodAllocation() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-5">
-              <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mb-4 text-xs text-blue-700">
+              <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mb-3 text-xs text-blue-700">
                 <IonIcon icon={informationCircleOutline} style={{ fontSize: '1rem', flexShrink: 0 }} />
                 <span className="font-semibold">AI Recommended Allocation</span>
                 <span className="text-gray-500">— Allocation ensures safe stock levels and timely availability</span>
               </div>
+
+              {expiryRec && (
+                <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4 text-xs text-amber-800">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 text-amber-500" />
+                  <span>
+                    <span className="font-semibold">Wastage alert:</span>{' '}
+                    {expiryRec.hospitalName} has <span className="font-semibold">{expiryRec.expiringUnits} units</span> of{' '}
+                    {formatBloodType(activeBloodType)} expiring in{' '}
+                    <span className="font-semibold">{expiryRec.daysUntilExpiry} {expiryRec.daysUntilExpiry === 1 ? 'day' : 'days'}</span>.
+                    {' '}Consider sourcing from there first — HSA can replenish with fresher stock.
+                  </span>
+                </div>
+              )}
 
               <div className="grid grid-cols-3 gap-4">
                 <div className="card p-3">
@@ -389,16 +450,39 @@ export default function BloodAllocation() {
                       </tr>
                     </thead>
                     <tbody>
-                      {donorHospitals.filter(h => h.safeToTransfer === 'Yes').slice(0, 3).map((h, i) => {
-                        const units = [10, 5, 5][i] ?? 0
-                        return (
+                      {(() => {
+                        // Build recommended rows: expiring hospital first, then fill remainder from other safe hospitals
+                        const rows = []
+                        let remaining = needed
+
+                        if (expiryRec) {
+                          const give = expiryRec.suggestedUnits
+                          rows.push({ h: donorHospitals.find(h => h.hospitalCode === expiryRec.hospitalCode), units: give, expiring: true })
+                          remaining -= give
+                        }
+
+                        for (const h of donorHospitals.filter(h => h.safeToTransfer === 'Yes' && h.hospitalCode !== expiryRec?.hospitalCode)) {
+                          if (remaining <= 0) break
+                          const give = Math.min(h.maxSafeTransfer, remaining)
+                          if (give > 0) { rows.push({ h, units: give, expiring: false }); remaining -= give }
+                        }
+
+                        // Fill any shortfall from HSA
+                        if (remaining > 0) {
+                          rows.push({ h: { hospitalId: 'HSA', hospitalCode: 'HSA', hospitalName: 'HSA Blood Services' }, units: remaining, expiring: false, isHsa: true })
+                          remaining = 0
+                        }
+
+                        return rows.filter(r => r.h).map(({ h, units, expiring, isHsa }) => (
                           <tr key={h.hospitalId} className="border-b border-gray-50">
                             <td className="py-2">
                               <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700">
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${expiring ? 'bg-amber-100 text-amber-700' : isHsa ? 'bg-primary/10 text-primary' : 'bg-blue-100 text-blue-700'}`}>
                                   {h.hospitalCode?.charAt(0)}
                                 </div>
                                 <span className="font-medium text-gray-800">{h.hospitalName}</span>
+                                {expiring && <span className="text-xs text-amber-600 font-semibold bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">expiring</span>}
+                                {isHsa && <span className="text-xs text-primary font-semibold bg-primary/5 border border-primary/20 px-1.5 py-0.5 rounded">national</span>}
                               </div>
                             </td>
                             <td className="py-2 text-center font-bold text-gray-800">{units} units</td>
@@ -409,8 +493,8 @@ export default function BloodAllocation() {
                               </span>
                             </td>
                           </tr>
-                        )
-                      })}
+                        ))
+                      })()}
                     </tbody>
                   </table>
                   <div className="flex items-center justify-between bg-green-50 border border-green-100 rounded-lg px-3 py-2 text-xs">
@@ -714,6 +798,32 @@ export default function BloodAllocation() {
                       </div>
                       <button onClick={() => setShowConfirmAppeal(true)} className="px-2 py-1 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 flex-shrink-0">
                         Trigger Appeal
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Expiry-based allocation recommendation */}
+                  {showExpiryBanner && (
+                    <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3 text-xs text-amber-800">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0 text-amber-500" />
+                      <span className="flex-1">
+                        <span className="font-semibold">{expiryRec.hospitalName}</span> has{' '}
+                        <span className="font-semibold">{expiryRec.expiringUnits} units</span> of{' '}
+                        {formatBloodType(activeBloodType)} expiring in{' '}
+                        <span className="font-semibold">{expiryRec.daysUntilExpiry} {expiryRec.daysUntilExpiry === 1 ? 'day' : 'days'}</span>.
+                        {' '}Allocating from there reduces wastage — HSA can replenish with fresher stock.
+                      </span>
+                      <button
+                        onClick={acceptExpiryRec}
+                        className="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-xs font-medium flex-shrink-0"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => setExpiryDismissed(prev => ({ ...prev, [expiryKey]: true }))}
+                        className="text-amber-400 hover:text-amber-600 flex-shrink-0"
+                      >
+                        <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   )}
