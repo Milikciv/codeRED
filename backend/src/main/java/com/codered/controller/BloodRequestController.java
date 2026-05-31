@@ -102,7 +102,9 @@ public class BloodRequestController {
             count = bloodRequestRepository.countByStatus(RequestStatus.PENDING);
         } else {
             count = bloodRequestRepository.findByRequestingHospital(user.getHospital())
-                    .stream().filter(r -> r.getStatus() == RequestStatus.PENDING || r.getStatus() == RequestStatus.IN_TRANSIT).count();
+                    .stream().filter(r -> r.getStatus() == RequestStatus.PENDING
+                            || r.getStatus() == RequestStatus.APPROVED
+                            || r.getStatus() == RequestStatus.IN_TRANSIT).count();
         }
         return ResponseEntity.ok(Map.of("count", count));
     }
