@@ -4,6 +4,7 @@ import com.codered.model.BloodRequest;
 import com.codered.model.BloodTransfer;
 import com.codered.model.Hospital;
 import com.codered.model.User;
+import com.codered.repository.BloodRequestRepository;
 import com.codered.repository.BloodTransferRepository;
 import com.codered.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,12 +23,13 @@ import java.util.List;
 public class TransferService {
 
     private final BloodTransferRepository bloodTransferRepository;
+    private final BloodRequestRepository bloodRequestRepository;
     private final UserRepository userRepository;
 
+    /** All transfers visible to the caller: HSA sees everything; hospital sees as donor + as receiver. */
     public List<BloodTransfer> getTransfers(UserDetails userDetails) {
         User user = resolveUser(userDetails);
         if (user.getHospital() == null) {
-            // HSA users see all transfers
             return bloodTransferRepository.findAllByOrderByCreatedAtDesc();
         }
         Hospital hospital = user.getHospital();
@@ -36,6 +38,27 @@ public class TransferService {
         all.addAll(bloodTransferRepository.findByReceivingHospitalOrderByCreatedAtDesc(hospital));
         all.sort(Comparator.comparing(BloodTransfer::getCreatedAt).reversed());
         return all;
+    }
+
+    /** Only transfers where the caller's hospital is the donor (for "Transfers Out" tab). */
+    public List<BloodTransfer> getOutboundTransfers(UserDetails userDetails) {
+        User user = resolveUser(userDetails);
+        if (user.getHospital() == null) {
+            return bloodTransferRepository.findAllByOrderByCreatedAtDesc();
+        }
+        return bloodTransferRepository.findByDonorHospitalOrderByCreatedAtDesc(user.getHospital());
+    }
+
+    /** All transfers under a specific request. HSA may see any; hospital must own the request. */
+    public List<BloodTransfer> getTransfersByRequest(Long requestId, UserDetails userDetails) {
+        User user = resolveUser(userDetails);
+        BloodRequest request = bloodRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found"));
+        if (user.getHospital() != null
+                && !request.getRequestingHospital().getId().equals(user.getHospital().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+        return bloodTransferRepository.findByBloodRequest_IdOrderByCreatedAtDesc(requestId);
     }
 
     /**
@@ -64,10 +87,7 @@ public class TransferService {
         return bloodTransferRepository.save(transfer);
     }
 
-    /**
-     * Receiving hospital acknowledges an incoming hospital-to-hospital transfer.
-     * Not applicable to HSA deliveries — those are already in transit; use confirmDelivered instead.
-     */
+    /** Donor hospital acknowledges a PENDING inter-hospital transfer. */
     public BloodTransfer acknowledge(Long id) {
         BloodTransfer transfer = findOrThrow(id);
         if (isHsaDelivery(transfer)) {
@@ -82,38 +102,63 @@ public class TransferService {
         return bloodTransferRepository.save(transfer);
     }
 
-    /**
-     * Donor hospital signals blood is packed and ready for courier pickup.
-     * Only valid for hospital-to-hospital transfers in ACKNOWLEDGED state.
-     */
+    /** Donor hospital marks blood as being prepared (ACKNOWLEDGED → PREPARING). */
+    public BloodTransfer prepare(Long id) {
+        BloodTransfer transfer = findOrThrow(id);
+        if (isHsaDelivery(transfer)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "HSA deliveries do not go through the preparation step");
+        }
+        if (!"ACKNOWLEDGED".equals(transfer.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Transfer must be ACKNOWLEDGED to mark as preparing (current: " + transfer.getStatus() + ")");
+        }
+        transfer.setStatus("PREPARING");
+        return bloodTransferRepository.save(transfer);
+    }
+
+    /** Donor hospital signals blood is packed and ready for courier pickup (ACKNOWLEDGED/PREPARING → READY_FOR_PICKUP). */
     public BloodTransfer readyForPickup(Long id) {
         BloodTransfer transfer = findOrThrow(id);
         if (isHsaDelivery(transfer)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "HSA deliveries have no pickup step — HSA handles logistics directly");
         }
-        if (!"ACKNOWLEDGED".equals(transfer.getStatus())) {
+        String status = transfer.getStatus();
+        if (!"ACKNOWLEDGED".equals(status) && !"PREPARING".equals(status)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Transfer must be ACKNOWLEDGED before marking ready for pickup (current: " + transfer.getStatus() + ")");
+                    "Transfer must be ACKNOWLEDGED or PREPARING before marking ready for pickup (current: " + status + ")");
         }
         transfer.setStatus("READY_FOR_PICKUP");
         return bloodTransferRepository.save(transfer);
     }
 
+    /** Donor hospital dispatches the blood — marks it in transit (READY_FOR_PICKUP → IN_TRANSIT). */
+    public BloodTransfer dispatch(Long id) {
+        BloodTransfer transfer = findOrThrow(id);
+        if (isHsaDelivery(transfer)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "HSA deliveries are already dispatched at creation");
+        }
+        if (!"READY_FOR_PICKUP".equals(transfer.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Transfer must be READY_FOR_PICKUP to dispatch (current: " + transfer.getStatus() + ")");
+        }
+        transfer.setStatus("IN_TRANSIT");
+        return bloodTransferRepository.save(transfer);
+    }
+
     /**
-     * Confirms the blood has been physically received by the hospital.
-     * Valid for both HSA deliveries (IN_TRANSIT → RECEIVED)
-     * and hospital transfers (READY_FOR_PICKUP or IN_TRANSIT → RECEIVED).
+     * Receiving hospital confirms the blood has arrived.
+     * Valid for HSA deliveries (IN_TRANSIT → RECEIVED)
+     * and hospital transfers (IN_TRANSIT → RECEIVED).
      */
     public BloodTransfer confirmDelivered(Long id) {
         BloodTransfer transfer = findOrThrow(id);
         String status = transfer.getStatus();
-        boolean validState = isHsaDelivery(transfer)
-                ? "IN_TRANSIT".equals(status)
-                : "READY_FOR_PICKUP".equals(status) || "IN_TRANSIT".equals(status);
-        if (!validState) {
+        if (!"IN_TRANSIT".equals(status)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Cannot confirm delivery from current status: " + status);
+                    "Transfer must be IN_TRANSIT to confirm receipt (current: " + status + ")");
         }
         transfer.setStatus("RECEIVED");
         return bloodTransferRepository.save(transfer);

@@ -2,6 +2,7 @@ package com.codered.controller;
 
 import com.codered.dto.BloodRequestDTO;
 import com.codered.model.BloodRequest;
+import com.codered.model.RequestBloodItem;
 import com.codered.model.User;
 import com.codered.model.enums.BloodType;
 import com.codered.model.enums.Priority;
@@ -46,15 +47,32 @@ public class BloodRequestController {
         BloodRequest request = new BloodRequest();
         request.setRequestId("REQ-" + System.currentTimeMillis() % 10000);
         request.setRequestingHospital(user.getHospital());
-        request.setBloodType(BloodType.valueOf(dto.getBloodTypes().get(0).replace("+", "_POSITIVE").replace("-", "_NEGATIVE")
-                .replace("O_POSITIVE", "O_POSITIVE").replace("AB+", "AB_POSITIVE").replace("AB-", "AB_NEGATIVE")));
-        request.setUnitsRequested(dto.getUnits());
         request.setPriority(Priority.valueOf(dto.getPriority().toUpperCase()));
         request.setStatus(RequestStatus.PENDING);
         request.setRemarks(dto.getRemarks());
         request.setNeededBy(dto.getNeededBy());
         request.setRequestedByName(user.getName());
         request.setRequestedByDesignation(user.getDesignation());
+
+        // Persist per-type blood items
+        if (dto.getItems() != null && !dto.getItems().isEmpty()) {
+            int total = 0;
+            for (BloodRequestDTO.BloodItemDTO item : dto.getItems()) {
+                BloodType bt = parseBloodType(item.getBloodType());
+                RequestBloodItem rbi = new RequestBloodItem();
+                rbi.setBloodRequest(request);
+                rbi.setBloodType(bt);
+                rbi.setUnits(item.getUnits());
+                request.getBloodItems().add(rbi);
+                total += item.getUnits();
+                if (request.getBloodType() == null) request.setBloodType(bt); // primary type for workbench
+            }
+            request.setUnitsRequested(total);
+        } else if (dto.getBloodTypes() != null && !dto.getBloodTypes().isEmpty()) {
+            // fallback: legacy single-type payload
+            request.setBloodType(parseBloodType(dto.getBloodTypes().get(0)));
+            request.setUnitsRequested(dto.getUnits() != null ? dto.getUnits() : 0);
+        }
 
         return ResponseEntity.ok(bloodRequestRepository.save(request));
     }
@@ -66,6 +84,14 @@ public class BloodRequestController {
         BloodRequest request = bloodRequestRepository.findById(id).orElseThrow();
         request.setStatus(RequestStatus.valueOf(body.get("status").toUpperCase()));
         return ResponseEntity.ok(bloodRequestRepository.save(request));
+    }
+
+    private BloodType parseBloodType(String raw) {
+        return BloodType.valueOf(raw
+                .replace("AB+", "AB_POSITIVE").replace("AB-", "AB_NEGATIVE")
+                .replace("O+",  "O_POSITIVE") .replace("O-",  "O_NEGATIVE")
+                .replace("A+",  "A_POSITIVE") .replace("A-",  "A_NEGATIVE")
+                .replace("B+",  "B_POSITIVE") .replace("B-",  "B_NEGATIVE"));
     }
 
     @GetMapping("/active-count")

@@ -41,6 +41,7 @@ export default function RequestBlood() {
     setSubmitting(true)
     try {
       await api.post('/requests', {
+        items: selectedTypes.map(t => ({ bloodType: t, units: units[t] || 10 })),
         bloodTypes: selectedTypes,
         units: totalUnits,
         priority: priority.toUpperCase(),

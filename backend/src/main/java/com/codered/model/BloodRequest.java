@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "blood_requests")
@@ -49,6 +51,9 @@ public class BloodRequest {
 
     private String requestedByName;
     private String requestedByDesignation;
+
+    @OneToMany(mappedBy = "bloodRequest", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
+    private List<RequestBloodItem> bloodItems = new ArrayList<>();
 
     @PrePersist
     public void onCreate() {
