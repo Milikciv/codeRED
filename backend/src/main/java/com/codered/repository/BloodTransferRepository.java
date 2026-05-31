@@ -10,4 +10,5 @@ public interface BloodTransferRepository extends JpaRepository<BloodTransfer, Lo
     List<BloodTransfer> findByDonorHospitalOrderByCreatedAtDesc(Hospital donorHospital);
     List<BloodTransfer> findByReceivingHospitalOrderByCreatedAtDesc(Hospital receivingHospital);
     List<BloodTransfer> findAllByOrderByCreatedAtDesc();
+    List<BloodTransfer> findByBloodRequest_IdOrderByCreatedAtDesc(Long bloodRequestId);
 }

@@ -4,13 +4,12 @@ import PriorityBadge from '../../components/common/PriorityBadge'
 import Toast from '../../components/common/Toast'
 import ConfirmModal from '../../components/common/ConfirmModal'
 import api from '../../api/axios'
-import { Filter, List, Building2, Check, X, Star, ClipboardList, AlertTriangle } from 'lucide-react'
+import { Filter, List, Building2, Check, X, Star, ClipboardList, AlertTriangle, ArrowRightLeft } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { informationCircleOutline, airplaneOutline, rocketOutline, starOutline, clipboardOutline } from 'ionicons/icons'
 import LoadingScreen from '../../components/common/LoadingScreen'
 
 const PRIORITY_TABS = ['All', 'Critical', 'High', 'Medium']
-const STATUS_FILTER_TABS = ['All', 'Pending', 'Active', 'Completed', 'Rejected']
 
 const STATUS_LABELS = {
   PENDING: 'Pending', APPROVED: 'Approved', PREPARING: 'Preparing',
@@ -67,20 +66,20 @@ function RequestCardSkeleton() {
 }
 
 export default function BloodAllocation() {
-  const [requests, setRequests]       = useState([])
-  const [selected, setSelected]       = useState(null)
-  const [inventory, setInventory]     = useState(null)
-  const [assessment, setAssessment]   = useState(null)   // result of /assess
-  const [hsaAlloc, setHsaAlloc]       = useState(0)      // units allocated from HSA
-  const [allocations, setAllocations] = useState({})     // units allocated from hospitals
-  const [tab, setTab]                 = useState('All')
-  const [statusFilter, setStatusFilter] = useState('Pending')
-  const [toast, setToast]             = useState(null)
-  const [showAiModal, setShowAiModal] = useState(false)
+  const [requests, setRequests]         = useState([])
+  const [selected, setSelected]         = useState(null)
+  const [requestTransfers, setRequestTransfers] = useState([])
+  const [inventory, setInventory]       = useState(null)
+  const [assessment, setAssessment]     = useState(null)
+  const [hsaAlloc, setHsaAlloc]         = useState(0)
+  const [allocations, setAllocations]   = useState({})
+  const [tab, setTab]                   = useState('All')
+  const [toast, setToast]               = useState(null)
+  const [showAiModal, setShowAiModal]   = useState(false)
   const [showConfirmApprove, setShowConfirmApprove] = useState(false)
   const [showConfirmAppeal, setShowConfirmAppeal]   = useState(false)
   const [aiRecommended, setAiRecommended] = useState(false)
-  const [loading, setLoading]         = useState(true)
+  const [loading, setLoading]           = useState(true)
 
   useEffect(() => {
     Promise.allSettled([
@@ -95,7 +94,14 @@ export default function BloodAllocation() {
     setAllocations({})
     setHsaAlloc(0)
     setAiRecommended(false)
-    if (req.status !== 'PENDING') return
+    setRequestTransfers([])
+
+    if (req.status !== 'PENDING') {
+      api.get(`/transfers/by-request/${req.id}`)
+        .then(r => setRequestTransfers(r.data ?? []))
+        .catch(() => setRequestTransfers([]))
+      return
+    }
     try {
       const { data } = await api.get(`/allocation/assess/${req.id}`)
       setAssessment(data)
@@ -157,28 +163,8 @@ export default function BloodAllocation() {
 
   const filteredRequests = requests.filter(r => {
     const matchesPriority = tab === 'All' || r.priority?.toLowerCase() === tab.toLowerCase()
-    const s = r.status?.toUpperCase()
-    const matchesStatus =
-      statusFilter === 'All'       ? true :
-      statusFilter === 'Pending'   ? s === 'PENDING' :
-      statusFilter === 'Active'    ? ['APPROVED', 'PREPARING', 'IN_TRANSIT'].includes(s) :
-      statusFilter === 'Completed' ? ['DELIVERED', 'COMPLETED'].includes(s) :
-      statusFilter === 'Rejected'  ? s === 'REJECTED' : true
-    return matchesPriority && matchesStatus
+    return r.status?.toUpperCase() === 'PENDING' && matchesPriority
   })
-
-  const statusFilterCount = (f) => {
-    const s = f
-    return requests.filter(r => {
-      const rs = r.status?.toUpperCase()
-      if (s === 'All') return true
-      if (s === 'Pending') return rs === 'PENDING'
-      if (s === 'Active') return ['APPROVED', 'PREPARING', 'IN_TRANSIT'].includes(rs)
-      if (s === 'Completed') return ['DELIVERED', 'COMPLETED'].includes(rs)
-      if (s === 'Rejected') return rs === 'REJECTED'
-      return false
-    }).length
-  }
 
   const safeColor = (s) => {
     if (s === 'Yes') return 'text-green-600 bg-green-50'
@@ -332,37 +318,22 @@ export default function BloodAllocation() {
             </div>
           </div>
 
-          {/* Status filter */}
-          <div className="flex gap-1 mb-2 flex-wrap">
-            {STATUS_FILTER_TABS.map(f => (
+          {/* Priority filter */}
+          <div className="flex gap-1 mb-3 flex-wrap">
+            {PRIORITY_TABS.map(t => (
               <button
-                key={f}
-                onClick={() => { setStatusFilter(f); setSelected(null); setAssessment(null) }}
-                className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusFilter === f ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                key={t}
+                onClick={() => setTab(t)}
+                className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                  tab === t
+                    ? t === 'All' ? 'bg-gray-600 text-white' : t === 'Critical' ? 'bg-red-600 text-white' : t === 'High' ? 'bg-orange-500 text-white' : 'bg-yellow-500 text-white'
+                    : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                }`}
               >
-                {f} {statusFilterCount(f)}
+                {t}
               </button>
             ))}
           </div>
-
-          {/* Priority filter — only relevant for Pending/All */}
-          {(statusFilter === 'Pending' || statusFilter === 'All') && (
-            <div className="flex gap-1 mb-3 flex-wrap">
-              {PRIORITY_TABS.map(t => (
-                <button
-                  key={t}
-                  onClick={() => setTab(t)}
-                  className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    tab === t
-                      ? t === 'All' ? 'bg-gray-600 text-white' : t === 'Critical' ? 'bg-red-600 text-white' : t === 'High' ? 'bg-orange-500 text-white' : 'bg-yellow-500 text-white'
-                      : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          )}
 
           <div className="space-y-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
             {loading ? (
@@ -371,7 +342,7 @@ export default function BloodAllocation() {
               <div className="flex flex-col items-center py-12 text-center">
                 <ClipboardList className="w-8 h-8 text-gray-300 mb-2" />
                 <p className="text-sm font-medium text-gray-500">No requests</p>
-                <p className="text-xs text-gray-400 mt-1">No {statusFilter.toLowerCase()} requests at this time.</p>
+                <p className="text-xs text-gray-400 mt-1">No pending requests at this time.</p>
               </div>
             ) : (
               filteredRequests.map(req => (
@@ -442,10 +413,10 @@ export default function BloodAllocation() {
             <div className="card flex-1 flex flex-col items-center justify-center text-center p-8">
               <IonIcon icon={clipboardOutline} style={{ fontSize: '3.75rem', marginBottom: '1rem', opacity: 0.2 }} />
               <h3 className="text-lg font-semibold text-gray-600">Select a request to view details</h3>
-              <p className="text-sm text-gray-400 mt-2">{statusFilter === 'Pending' ? 'Blood will be sourced from HSA national inventory first' : 'Select any request from the list to see its details'}</p>
+              <p className="text-sm text-gray-400 mt-2">Blood will be sourced from HSA national inventory first. Select a request to begin allocation.</p>
             </div>
           ) : selected.status !== 'PENDING' ? (
-            <div className="card p-4">
+            <div className="card p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
               <div className="flex items-center gap-2 mb-4">
                 <h3 className="font-semibold text-sm text-gray-800">Request Details</h3>
                 <span className="text-xs font-bold text-primary bg-primary-100 px-2 py-0.5 rounded">{selected.requestId}</span>
@@ -454,7 +425,7 @@ export default function BloodAllocation() {
                   {STATUS_LABELS[selected.status] ?? selected.status}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="grid grid-cols-2 gap-3 text-xs mb-4">
                 <div className="card p-3 bg-gray-50">
                   <div className="text-gray-500 mb-1">Blood Type</div>
                   <div className="text-2xl font-black text-primary">{formatBloodType(selected.bloodType)}</div>
@@ -464,7 +435,7 @@ export default function BloodAllocation() {
                   <div className="text-2xl font-black text-gray-800">{selected.unitsRequested}</div>
                 </div>
               </div>
-              <div className="mt-3 space-y-2 text-xs">
+              <div className="space-y-2 text-xs mb-5">
                 {[
                   ['Hospital', selected.requestingHospital?.name],
                   ['Requested By', selected.requestedByName],
@@ -478,6 +449,67 @@ export default function BloodAllocation() {
                     <span className="font-medium text-gray-800 text-right">{v ?? '—'}</span>
                   </div>
                 ))}
+              </div>
+
+              {/* Child transfers */}
+              <div className="border-t border-gray-100 pt-4">
+                <h4 className="font-semibold text-xs text-gray-700 mb-3 flex items-center gap-1.5">
+                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                  Transfers ({requestTransfers.length})
+                </h4>
+                {requestTransfers.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic">No transfers created yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {requestTransfers.map(t => {
+                      const isDel = t.donorHospital?.code === 'HSA' || t.transferId?.startsWith('DEL')
+                      const tStatusColor = ['RECEIVED', 'DELIVERED'].includes(t.status) ? 'text-green-600'
+                        : t.status === 'PENDING' ? 'text-gray-500' : 'text-blue-600'
+                      const tStatusLabel = {
+                        PENDING: 'Pending', ACKNOWLEDGED: 'Acknowledged', PREPARING: 'Preparing',
+                        READY_FOR_PICKUP: 'Ready for Pickup', IN_TRANSIT: 'In Transit', RECEIVED: 'Received',
+                      }[t.status] ?? t.status
+                      return (
+                        <div key={t.id} className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-xs">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-mono text-primary font-semibold">{t.transferId}</span>
+                            <div className={`flex items-center gap-1 font-medium ${tStatusColor}`}>
+                              <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                              {tStatusLabel}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-gray-600 flex-wrap">
+                            <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${isDel ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-600'}`}>
+                              {isDel ? 'HSA Delivery' : 'Inter-hospital'}
+                            </span>
+                            <span className="font-bold text-red-600">{formatBloodType(t.bloodType)}</span>
+                            <span className="text-gray-300">·</span>
+                            <span>{t.units} units</span>
+                            <span className="text-gray-300">·</span>
+                            <span>{t.donorHospital?.name ?? t.donorHospital?.code} → {t.receivingHospital?.name ?? t.receivingHospital?.code}</span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* Close Request — available once all transfers are received */}
+                {requestTransfers.length > 0 &&
+                  requestTransfers.every(t => ['RECEIVED', 'DELIVERED'].includes(t.status)) &&
+                  selected.status !== 'COMPLETED' && (
+                  <button
+                    onClick={async () => {
+                      await api.patch(`/requests/${selected.id}/status`, { status: 'COMPLETED' })
+                      setRequests(prev => prev.map(r => r.id === selected.id ? { ...r, status: 'COMPLETED' } : r))
+                      setSelected(prev => ({ ...prev, status: 'COMPLETED' }))
+                      setToast({ type: 'success', title: 'Request closed', message: `${selected.requestId} marked as completed.` })
+                    }}
+                    className="mt-3 w-full bg-green-50 border border-green-300 text-green-800 rounded-lg py-2 text-sm font-semibold hover:bg-green-100"
+                  >
+                    ✓ Close Request
+                  </button>
+                )}
               </div>
             </div>
           ) : (

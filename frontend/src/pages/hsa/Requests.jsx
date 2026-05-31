@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import PriorityBadge from '../../components/common/PriorityBadge'
 import api from '../../api/axios'
-import { Check, X, ArrowRightLeft } from 'lucide-react'
+import { X, ArrowRightLeft } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { checkmarkOutline } from 'ionicons/icons'
 
 const STATUS_LABELS = {
   PENDING: 'Pending', ACKNOWLEDGED: 'Acknowledged', PREPARING: 'Acknowledged',
@@ -117,7 +119,7 @@ function StepProgress({ steps, currentIndex }) {
                 active ? 'bg-primary-500 border-primary-500 text-white' :
                 'bg-white border-gray-300 text-gray-300'
               }`}>
-                {done ? <Check className="w-3 h-3" /> : <span className="w-1.5 h-1.5 rounded-full bg-current" />}
+                {done ? <IonIcon icon={checkmarkOutline} style={{ fontSize: '0.7rem' }} /> : <span className="w-1.5 h-1.5 rounded-full bg-current" />}
               </div>
               <span className="text-gray-400 mt-1 whitespace-nowrap" style={{ fontSize: 9 }}>{step}</span>
             </div>
@@ -137,7 +139,7 @@ function TableSkeleton() {
       <table className="w-full text-xs">
         <thead>
           <tr className="bg-gray-50 border-b border-gray-100">
-            {['ID', 'Type', 'Route', 'Priority', 'Status', 'Progress', 'ETA', 'Actions'].map(h => (
+            {['ID', 'Type', 'Route', 'Blood Type', 'Priority', 'Status', 'ETA', 'Actions'].map(h => (
               <th key={h} className="text-left px-4 py-3">
                 <div className="h-3 bg-gray-200 rounded w-16" />
               </th>
@@ -175,7 +177,82 @@ export default function HsaTransfers() {
 
   return (
     <PageLayout title="Transfers" subtitle="Monitor all blood deliveries and inter-hospital transfers">
-      <div className="flex gap-4">
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 bg-black/40 z-40 transition-opacity duration-200 ${selected ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={() => setSelected(null)}
+      />
+
+      {/* Slide-in drawer */}
+      <div className={`fixed top-0 right-0 h-full w-[420px] bg-white shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out ${selected ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h3 className="font-semibold text-gray-800">Transfer Details</h3>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono text-primary">{selected?.transferId}</span>
+            <button onClick={() => setSelected(null)}><X className="w-4 h-4 text-gray-400 hover:text-gray-600" /></button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          {selected && (() => {
+            const del = isHsaDelivery(selected)
+            const timeline = del ? buildDelTimeline(selected) : buildTrfTimeline(selected)
+            return (
+              <>
+                <div className={`rounded-lg px-3 py-2 mb-3 text-xs font-medium border ${
+                  selected.status === 'PENDING' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' :
+                  ['DELIVERED', 'RECEIVED'].includes(selected.status) ? 'bg-green-50 border-green-200 text-green-800' :
+                  'bg-blue-50 border-blue-200 text-blue-800'
+                }`}>
+                  <span className="font-semibold">{del ? 'HSA Delivery' : 'Inter-hospital Transfer'}</span>
+                  {' — '}{TRANSFER_STATUS_NOTES[selected.status] ?? STATUS_LABELS[selected.status]}
+                </div>
+
+                <div className="space-y-1.5 text-xs mb-4">
+                  <h4 className="font-semibold text-gray-700">Overview</h4>
+                  {[
+                    ['Priority', <PriorityBadge priority={selected.priority} />],
+                    ['Blood Type', formatBloodType(selected.bloodType)],
+                    ['Units', `${selected.units} units`],
+                    ['From', del ? 'HSA Blood Services' : selected.donorHospital?.name],
+                    ['To', selected.receivingHospital?.name],
+                    ['Created', formatDateTime(selected.createdAt)],
+                    ['Est. Delivery', formatDateTime(selected.estimatedDelivery)],
+                    ...(selected.purposeNotes ? [['Notes', selected.purposeNotes]] : []),
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex justify-between gap-2">
+                      <span className="text-gray-500 flex-shrink-0">{k}</span>
+                      <span className="font-medium text-gray-800 text-right">{v}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-xs text-gray-700 mb-2">Timeline</h4>
+                  <div className="space-y-2">
+                    {timeline.map((step, i) => (
+                      <div key={i} className="flex gap-2">
+                        <div className="flex flex-col items-center">
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${step.done ? 'bg-green-500' : step.active ? 'border-2 border-primary' : 'border-2 border-gray-200'}`}>
+                            {step.done ? <IonIcon icon={checkmarkOutline} style={{ fontSize: '0.7rem', color: 'white' }} /> : <span className="w-2 h-2 rounded-full bg-gray-200" />}
+                          </div>
+                          {i < timeline.length - 1 && <div className="w-0.5 h-5 bg-gray-200 mt-0.5" />}
+                        </div>
+                        <div className="pb-2">
+                          <div className="text-xs font-medium text-gray-800">{step.label}</div>
+                          <div className="text-xs text-gray-400">{step.note}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )
+          })()}
+        </div>
+      </div>
+
+      <div>
         <div className="flex-1 min-w-0">
           {/* Filters */}
           <div className="flex items-center gap-4 mb-3 flex-wrap">
@@ -223,6 +300,7 @@ export default function HsaTransfers() {
                     <th className="text-left px-4 py-3 font-medium">Transfer ID</th>
                     <th className="text-left px-4 py-3 font-medium">Type</th>
                     <th className="text-left px-4 py-3 font-medium">Route</th>
+                    <th className="text-left px-4 py-3 font-medium">Blood Type</th>
                     <th className="text-left px-4 py-3 font-medium">Priority</th>
                     <th className="text-left px-4 py-3 font-medium">Status</th>
                     <th className="text-left px-4 py-3 font-medium">ETA</th>
@@ -253,6 +331,7 @@ export default function HsaTransfers() {
                         <td className="px-4 py-3">
                           <div className="text-gray-700 max-w-[180px] truncate" title={route}>{route}</div>
                         </td>
+                        <td className="px-4 py-3 font-bold text-red-600">{formatBloodType(row.bloodType)}</td>
                         <td className="px-4 py-3">
                           <PriorityBadge priority={row.priority} />
                         </td>
@@ -285,71 +364,6 @@ export default function HsaTransfers() {
             </div>
           )}
         </div>
-
-        {/* Detail panel */}
-        {selected && (() => {
-          const del = isHsaDelivery(selected)
-          const timeline = del ? buildDelTimeline(selected) : buildTrfTimeline(selected)
-          return (
-            <div className="w-80 flex-shrink-0 card p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-sm text-gray-800">Transfer Details</h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-primary">{selected.transferId}</span>
-                  <button onClick={() => setSelected(null)}><X className="w-4 h-4 text-gray-400 hover:text-gray-600" /></button>
-                </div>
-              </div>
-
-              <div className={`rounded-lg px-3 py-2 mb-3 text-xs font-medium border ${
-                selected.status === 'PENDING' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' :
-                ['DELIVERED', 'RECEIVED'].includes(selected.status) ? 'bg-green-50 border-green-200 text-green-800' :
-                'bg-blue-50 border-blue-200 text-blue-800'
-              }`}>
-                <span className="font-semibold">{del ? 'HSA Delivery' : 'Inter-hospital Transfer'}</span>
-                {' — '}{TRANSFER_STATUS_NOTES[selected.status] ?? STATUS_LABELS[selected.status]}
-              </div>
-
-              <div className="space-y-1.5 text-xs mb-4">
-                <h4 className="font-semibold text-gray-700">Overview</h4>
-                {[
-                  ['Priority', <PriorityBadge priority={selected.priority} />],
-                  ['Blood Type', formatBloodType(selected.bloodType)],
-                  ['Units', `${selected.units} units`],
-                  ['From', del ? 'HSA Blood Services' : selected.donorHospital?.name],
-                  ['To', selected.receivingHospital?.name],
-                  ['Created', formatDateTime(selected.createdAt)],
-                  ['Est. Delivery', formatDateTime(selected.estimatedDelivery)],
-                  ...(selected.purposeNotes ? [['Notes', selected.purposeNotes]] : []),
-                ].map(([k, v]) => (
-                  <div key={k} className="flex justify-between gap-2">
-                    <span className="text-gray-500 flex-shrink-0">{k}</span>
-                    <span className="font-medium text-gray-800 text-right">{v}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div>
-                <h4 className="font-semibold text-xs text-gray-700 mb-2">Timeline</h4>
-                <div className="space-y-2">
-                  {timeline.map((step, i) => (
-                    <div key={i} className="flex gap-2">
-                      <div className="flex flex-col items-center">
-                        <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${step.done ? 'bg-green-500' : step.active ? 'border-2 border-primary' : 'border-2 border-gray-200'}`}>
-                          {step.done ? <Check className="w-3 h-3 text-white" /> : <span className="w-2 h-2 rounded-full bg-gray-200" />}
-                        </div>
-                        {i < timeline.length - 1 && <div className="w-0.5 h-5 bg-gray-200 mt-0.5" />}
-                      </div>
-                      <div className="pb-2">
-                        <div className="text-xs font-medium text-gray-800">{step.label}</div>
-                        <div className="text-xs text-gray-400">{step.note}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )
-        })()}
       </div>
     </PageLayout>
   )
