@@ -25,13 +25,55 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) {
         ensureHsaExists();
-        if (hospitalRepository.count() > 1) return;  // already fully seeded
+        if (hospitalRepository.count() > 1) {
+            ensureMultiTypeRequestsExist();  // backfill multi-type mock data if missing
+            return;
+        }
         seedHospitals();
         seedUsers();
         seedBloodStock();
         seedRequests();
         seedAlerts();
         seedTransfers();
+    }
+
+    private void ensureMultiTypeRequestsExist() {
+        Hospital sgh = hospitalRepository.findByCode("SGH").orElseThrow();
+
+        // If request exists but has no blood items, patch it in place (avoids FK constraint issues)
+        bloodRequestRepository.findByRequestId("REQ-3330").ifPresentOrElse(r -> {
+            if (r.getBloodItems().isEmpty()) {
+                addBloodItems(r, new BloodType[]{BloodType.O_POSITIVE, BloodType.B_POSITIVE, BloodType.A_NEGATIVE}, new int[]{20, 10, 5});
+                r.setUnitsRequested(35);
+                bloodRequestRepository.save(r);
+            }
+        }, () -> saveMultiTypeRequest("REQ-3330", sgh, Priority.CRITICAL, RequestStatus.PENDING,
+            "Mass casualty event — multiple patients requiring different blood products.",
+            LocalDateTime.now().minusHours(2),
+            new BloodType[]{BloodType.O_POSITIVE, BloodType.B_POSITIVE, BloodType.A_NEGATIVE},
+            new int[]{20, 10, 5}));
+
+        bloodRequestRepository.findByRequestId("REQ-4976").ifPresentOrElse(r -> {
+            if (r.getBloodItems().isEmpty()) {
+                addBloodItems(r, new BloodType[]{BloodType.B_POSITIVE, BloodType.O_POSITIVE}, new int[]{20, 10});
+                r.setUnitsRequested(30);
+                bloodRequestRepository.save(r);
+            }
+        }, () -> saveMultiTypeRequest("REQ-4976", sgh, Priority.CRITICAL, RequestStatus.PENDING,
+            "Cardiac surgery and trauma cases requiring multiple blood types.",
+            LocalDateTime.now().minusHours(10),
+            new BloodType[]{BloodType.B_POSITIVE, BloodType.O_POSITIVE},
+            new int[]{20, 10}));
+    }
+
+    private void addBloodItems(BloodRequest req, BloodType[] bloodTypes, int[] units) {
+        for (int i = 0; i < bloodTypes.length; i++) {
+            RequestBloodItem item = new RequestBloodItem();
+            item.setBloodRequest(req);
+            item.setBloodType(bloodTypes[i]);
+            item.setUnits(units[i]);
+            req.getBloodItems().add(item);
+        }
     }
 
     /** Adds HSA hospital + stock if missing, without touching any existing data. */
@@ -160,26 +202,40 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void seedRequests() {
-        Hospital sgh = hospitalRepository.findByCode("SGH").orElseThrow();
-        Hospital nuh = hospitalRepository.findByCode("NUH").orElseThrow();
-        Hospital kkh = hospitalRepository.findByCode("KKH").orElseThrow();
+        Hospital sgh  = hospitalRepository.findByCode("SGH").orElseThrow();
+        Hospital nuh  = hospitalRepository.findByCode("NUH").orElseThrow();
+        Hospital kkh  = hospitalRepository.findByCode("KKH").orElseThrow();
         Hospital ttsh = hospitalRepository.findByCode("TTSH").orElseThrow();
-        Hospital cgh = hospitalRepository.findByCode("CGH").orElseThrow();
+        Hospital cgh  = hospitalRepository.findByCode("CGH").orElseThrow();
 
-        Object[][] requests = {
-            {"REQ-2109", sgh, BloodType.O_NEGATIVE, 20, Priority.CRITICAL, RequestStatus.PENDING,
+        // Multi-type requests
+        saveMultiTypeRequest("REQ-3330", sgh, Priority.CRITICAL, RequestStatus.PENDING,
+            "Mass casualty event — multiple patients requiring different blood products.",
+            LocalDateTime.now().minusHours(2),
+            new BloodType[]{BloodType.O_POSITIVE, BloodType.B_POSITIVE, BloodType.A_NEGATIVE},
+            new int[]{20, 10, 5});
+
+        saveMultiTypeRequest("REQ-4976", sgh, Priority.CRITICAL, RequestStatus.PENDING,
+            "Cardiac surgery and trauma cases requiring multiple blood types.",
+            LocalDateTime.now().minusHours(10),
+            new BloodType[]{BloodType.B_POSITIVE, BloodType.O_POSITIVE},
+            new int[]{20, 10});
+
+        // Single-type requests
+        Object[][] singleRequests = {
+            {"REQ-2109", sgh,  BloodType.O_NEGATIVE, 20, Priority.CRITICAL, RequestStatus.PENDING,
              "Multiple trauma cases due to major road accident.", LocalDateTime.now().minusMinutes(17)},
-            {"REQ-2108", kkh, BloodType.A_POSITIVE, 10, Priority.HIGH, RequestStatus.PENDING,
+            {"REQ-2108", kkh,  BloodType.A_POSITIVE, 10, Priority.HIGH,    RequestStatus.PENDING,
              "Paediatric surgery cases.", LocalDateTime.now().minusMinutes(32)},
-            {"REQ-2107", ttsh, BloodType.B_POSITIVE, 10, Priority.MEDIUM, RequestStatus.PENDING,
+            {"REQ-2107", ttsh, BloodType.B_POSITIVE, 10, Priority.MEDIUM,  RequestStatus.PENDING,
              "Scheduled surgeries.", LocalDateTime.now().minusMinutes(32)},
-            {"REQ-2106", cgh, BloodType.O_NEGATIVE, 10, Priority.MEDIUM, RequestStatus.IN_TRANSIT,
+            {"REQ-2106", cgh,  BloodType.O_NEGATIVE, 10, Priority.MEDIUM,  RequestStatus.IN_TRANSIT,
              "Post Surgical Care", LocalDateTime.now().minusMinutes(32)},
-            {"REQ-2105", nuh, BloodType.O_POSITIVE, 20, Priority.CRITICAL, RequestStatus.APPROVED,
+            {"REQ-2105", nuh,  BloodType.O_POSITIVE, 20, Priority.CRITICAL, RequestStatus.APPROVED,
              "Urgent supply for emergency surgeries.", LocalDateTime.now().minusMinutes(45)},
         };
 
-        for (Object[] r : requests) {
+        for (Object[] r : singleRequests) {
             BloodRequest req = new BloodRequest();
             req.setRequestId((String) r[0]);
             req.setRequestingHospital((Hospital) r[1]);
@@ -195,6 +251,35 @@ public class DataSeeder implements CommandLineRunner {
             req.setRequestedByDesignation("Head, Emergency Dept");
             bloodRequestRepository.save(req);
         }
+    }
+
+    private void saveMultiTypeRequest(String requestId, Hospital hospital, Priority priority,
+                                      RequestStatus status, String reason, LocalDateTime requestedAt,
+                                      BloodType[] bloodTypes, int[] units) {
+        BloodRequest req = new BloodRequest();
+        req.setRequestId(requestId);
+        req.setRequestingHospital(hospital);
+        req.setBloodType(bloodTypes[0]);  // primary type
+        req.setPriority(priority);
+        req.setStatus(status);
+        req.setReason(reason);
+        req.setRequestedAt(requestedAt);
+        req.setUpdatedAt(LocalDateTime.now());
+        req.setNeededBy(LocalDateTime.now().plusHours(2));
+        req.setRequestedByName("Dr. James Tan");
+        req.setRequestedByDesignation("Head, Emergency Dept");
+
+        int total = 0;
+        for (int i = 0; i < bloodTypes.length; i++) {
+            RequestBloodItem item = new RequestBloodItem();
+            item.setBloodRequest(req);
+            item.setBloodType(bloodTypes[i]);
+            item.setUnits(units[i]);
+            req.getBloodItems().add(item);
+            total += units[i];
+        }
+        req.setUnitsRequested(total);
+        bloodRequestRepository.save(req);
     }
 
     private void seedAlerts() {

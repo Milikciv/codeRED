@@ -4,6 +4,7 @@ import com.codered.model.BloodRequest;
 import com.codered.model.BloodTransfer;
 import com.codered.model.Hospital;
 import com.codered.model.User;
+import com.codered.model.enums.BloodType;
 import com.codered.repository.BloodRequestRepository;
 import com.codered.repository.BloodTransferRepository;
 import com.codered.repository.UserRepository;
@@ -66,14 +67,14 @@ public class TransferService {
      * HSA deliveries start IN_TRANSIT immediately; hospital transfers start PENDING.
      */
     public BloodTransfer createFromAllocation(Hospital donorHospital, Hospital receivingHospital,
-                                               BloodRequest bloodRequest, int units, String prefix) {
+                                               BloodRequest bloodRequest, int units, String prefix, BloodType bloodType) {
         boolean isHsaDelivery = "HSA".equals(donorHospital.getCode());
         BloodTransfer transfer = new BloodTransfer();
         transfer.setTransferId(prefix + "-" + System.currentTimeMillis() % 100000);
         transfer.setDonorHospital(donorHospital);
         transfer.setReceivingHospital(receivingHospital);
         transfer.setBloodRequest(bloodRequest);
-        transfer.setBloodType(bloodRequest.getBloodType());
+        transfer.setBloodType(bloodType);
         transfer.setUnits(units);
         transfer.setPriority(bloodRequest.getPriority());
         transfer.setStatus(isHsaDelivery ? "IN_TRANSIT" : "PENDING");

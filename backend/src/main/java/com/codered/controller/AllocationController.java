@@ -4,6 +4,7 @@ import com.codered.model.Alert;
 import com.codered.model.BloodRequest;
 import com.codered.model.BloodStock;
 import com.codered.model.Hospital;
+import com.codered.model.enums.BloodType;
 import com.codered.model.enums.Priority;
 import com.codered.model.enums.RequestStatus;
 import com.codered.repository.AlertRepository;
@@ -68,25 +69,44 @@ public class AllocationController {
      *   3. National donor appeal (critically low everywhere)
      */
     @GetMapping("/assess/{requestId}")
-    public ResponseEntity<Map<String, Object>> assess(@PathVariable Long requestId) {
+    public ResponseEntity<Map<String, Object>> assess(
+            @PathVariable Long requestId,
+            @RequestParam(required = false) String bloodType) {
         BloodRequest request = bloodRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found"));
 
+        // Resolve which blood type and units to assess
+        BloodType effectiveType = request.getBloodType();
+        int effectiveUnits = request.getUnitsRequested();
+        if (bloodType != null) {
+            try {
+                BloodType parsed = BloodType.valueOf(bloodType);
+                int perTypeUnits = request.getBloodItems().stream()
+                        .filter(i -> i.getBloodType() == parsed)
+                        .mapToInt(i -> i.getUnits())
+                        .findFirst().orElse(effectiveUnits);
+                effectiveType = parsed;
+                effectiveUnits = perTypeUnits;
+            } catch (IllegalArgumentException ignored) {}
+        }
+        final BloodType assessType = effectiveType;
+        final int assessUnits = effectiveUnits;
+
         Hospital hsa = hsaHospital();
         int hsaUnits = bloodStockRepository
-                .findByHospitalAndBloodType(hsa, request.getBloodType())
+                .findByHospitalAndBloodType(hsa, assessType)
                 .map(BloodStock::getCurrentUnits)
                 .orElse(0);
 
-        boolean hsaCanFulfill = hsaUnits >= request.getUnitsRequested();
+        boolean hsaCanFulfill = hsaUnits >= assessUnits;
 
         List<Map<String, Object>> hospitalOptions = hospitalRepository.findAll().stream()
                 .filter(h -> !h.getCode().equals(HSA_CODE)
                         && !h.getId().equals(request.getRequestingHospital().getId()))
-                .map(h -> buildHospitalOption(h, request))
+                .map(h -> buildHospitalOptionForType(h, request, assessType))
                 .collect(Collectors.toList());
 
-        boolean nationallyLow = isNationallyLow(request);
+        boolean nationallyLow = isNationallyLowForType(request, assessType);
 
         String recommendedSource = hsaCanFulfill ? "HSA"
                 : nationallyLow ? "APPEAL"
@@ -94,8 +114,8 @@ public class AllocationController {
 
         return ResponseEntity.ok(Map.of(
                 "requestId", requestId,
-                "bloodType", request.getBloodType().getLabel(),
-                "unitsRequested", request.getUnitsRequested(),
+                "bloodType", assessType.getLabel(),
+                "unitsRequested", assessUnits,
                 "hsaUnitsAvailable", hsaUnits,
                 "hsaCanFulfill", hsaCanFulfill,
                 "recommendedSource", recommendedSource,
@@ -112,16 +132,23 @@ public class AllocationController {
         List<Map<String, Object>> result = hospitalRepository.findAll().stream()
                 .filter(h -> !h.getCode().equals(HSA_CODE)
                         && !h.getId().equals(request.getRequestingHospital().getId()))
-                .map(h -> buildHospitalOption(h, request))
+                .map(h -> buildHospitalOptionForType(h, request, request.getBloodType()))
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(result);
     }
 
     /**
-     * Approves a mixed allocation: any combination of HSA units and hospital units.
-     * Payload: { requestId, hsaUnits?: int, allocations?: { hospitalId: units } }
-     * At least one of hsaUnits > 0 or a non-empty allocations map must be provided.
+     * Approves a multi-type allocation plan and creates the resulting transfers.
+     *
+     * Payload:
+     * {
+     *   requestId: Long,
+     *   perTypeAllocations: [
+     *     { bloodType: "O_POSITIVE", hsaUnits: 10, allocations: { "hospitalId": units } },
+     *     ...
+     *   ]
+     * }
      */
     @PostMapping("/approve")
     @SuppressWarnings("unchecked")
@@ -130,57 +157,59 @@ public class AllocationController {
         BloodRequest request = bloodRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found"));
 
-        int hsaUnits = body.get("hsaUnits") != null ? Integer.parseInt(body.get("hsaUnits").toString()) : 0;
-        Map<String, Object> allocations = body.get("allocations") != null
-                ? (Map<String, Object>) body.get("allocations")
-                : Map.of();
+        List<Map<String, Object>> perTypeAllocations = (List<Map<String, Object>>) body.get("perTypeAllocations");
+        if (perTypeAllocations == null || perTypeAllocations.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No allocation data provided");
+        }
 
-        int hospitalUnits = allocations.values().stream().mapToInt(v -> Integer.parseInt(v.toString())).sum();
-        if (hsaUnits <= 0 && hospitalUnits <= 0) {
+        int totalHsaUnits = 0;
+        int totalHospitalUnits = 0;
+        Hospital hsa = hsaHospital();
+
+        for (Map<String, Object> typeAlloc : perTypeAllocations) {
+            BloodType bloodType = BloodType.valueOf(typeAlloc.get("bloodType").toString());
+            int hsaUnits = typeAlloc.get("hsaUnits") != null ? Integer.parseInt(typeAlloc.get("hsaUnits").toString()) : 0;
+            Map<String, Object> allocations = typeAlloc.get("allocations") != null
+                    ? (Map<String, Object>) typeAlloc.get("allocations")
+                    : Map.of();
+
+            if (hsaUnits > 0) {
+                BloodStock hsaStock = bloodStockRepository
+                        .findByHospitalAndBloodType(hsa, bloodType)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                "HSA has no stock for " + bloodType));
+                if (hsaStock.getCurrentUnits() < hsaUnits) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,
+                            "Insufficient HSA stock for " + bloodType.getLabel() + ": "
+                                    + hsaStock.getCurrentUnits() + " available, " + hsaUnits + " requested");
+                }
+                hsaStock.setCurrentUnits(hsaStock.getCurrentUnits() - hsaUnits);
+                bloodStockRepository.save(hsaStock);
+                transferService.createFromAllocation(hsa, request.getRequestingHospital(), request, hsaUnits, "DEL", bloodType);
+                totalHsaUnits += hsaUnits;
+            }
+
+            for (Map.Entry<String, Object> entry : allocations.entrySet()) {
+                int units = Integer.parseInt(entry.getValue().toString());
+                if (units <= 0) continue;
+                Hospital donor = hospitalRepository.findById(Long.valueOf(entry.getKey()))
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Hospital not found"));
+                transferService.createFromAllocation(donor, request.getRequestingHospital(), request, units, "TRF", bloodType);
+                totalHospitalUnits += units;
+            }
+        }
+
+        if (totalHsaUnits == 0 && totalHospitalUnits == 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No units allocated");
         }
 
-        // Deduct HSA stock and create HSA delivery transfer
-        if (hsaUnits > 0) {
-            Hospital hsa = hsaHospital();
-            BloodStock hsaStock = bloodStockRepository
-                    .findByHospitalAndBloodType(hsa, request.getBloodType())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                            "HSA has no stock for " + request.getBloodType()));
-            if (hsaStock.getCurrentUnits() < hsaUnits) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT,
-                        "Insufficient HSA stock: " + hsaStock.getCurrentUnits() + " available, " + hsaUnits + " requested");
-            }
-            hsaStock.setCurrentUnits(hsaStock.getCurrentUnits() - hsaUnits);
-            bloodStockRepository.save(hsaStock);
-            transferService.createFromAllocation(hsa, request.getRequestingHospital(), request, hsaUnits, "DEL");
-        }
-
-        // Create hospital-to-hospital transfer records
-        for (Map.Entry<String, Object> entry : allocations.entrySet()) {
-            int units = Integer.parseInt(entry.getValue().toString());
-            if (units <= 0) continue;
-            Hospital donor = hospitalRepository.findById(Long.valueOf(entry.getKey()))
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Hospital not found"));
-            transferService.createFromAllocation(donor, request.getRequestingHospital(), request, units, "TRF");
-        }
-
-        request.setStatus(hsaUnits > 0 && hospitalUnits == 0 ? RequestStatus.IN_TRANSIT : RequestStatus.APPROVED);
+        request.setStatus(RequestStatus.APPROVED);
         bloodRequestRepository.save(request);
 
-        String msg = buildApprovalMessage(hsaUnits, hospitalUnits, request);
+        String msg = "Allocation approved: " + (totalHsaUnits > 0 ? totalHsaUnits + " units from HSA" : "")
+                + (totalHsaUnits > 0 && totalHospitalUnits > 0 ? " + " : "")
+                + (totalHospitalUnits > 0 ? totalHospitalUnits + " units from hospitals" : "");
         return ResponseEntity.ok(Map.of("status", "success", "message", msg));
-    }
-
-    private String buildApprovalMessage(int hsaUnits, int hospitalUnits, BloodRequest request) {
-        String type = request.getBloodType().getLabel();
-        if (hsaUnits > 0 && hospitalUnits > 0) {
-            return "Mixed allocation approved: " + hsaUnits + " units from HSA + " + hospitalUnits + " units from hospitals for " + type;
-        } else if (hsaUnits > 0) {
-            return "HSA Blood Services will dispatch " + hsaUnits + " units of " + type;
-        } else {
-            return "Inter-hospital transfer of " + hospitalUnits + " units of " + type + " initiated";
-        }
     }
 
     /**
@@ -215,8 +244,12 @@ public class AllocationController {
     // --- private helpers ---
 
     private Map<String, Object> buildHospitalOption(Hospital h, BloodRequest request) {
+        return buildHospitalOptionForType(h, request, request.getBloodType());
+    }
+
+    private Map<String, Object> buildHospitalOptionForType(Hospital h, BloodRequest request, BloodType type) {
         BloodStock stock = bloodStockRepository
-                .findByHospitalAndBloodType(h, request.getBloodType())
+                .findByHospitalAndBloodType(h, type)
                 .orElse(null);
 
         int current = stock != null ? stock.getCurrentUnits() : 0;
@@ -239,8 +272,12 @@ public class AllocationController {
     }
 
     private boolean isNationallyLow(BloodRequest request) {
+        return isNationallyLowForType(request, request.getBloodType());
+    }
+
+    private boolean isNationallyLowForType(BloodRequest request, BloodType type) {
         List<BloodStock> allOfType = bloodStockRepository.findAll().stream()
-                .filter(s -> s.getBloodType() == request.getBloodType())
+                .filter(s -> s.getBloodType() == type)
                 .toList();
         int totalCurrent = allOfType.stream().mapToInt(BloodStock::getCurrentUnits).sum();
         int totalIdeal   = allOfType.stream().mapToInt(BloodStock::getIdealUnits).sum();
