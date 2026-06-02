@@ -16,11 +16,6 @@ import HotspotInsights from './pages/src/hotspots/Insights'
 import BloodbankPerformance from './pages/src/hotspots/BloodbankPerformance'
 import DonorMap from './pages/src/hotspots/DonorMap'
 
-// Hospital pages
-import HospitalDashboard from './pages/hospital/Dashboard'
-import RequestBlood from './pages/hospital/RequestBlood'
-import MyRequests from './pages/hospital/MyRequests'
-
 // SRC pages
 import SRCHome from './pages/src/SRCHome'
 import AlertsFromHSA from './pages/src/AlertsFromHSA'
@@ -29,8 +24,6 @@ import DrivePlanning from './pages/src/DrivePlanning'
 import DonationDrives from './pages/src/DonationDrives'
 import DriveEdit from './pages/src/DriveEdit'
 import DonorOutreach from './pages/src/DonorOutreach'
-
-// Shared pages
 import UserManagement from './pages/UserManagement'
 
 function ProtectedRoute({ children, requiredRoles }) {
@@ -43,25 +36,22 @@ function ProtectedRoute({ children, requiredRoles }) {
 function RootRedirect() {
   const { user } = useAuth()
   if (!user) return <Navigate to="/login" replace />
+  if (user.role === 'ADMIN') return <Navigate to="/admin/users" replace />
   if (user.role === 'HSA') return <Navigate to="/hsa/dashboard" replace />
   if (user.role === 'SRC_STAFF') return <Navigate to="/src/home" replace />
-  return <Navigate to="/hospital/dashboard" replace />
+  return <Navigate to="/login" replace />
+}
+
+function Admin({ children }) {
+  return <ProtectedRoute requiredRoles={['ADMIN']}>{children}</ProtectedRoute>
 }
 
 function HSA({ children }) {
   return <ProtectedRoute requiredRoles={['HSA']}>{children}</ProtectedRoute>
 }
 
-function Hospital({ children }) {
-  return <ProtectedRoute requiredRoles={['HOSPITAL_STAFF', 'HOSPITAL_ADMIN']}>{children}</ProtectedRoute>
-}
-
 function SRC({ children }) {
   return <ProtectedRoute requiredRoles={['SRC_STAFF']}>{children}</ProtectedRoute>
-}
-
-function AdminOnly({ children }) {
-  return <ProtectedRoute requiredRoles={['HSA', 'HOSPITAL_ADMIN']}>{children}</ProtectedRoute>
 }
 
 export default function App() {
@@ -72,17 +62,15 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<RootRedirect />} />
 
+          {/* Admin routes */}
+          <Route path="/admin/users" element={<Admin><UserManagement /></Admin>} />
+
           {/* HSA routes */}
           <Route path="/hsa/dashboard"   element={<HSA><HsaDashboard /></HSA>} />
           <Route path="/hsa/forecasting" element={<HSA><Forecasting /></HSA>} />
           <Route path="/hsa/forecasting/blood-type-analytics" element={<HSA><BloodTypeAnalytics /></HSA>} />
           <Route path="/hsa/forecasting/recommendations"      element={<HSA><Recommendations /></HSA>} />
           <Route path="/hsa/alerts"      element={<HSA><AlertsToSRC /></HSA>} />
-
-          {/* Hospital routes */}
-          <Route path="/hospital/dashboard"   element={<Hospital><HospitalDashboard /></Hospital>} />
-          <Route path="/hospital/request"     element={<Hospital><RequestBlood /></Hospital>} />
-          <Route path="/hospital/my-requests" element={<Hospital><MyRequests /></Hospital>} />
 
           {/* SRC routes */}
           <Route path="/src/home"              element={<SRC><SRCHome /></SRC>} />
@@ -96,9 +84,6 @@ export default function App() {
           <Route path="/src/hotspots/map"                   element={<SRC><DonorMap /></SRC>} />
           <Route path="/src/hotspots/insights"              element={<SRC><HotspotInsights /></SRC>} />
           <Route path="/src/hotspots/bloodbank-performance" element={<SRC><BloodbankPerformance /></SRC>} />
-
-          {/* User management */}
-          <Route path="/hospital/users" element={<AdminOnly><UserManagement /></AdminOnly>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

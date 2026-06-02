@@ -1,7 +1,7 @@
 package com.codered.model.enums;
 
 public enum UserRole {
+    ADMIN,
     HSA,
-    HOSPITAL_STAFF,
-    HOSPITAL_ADMIN
+    SRC_STAFF
 }

@@ -2,10 +2,8 @@ package com.codered.controller;
 
 import com.codered.dto.CreateUserRequest;
 import com.codered.dto.UserDTO;
-import com.codered.model.Hospital;
 import com.codered.model.User;
 import com.codered.model.enums.UserRole;
-import com.codered.repository.HospitalRepository;
 import com.codered.repository.UserRepository;
 import com.codered.service.UserManagementService;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +23,6 @@ public class UserController {
 
     private final UserManagementService userManagementService;
     private final UserRepository userRepository;
-    private final HospitalRepository hospitalRepository;
 
     private User resolveUser(UserDetails userDetails) {
         return userRepository.findByEmail(userDetails.getUsername())
@@ -33,7 +30,7 @@ public class UserController {
     }
 
     private void requireAdminRole(User caller) {
-        if (caller.getRole() != UserRole.HSA && caller.getRole() != UserRole.HOSPITAL_ADMIN) {
+        if (caller.getRole() != UserRole.ADMIN) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin access required");
         }
     }
@@ -72,10 +69,5 @@ public class UserController {
         requireAdminRole(caller);
         userManagementService.deleteUser(id, caller);
         return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/hospitals")
-    public ResponseEntity<List<Hospital>> getHospitals() {
-        return ResponseEntity.ok(hospitalRepository.findAll());
     }
 }

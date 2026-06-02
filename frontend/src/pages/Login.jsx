@@ -3,20 +3,18 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { ChevronDown, Eye, EyeOff } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
-import { businessOutline, medkitOutline, heartOutline } from 'ionicons/icons'
+import { businessOutline, heartOutline } from 'ionicons/icons'
 
 const ROLES = [
+  { value: 'ADMIN',         label: 'Admin',                  icon: businessOutline },
   { value: 'SRC_STAFF',     label: 'Singapore Red Cross',    icon: heartOutline   },
   { value: 'HSA',           label: 'Health Sciences Authority', icon: businessOutline },
-  { value: 'HOSPITAL_ADMIN', label: 'Hospital Administrator', icon: businessOutline },
-  { value: 'HOSPITAL_STAFF', label: 'Hospital Staff',         icon: medkitOutline  },
 ]
 
 const CREDENTIALS = {
+  ADMIN:         { email: 'admin@codered.sg',        password: 'password123' },
   SRC_STAFF:     { email: 'winnie@redcross.org.sg', password: 'password123' },
   HSA:           { email: 'winnie@hsa.gov.sg',      password: 'password123' },
-  HOSPITAL_ADMIN: { email: 'admin@SGH.sg',           password: 'password123' },
-  HOSPITAL_STAFF: { email: 'winnieKoh@SGH.sg',       password: 'password123' },
 }
 
 const SRC_MOCK_USER = {
@@ -60,7 +58,8 @@ export default function Login() {
         return
       }
       const user = await login(email, password)
-      navigate(user.role === 'HSA' ? '/hsa/dashboard' : '/hospital/dashboard')
+      if (user.role === 'ADMIN') navigate('/admin/users')
+      else navigate(user.role === 'HSA' ? '/hsa/dashboard' : '/src/home')
     } catch {
       setError('Invalid email or password.')
     } finally {

@@ -5,6 +5,7 @@ import com.codered.model.enums.*;
 import com.codered.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -21,9 +22,12 @@ public class DataSeeder implements CommandLineRunner {
     private final AlertRepository alertRepository;
     private final BloodTransferRepository bloodTransferRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     public void run(String... args) {
+        migrateLegacyHospitalUsers();
+        ensureAdminExists();
         ensureHsaExists();
         if (hospitalRepository.count() > 1) {
             ensureMultiTypeRequestsExist();  // backfill multi-type mock data if missing
@@ -35,6 +39,22 @@ public class DataSeeder implements CommandLineRunner {
         seedRequests();
         seedAlerts();
         seedTransfers();
+    }
+
+    private void migrateLegacyHospitalUsers() {
+        jdbcTemplate.update("UPDATE users SET role = 'SRC_STAFF', hospital_id = NULL WHERE role IN ('HOSPITAL_STAFF', 'HOSPITAL_ADMIN')");
+    }
+
+    private void ensureAdminExists() {
+        if (userRepository.findByEmail("admin@codered.sg").isPresent()) return;
+
+        User admin = new User();
+        admin.setEmail("admin@codered.sg");
+        admin.setPassword(passwordEncoder.encode("password123"));
+        admin.setName("Admin");
+        admin.setRole(UserRole.ADMIN);
+        admin.setDesignation("System Administrator");
+        userRepository.save(admin);
     }
 
     private void ensureMultiTypeRequestsExist() {
@@ -129,38 +149,13 @@ public class DataSeeder implements CommandLineRunner {
         hsa.setDesignation("Blood Services Manager");
         userRepository.save(hsa);
 
-        // Hospital staff
-        Hospital sgh = hospitalRepository.findByCode("SGH").orElseThrow();
-        User staff = new User();
-        staff.setEmail("winnieKoh@SGH.sg");
-        staff.setPassword(passwordEncoder.encode("password123"));
-        staff.setName("Winnie Koh");
-        staff.setRole(UserRole.HOSPITAL_STAFF);
-        staff.setDesignation("Head, Emergency Dept");
-        staff.setContactNumber("+65 9627 6354");
-        staff.setHospital(sgh);
-        userRepository.save(staff);
-
-        User james = new User();
-        james.setEmail("james.tan@SGH.sg");
-        james.setPassword(passwordEncoder.encode("password123"));
-        james.setName("Dr. James Tan");
-        james.setRole(UserRole.HOSPITAL_STAFF);
-        james.setDesignation("Head, Emergency Dept");
-        james.setContactNumber("+65 9627 6354");
-        james.setHospital(sgh);
-        userRepository.save(james);
-
-        // Hospital admin
-        User admin = new User();
-        admin.setEmail("admin@SGH.sg");
-        admin.setPassword(passwordEncoder.encode("password123"));
-        admin.setName("Sarah Lim");
-        admin.setRole(UserRole.HOSPITAL_ADMIN);
-        admin.setDesignation("Hospital Administrator");
-        admin.setContactNumber("+65 9123 4567");
-        admin.setHospital(sgh);
-        userRepository.save(admin);
+        User src = new User();
+        src.setEmail("winnie@redcross.org.sg");
+        src.setPassword(passwordEncoder.encode("password123"));
+        src.setName("Winnie Koh");
+        src.setRole(UserRole.SRC_STAFF);
+        src.setDesignation("SRC Staff");
+        userRepository.save(src);
     }
 
     private void seedBloodStock() {

@@ -63,16 +63,16 @@ export default function PageBanner({ title, subtitle, breadcrumb, isHome, action
         <div ref={ref} className="fixed top-3 right-5 z-50">
           <button
             onClick={() => setOpen(o => !o)}
-            className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-1.5 shadow-md hover:shadow-lg transition-shadow"
+            className="w-60 flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-1.5 shadow-md hover:shadow-lg transition-shadow"
           >
             <div className="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center text-primary text-xs font-bold flex-shrink-0">
               {user.name?.charAt(0)}
             </div>
-            <div className="leading-tight text-left">
-              <div className="text-xs font-semibold text-gray-800">{user.name}</div>
-              <div className="text-xs text-gray-500">{user.hospitalName}</div>
+            <div className="leading-tight text-left min-w-0 flex-1">
+              <div className="text-xs font-semibold text-gray-800 truncate">{user.name}</div>
+              <div className="text-xs text-gray-500 truncate">{user.role === 'ADMIN' ? 'Admin' : user.hospitalName}</div>
             </div>
-            <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform flex-shrink-0 ${open ? 'rotate-180' : ''}`} />
           </button>
 
           {open && (

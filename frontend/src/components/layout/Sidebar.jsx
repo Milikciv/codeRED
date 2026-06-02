@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
-  Home, TrendingUp, Droplets, MapPin, ArrowRightLeft,
+  Home, TrendingUp,
   Settings, HelpCircle, LogOut, Users, Bell, CalendarDays, Send, Map,
   ChevronsLeft, ChevronsRight
 } from 'lucide-react'
@@ -12,17 +12,8 @@ const HSA_NAV = [
   { to: '/hsa/alerts',      icon: Bell,        label: 'Alerts' },
 ]
 
-const HOSPITAL_NAV = [
-  { to: '/hospital/dashboard',   icon: Home,       label: 'Home' },
-  { to: '/hospital/request',     icon: Droplets,   label: 'Request Blood' },
-  { to: '/hospital/my-requests', icon: TrendingUp, label: 'My Requests' },
-]
-
-const HOSPITAL_ADMIN_NAV = [
-  { to: '/hospital/dashboard',   icon: Home,       label: 'Home' },
-  { to: '/hospital/request',     icon: Droplets,   label: 'Request Blood' },
-  { to: '/hospital/my-requests', icon: TrendingUp, label: 'My Requests' },
-  { to: '/hospital/users',       icon: Users,      label: 'Users' },
+const ADMIN_NAV = [
+  { to: '/admin/users', icon: Users, label: 'Users' },
 ]
 
 const SRC_NAV = [
@@ -37,13 +28,13 @@ const SRC_NAV = [
 export default function Sidebar({ open = true, onToggle }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const navItems = user?.role === 'SRC_STAFF'
+  const navItems = user?.role === 'ADMIN'
+    ? ADMIN_NAV
+    : user?.role === 'SRC_STAFF'
     ? SRC_NAV
     : user?.role === 'HSA'
     ? HSA_NAV
-    : user?.role === 'HOSPITAL_ADMIN'
-    ? HOSPITAL_ADMIN_NAV
-    : HOSPITAL_NAV
+    : []
 
   const handleLogout = () => {
     logout()
