@@ -9,8 +9,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -27,8 +27,8 @@ public class DataSeeder implements CommandLineRunner {
     private final SrcAlertRepository srcAlertRepository;
     private final DonationDriveRepository donationDriveRepository;
     private final DonorDemographicRepository donorDemographicRepository;
-    private final DonorHotspotRepository donorHotspotRepository;
     private final RecommendedDriveRepository recommendedDriveRepository;
+    private final DonorRepository donorRepository;
 
     @Override
     public void run(String... args) {
@@ -52,18 +52,18 @@ public class DataSeeder implements CommandLineRunner {
     // ── ensure methods (idempotent backfills) ────────────────────────────
 
     private void ensureSrcDataExists() {
-        if (srcAlertRepository.count() == 0)          seedSrcAlerts();
-        if (donationDriveRepository.count() == 0)     seedDonationDrives();
-        if (donorDemographicRepository.count() == 0)  seedDonorDemographics();
-        if (donorHotspotRepository.count() == 0)      seedDonorHotspots();
-        if (recommendedDriveRepository.count() == 0)  seedRecommendedDrive();
+        if (srcAlertRepository.count() == 0)            seedSrcAlerts();
+        if (donationDriveRepository.count() == 0)       seedDonationDrives();
+        if (donorRepository.count() == 0)               seedDonors();
+        if (donorDemographicRepository.count() == 0)    seedResponseRateTrend();
+        if (recommendedDriveRepository.count() == 0)    seedRecommendedDrive();
     }
 
     private void seedSrcData() {
         seedSrcAlerts();
         seedDonationDrives();
-        seedDonorDemographics();
-        seedDonorHotspots();
+        seedDonors();
+        seedResponseRateTrend();
         seedRecommendedDrive();
     }
 
@@ -203,87 +203,94 @@ public class DataSeeder implements CommandLineRunner {
         donationDriveRepository.save(d);
     }
 
-    // ── donor_demographics ───────────────────────────────────────────────
+    // ── donors ───────────────────────────────────────────────────────────
 
-    private void seedDonorDemographics() {
-        // summary
-        saveDemographic("summary", "activeDonors",   128450L, null, null, null, null, 1);
-        saveDemographic("summary", "eligibleRepeat",  74320L, null, null, null, null, 2);
-        saveDemographic("summary", "dormant",         54130L, null, null, null, null, 3);
-        saveDemographic("summary", "responseRate",     null,  28.7, null, null, null, 4);
+    private void seedDonors() {
+        // Regions with coordinates
+        String[] regions = {"Tampines", "Jurong East", "Woodlands", "Ang Mo Kio", "Bedok", "Bukit Batok", "Clementi", "Yishun"};
+        double[] lats    = {1.3540,     1.3333,        1.4382,      1.3696,        1.3239,  1.3590,        1.3162,      1.4304};
+        double[] lons    = {103.9440,   103.7420,      103.7891,    103.8454,      103.9290, 103.7637,     103.7649,    103.8354};
 
-        // blood_type
-        saveDemographic("blood_type", "O+",  44150L, 34.4, null, null, null, 1);
-        saveDemographic("blood_type", "A+",  32620L, 25.4, null, null, null, 2);
-        saveDemographic("blood_type", "B+",  20340L, 15.9, null, null, null, 3);
-        saveDemographic("blood_type", "O-",   8950L,  7.0, null, null, null, 4);
-        saveDemographic("blood_type", "A-",   7560L,  5.9, null, null, null, 5);
-        saveDemographic("blood_type", "AB+",  7020L,  5.5, null, null, null, 6);
-        saveDemographic("blood_type", "B-",   4120L,  3.2, null, null, null, 7);
-        saveDemographic("blood_type", "AB-",  3690L,  2.7, null, null, null, 8);
+        // Blood type batches: {BloodType ordinal, count}
+        // Distribution approximates Singapore prevalence: O+(34%), A+(25%), B+(16%), O-(7%), A-(6%), AB+(5.5%), B-(3.2%), AB-(2.7%)
+        int[][] batches = {{0,82},{1,61},{2,38},{3,17},{4,14},{5,13},{6,8},{7,7}};
+        BloodType[] bts = BloodType.values();
 
-        // age
-        saveDemographic("age", "16-20",  5420L,  4.2, null, null, null, 1);
-        saveDemographic("age", "21-30", 37980L, 29.6, null, null, null, 2);
-        saveDemographic("age", "31-40", 34430L, 26.8, null, null, null, 3);
-        saveDemographic("age", "41-50", 28400L, 22.1, null, null, null, 4);
-        saveDemographic("age", "51-60", 17470L, 13.6, null, null, null, 5);
-        saveDemographic("age", "60+",    4750L,  3.7, null, null, null, 6);
-
-        // location
-        saveDemographic("location", "Tampines",    18560L, null, 1, 1.3540, 103.9440, null, 1);
-        saveDemographic("location", "Jurong East", 15230L, null, 2, 1.3333, 103.7420, null, 2);
-        saveDemographic("location", "Woodlands",   12480L, null, 3, 1.4382, 103.7891, null, 3);
-        saveDemographic("location", "Ang Mo Kio",  10390L, null, 4, 1.3696, 103.8454, null, 4);
-        saveDemographic("location", "Bedok",        8760L, null, 5, 1.3239, 103.9290, null, 5);
-
-        // response_rate
-        saveDemographic("response_rate", "Dec 2025", null, null, null, null, null, 23.1, 1);
-        saveDemographic("response_rate", "Jan 2026", null, null, null, null, null, 24.0, 2);
-        saveDemographic("response_rate", "Feb 2026", null, null, null, null, null, 25.3, 3);
-        saveDemographic("response_rate", "Mar 2026", null, null, null, null, null, 26.1, 4);
-        saveDemographic("response_rate", "Apr 2026", null, null, null, null, null, 25.9, 5);
-        saveDemographic("response_rate", "May 2026", null, null, null, null, null, 28.7, 6);
-    }
-
-    private void saveDemographic(String category, String label, Long count, Double pct,
-                                  Integer rank, Double lat, Double lon, Double rate, int sortOrder) {
-        DonorDemographic d = new DonorDemographic();
-        d.setCategory(category);
-        d.setLabel(label);
-        d.setCount(count);
-        d.setPercentage(pct);
-        d.setRank(rank);
-        d.setLatitude(lat);
-        d.setLongitude(lon);
-        d.setRate(rate);
-        d.setSortOrder(sortOrder);
-        donorDemographicRepository.save(d);
-    }
-
-    // ── donor_hotspots ───────────────────────────────────────────────────
-
-    private void seedDonorHotspots() {
-        Object[][] hotspots = {
-            // rank, name, score, lat, lon, activeDonors, venue, eligibleDonors, successRate
-            {1, "Tampines",    86, 1.3540, 103.9440, 18560, "Tampines Community Plaza", 86, 72},
-            {2, "Jurong East", 78, 1.3333, 103.7420, 15230, "JEM (Level 1)",             72, 65},
-            {3, "Woodlands",   72, 1.4382, 103.7891, 12480, "Woodlands Civic Centre",    65, 63},
-            {4, "Ang Mo Kio",  65, 1.3696, 103.8454, 10390, "AMK Hub",                   58, 59},
-            {5, "Bukit Batok", 58, 1.3590, 103.7637,  8200, "Beauty World Plaza",        48, 52},
+        // Birth year pool giving target age distribution (16-20: 4%, 21-30: 30%, 31-40: 27%, 41-50: 22%, 51-60: 13%, 60+: 4%)
+        // 24-element cycle: 1×60+, 3×51-60, 5×41-50, 7×31-40, 7×21-30, 1×16-20
+        int[] birthYears = {
+            1961,                               // 60+
+            1968, 1971, 1974,                   // 51-60
+            1977, 1979, 1981, 1983, 1985,       // 41-50
+            1987, 1989, 1990, 1992, 1993, 1995, 1986, // 31-40
+            1997, 1999, 2001, 2002, 2004, 1996, 2000, // 21-30
+            2007                                // 16-20
         };
-        for (Object[] row : hotspots) {
-            DonorHotspot h = new DonorHotspot();
-            h.setRank((Integer) row[0]);
-            h.setName((String) row[1]);
-            h.setScore((Integer) row[2]);
-            h.setLatitude((Double) row[3]);
-            h.setLongitude((Double) row[4]);
-            h.setActiveDonorCount((Integer) row[5]);
-            h.setVenue((String) row[6]);
-            h.setEligibleDonors((Integer) row[7]);
-            h.setSuccessRate((Integer) row[8]);
-            donorHotspotRepository.save(h);
+
+        LocalDate today = LocalDate.now();
+        int seq = 1;
+
+        for (int[] batch : batches) {
+            BloodType bt = bts[batch[0]];
+            int count    = batch[1];
+
+            for (int ci = 0; ci < count; ci++) {
+                Donor d = new Donor();
+                d.setDonorId(String.format("D-%05d", seq++));
+                d.setBloodType(bt);
+
+                int ri = (ci + batch[0] * 3) % regions.length;
+                d.setRegion(regions[ri]);
+                d.setLatitude(lats[ri]);
+                d.setLongitude(lons[ri]);
+
+                int birthYear = birthYears[ci % birthYears.length];
+                d.setDateOfBirth(LocalDate.of(birthYear, 1 + (ci % 12), 1 + (ci % 15)));
+
+                d.setGender(ci % 2 == 0 ? "Male" : "Female");
+
+                // Status cycle (12-slot): 5 dormant (42%), 2 active-recent (17%), 5 active-eligible (42%)
+                int slot = ci % 12;
+                if (slot < 5) {
+                    // Dormant
+                    d.setStatus(DonorStatus.DORMANT);
+                    if (slot == 0) {
+                        d.setLastDonationDate(null);
+                        d.setTotalDonations(0);
+                    } else {
+                        d.setLastDonationDate(today.minusMonths(13 + (ci % 10)));
+                        d.setTotalDonations(1 + (ci % 4));
+                    }
+                } else if (slot < 7) {
+                    // Active, donated recently — not yet eligible for next donation
+                    d.setStatus(DonorStatus.ACTIVE);
+                    d.setLastDonationDate(today.minusDays(30 + (ci % 50)));
+                    d.setTotalDonations(2 + (ci % 6));
+                } else {
+                    // Active, eligible for repeat donation (last donation 3+ months ago)
+                    d.setStatus(DonorStatus.ACTIVE);
+                    d.setLastDonationDate(today.minusMonths(4 + (ci % 8)));
+                    d.setTotalDonations(3 + (ci % 9));
+                }
+
+                d.setRegisteredAt(LocalDate.of(2019 + (ci % 6), 1 + (ci % 12), 1 + (ci % 15)));
+                donorRepository.save(d);
+            }
+        }
+    }
+
+    // ── response rate trend (historical outreach campaign data) ──────────
+
+    private void seedResponseRateTrend() {
+        double[] rates  = {23.1, 24.0, 25.3, 26.1, 25.9, 28.7};
+        String[] months = {"Dec 2025", "Jan 2026", "Feb 2026", "Mar 2026", "Apr 2026", "May 2026"};
+        for (int i = 0; i < months.length; i++) {
+            DonorDemographic r = new DonorDemographic();
+            r.setCategory("response_rate");
+            r.setLabel(months[i]);
+            r.setRate(rates[i]);
+            r.setSortOrder(i + 1);
+            donorDemographicRepository.save(r);
         }
     }
 
@@ -320,11 +327,11 @@ public class DataSeeder implements CommandLineRunner {
         }
 
         Object[][] breakdown = {
-            {"Eligible donor density",      30, 28},
+            {"Eligible donor density",       30, 28},
             {"Low recent donation activity", 25, 22},
-            {"Accessibility",               20, 17},
-            {"Nearby amenities",            15, 10},
-            {"Past drive success",          10,  9},
+            {"Accessibility",                20, 17},
+            {"Nearby amenities",             15, 10},
+            {"Past drive success",           10,  9},
         };
         for (Object[] b : breakdown) {
             RecommendedDriveScoreBreakdown s = new RecommendedDriveScoreBreakdown();
