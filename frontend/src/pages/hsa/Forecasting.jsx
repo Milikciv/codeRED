@@ -285,7 +285,7 @@ export default function Forecasting() {
         <div className="card p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm text-gray-800">AI Early Warning</h3>
-            <button onClick={() => navigate('/hsa/forecasting/recommendations')} className="text-xs text-primary font-medium">View All</button>
+            <button onClick={() => navigate('/hsa/alerts')} className="text-xs text-primary font-medium">View All</button>
           </div>
           {data.earlyWarning ? (
             <div className="flex gap-3 p-3 bg-red-50 border border-red-100 rounded-lg">

@@ -11,8 +11,6 @@ public class UserDTO {
     private String role;
     private String designation;
     private String contactNumber;
-    private Long hospitalId;
-    private String hospitalName;
 
     public static UserDTO from(User user) {
         UserDTO dto = new UserDTO();
@@ -22,10 +20,6 @@ public class UserDTO {
         dto.setRole(user.getRole().name());
         dto.setDesignation(user.getDesignation());
         dto.setContactNumber(user.getContactNumber());
-        if (user.getHospital() != null) {
-            dto.setHospitalId(user.getHospital().getId());
-            dto.setHospitalName(user.getHospital().getName());
-        }
         return dto;
     }
 }

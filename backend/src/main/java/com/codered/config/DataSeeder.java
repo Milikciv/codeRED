@@ -20,7 +20,6 @@ public class DataSeeder implements CommandLineRunner {
     private final BloodStockRepository bloodStockRepository;
     private final BloodRequestRepository bloodRequestRepository;
     private final AlertRepository alertRepository;
-    private final BloodTransferRepository bloodTransferRepository;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
 
@@ -38,11 +37,10 @@ public class DataSeeder implements CommandLineRunner {
         seedBloodStock();
         seedRequests();
         seedAlerts();
-        seedTransfers();
     }
 
     private void migrateLegacyHospitalUsers() {
-        jdbcTemplate.update("UPDATE users SET role = 'SRC_STAFF', hospital_id = NULL WHERE role IN ('HOSPITAL_STAFF', 'HOSPITAL_ADMIN')");
+        jdbcTemplate.update("UPDATE users SET role = 'SRC_STAFF' WHERE role IN ('HOSPITAL_STAFF', 'HOSPITAL_ADMIN')");
     }
 
     private void ensureAdminExists() {
@@ -312,25 +310,4 @@ public class DataSeeder implements CommandLineRunner {
         }
     }
 
-    private void seedTransfers() {
-        Hospital sgh = hospitalRepository.findByCode("SGH").orElseThrow();
-        Hospital nuh = hospitalRepository.findByCode("NUH").orElseThrow();
-        BloodRequest nuhRequest = bloodRequestRepository.findByRequestId("REQ-2105").orElseThrow();
-
-        BloodTransfer t1 = new BloodTransfer();
-        t1.setTransferId("TRF-2025-3001");
-        t1.setDonorHospital(sgh);
-        t1.setReceivingHospital(nuh);
-        t1.setBloodRequest(nuhRequest);
-        t1.setBloodType(BloodType.O_POSITIVE);
-        t1.setUnits(20);
-        t1.setPriority(Priority.CRITICAL);
-        t1.setStatus("PENDING");
-        t1.setPurposeNotes("Inter-hospital transfer for REQ-2105");
-        t1.setRequestedPickupDate(LocalDateTime.now().plusHours(1));
-        t1.setEstimatedDelivery(LocalDateTime.now().plusHours(4));
-        t1.setCreatedAt(LocalDateTime.now().minusMinutes(30));
-        t1.setUpdatedAt(LocalDateTime.now());
-        bloodTransferRepository.save(t1);
-    }
 }

@@ -79,7 +79,6 @@ function UserFormModal({ isOpen, onClose, onSaved, onError, editUser }) {
       const payload = {
         ...form,
         password: form.password || undefined,
-        hospitalId: null,
       }
       if (editUser) await api.put(`/users/${editUser.id}`, payload)
       else await api.post('/users', payload)

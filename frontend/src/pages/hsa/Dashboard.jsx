@@ -164,7 +164,7 @@ export default function HsaDashboard() {
           value={`${summary.percentage}%`}
           sub="Of Ideal"
           linkText="View Details"
-          onLink={() => navigate('/hsa/allocation')}
+          onLink={() => navigate('/hsa/forecasting/blood-type-analytics')}
           highlight
         />
         <StatCard
@@ -192,7 +192,7 @@ export default function HsaDashboard() {
           label="Active Requests"
           value={activeRequests || 2}
           linkText="View Requests"
-          onLink={() => navigate('/hsa/allocation')}
+          onLink={() => navigate('/hsa/alerts')}
         />
       </div>
 
@@ -326,7 +326,7 @@ export default function HsaDashboard() {
           <div className="card p-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-semibold text-sm text-gray-800">Recent Requests</h3>
-              <button onClick={() => navigate('/hsa/allocation')} className="text-xs text-primary font-medium">View All</button>
+              <button onClick={() => navigate('/hsa/alerts')} className="text-xs text-primary font-medium">View All</button>
             </div>
             {requests.length > 0 ? (
               <div className="space-y-2">

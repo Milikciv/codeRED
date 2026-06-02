@@ -40,7 +40,6 @@ public class UserManagementService {
         user.setRole(role);
         user.setDesignation(req.getDesignation());
         user.setContactNumber(req.getContactNumber());
-        user.setHospital(null);
 
         return UserDTO.from(userRepository.save(user));
     }
@@ -63,7 +62,6 @@ public class UserManagementService {
         user.setRole(role);
         user.setDesignation(req.getDesignation());
         user.setContactNumber(req.getContactNumber());
-        user.setHospital(null);
 
         if (req.getPassword() != null && !req.getPassword().isBlank()) {
             user.setPassword(passwordEncoder.encode(req.getPassword()));

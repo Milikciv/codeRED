@@ -1,12 +1,10 @@
 package com.codered.repository;
 
 import com.codered.model.Alert;
-import com.codered.model.Hospital;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
 public interface AlertRepository extends JpaRepository<Alert, Long> {
     List<Alert> findByDismissedFalseOrderByCreatedAtDesc();
-    List<Alert> findByHospitalAndDismissedFalseOrderByCreatedAtDesc(Hospital hospital);
 }

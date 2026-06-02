@@ -31,7 +31,4 @@ public class User {
     @Column(nullable = false)
     private UserRole role;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "hospital_id")
-    private Hospital hospital;
 }

@@ -7,7 +7,6 @@ import Login from './pages/Login'
 import HsaDashboard from './pages/hsa/Dashboard'
 import Forecasting from './pages/hsa/Forecasting'
 import BloodTypeAnalytics from './pages/hsa/forecasting/BloodTypeAnalytics'
-import Recommendations from './pages/hsa/forecasting/Recommendations'
 import AlertsToSRC from './pages/hsa/AlertsToSRC'
 
 // SRC hotspot pages
@@ -69,7 +68,6 @@ export default function App() {
           <Route path="/hsa/dashboard"   element={<HSA><HsaDashboard /></HSA>} />
           <Route path="/hsa/forecasting" element={<HSA><Forecasting /></HSA>} />
           <Route path="/hsa/forecasting/blood-type-analytics" element={<HSA><BloodTypeAnalytics /></HSA>} />
-          <Route path="/hsa/forecasting/recommendations"      element={<HSA><Recommendations /></HSA>} />
           <Route path="/hsa/alerts"      element={<HSA><AlertsToSRC /></HSA>} />
 
           {/* SRC routes */}

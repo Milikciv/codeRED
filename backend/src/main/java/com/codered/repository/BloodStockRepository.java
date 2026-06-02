@@ -10,6 +10,5 @@ import java.util.Optional;
 
 public interface BloodStockRepository extends JpaRepository<BloodStock, Long> {
     List<BloodStock> findByHospital(Hospital hospital);
-    List<BloodStock> findByHospitalId(Long hospitalId);
     Optional<BloodStock> findByHospitalAndBloodType(Hospital hospital, BloodType bloodType);
 }

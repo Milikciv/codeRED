@@ -10,5 +10,4 @@ public class CreateUserRequest {
     private String role;
     private String designation;
     private String contactNumber;
-    private Long hospitalId;
 }

@@ -50,9 +50,17 @@ public class AuthService {
                 user.getRole().name(),
                 user.getName(),
                 user.getEmail(),
-                user.getHospital() != null ? user.getHospital().getId() : null,
-                user.getHospital() != null ? user.getHospital().getName() : "Health Sciences Authority",
+                null,
+                displayContext(user),
                 user.getDesignation()
         );
+    }
+
+    private String displayContext(User user) {
+        return switch (user.getRole()) {
+            case ADMIN -> "Admin";
+            case HSA -> "Health Sciences Authority";
+            case SRC_STAFF -> "Singapore Red Cross";
+        };
     }
 }
