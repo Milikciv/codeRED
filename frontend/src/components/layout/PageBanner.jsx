@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { ChevronDown, ChevronRight, LogOut } from 'lucide-react'
 
-export default function PageBanner({ title, subtitle, breadcrumb, isHome }) {
+export default function PageBanner({ title, subtitle, breadcrumb, isHome, actions }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -21,7 +21,7 @@ export default function PageBanner({ title, subtitle, breadcrumb, isHome }) {
   }
 
   return (
-    <div className="relative overflow-hidden flex-shrink-0">
+    <div className="relative flex-shrink-0">
       {/* Banner image — natural height, no cropping */}
       <img
         src={isHome ? '/banner-home.jpg' : '/banner-page.png'}
@@ -50,6 +50,13 @@ export default function PageBanner({ title, subtitle, breadcrumb, isHome }) {
         )}
         <div className="w-10 h-0.5 bg-primary mt-2 rounded" />
       </div>
+
+      {/* Page-level actions — bottom right of banner */}
+      {actions && (
+        <div className="absolute bottom-4 right-5 z-10">
+          {actions}
+        </div>
+      )}
 
       {/* User chip — fixed top right, always visible */}
       {user && (

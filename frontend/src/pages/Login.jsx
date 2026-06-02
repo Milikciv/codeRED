@@ -3,22 +3,33 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { ChevronDown, Eye, EyeOff } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
-import { businessOutline, medkitOutline } from 'ionicons/icons'
+import { businessOutline, medkitOutline, heartOutline } from 'ionicons/icons'
 
 const ROLES = [
-  { value: 'HSA', label: 'Health Sciences Authority', icon: businessOutline },
+  { value: 'SRC_STAFF',     label: 'Singapore Red Cross',    icon: heartOutline   },
+  { value: 'HSA',           label: 'Health Sciences Authority', icon: businessOutline },
   { value: 'HOSPITAL_ADMIN', label: 'Hospital Administrator', icon: businessOutline },
-  { value: 'HOSPITAL_STAFF', label: 'Hospital Staff', icon: medkitOutline },
+  { value: 'HOSPITAL_STAFF', label: 'Hospital Staff',         icon: medkitOutline  },
 ]
 
 const CREDENTIALS = {
-  HSA: { email: 'winnie@hsa.gov.sg', password: 'password123' },
-  HOSPITAL_ADMIN: { email: 'admin@SGH.sg', password: 'password123' },
-  HOSPITAL_STAFF: { email: 'winnieKoh@SGH.sg', password: 'password123' },
+  SRC_STAFF:     { email: 'winnie@redcross.org.sg', password: 'password123' },
+  HSA:           { email: 'winnie@hsa.gov.sg',      password: 'password123' },
+  HOSPITAL_ADMIN: { email: 'admin@SGH.sg',           password: 'password123' },
+  HOSPITAL_STAFF: { email: 'winnieKoh@SGH.sg',       password: 'password123' },
+}
+
+const SRC_MOCK_USER = {
+  id: 'src-001',
+  email: 'winnie@redcross.org.sg',
+  name: 'Winnie Koh',
+  role: 'SRC_STAFF',
+  hospitalName: 'Singapore Red Cross',
+  designation: 'SRC Staff',
 }
 
 export default function Login() {
-  const { login } = useAuth()
+  const { login, mockLogin } = useAuth()
   const navigate = useNavigate()
 
   const [role, setRole] = useState(ROLES[0])
@@ -41,6 +52,13 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
+      if (role.value === 'SRC_STAFF') {
+        const creds = CREDENTIALS.SRC_STAFF
+        if (email !== creds.email || password !== creds.password) throw new Error('invalid')
+        mockLogin(SRC_MOCK_USER)
+        navigate('/src/alerts')
+        return
+      }
       const user = await login(email, password)
       navigate(user.role === 'HSA' ? '/hsa/dashboard' : '/hospital/dashboard')
     } catch {

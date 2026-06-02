@@ -20,6 +20,15 @@ import HospitalDashboard from './pages/hospital/Dashboard'
 import RequestBlood from './pages/hospital/RequestBlood'
 import MyRequests from './pages/hospital/MyRequests'
 
+// SRC pages
+import SRCHome from './pages/src/SRCHome'
+import AlertsFromHSA from './pages/src/AlertsFromHSA'
+import DonorInformation from './pages/src/DonorInformation'
+import DrivePlanning from './pages/src/DrivePlanning'
+import DonationDrives from './pages/src/DonationDrives'
+import DriveEdit from './pages/src/DriveEdit'
+import DonorOutreach from './pages/src/DonorOutreach'
+
 // Shared pages
 import UserManagement from './pages/UserManagement'
 
@@ -34,6 +43,7 @@ function RootRedirect() {
   const { user } = useAuth()
   if (!user) return <Navigate to="/login" replace />
   if (user.role === 'HSA') return <Navigate to="/hsa/dashboard" replace />
+  if (user.role === 'SRC_STAFF') return <Navigate to="/src/home" replace />
   return <Navigate to="/hospital/dashboard" replace />
 }
 
@@ -43,6 +53,10 @@ function HSA({ children }) {
 
 function Hospital({ children }) {
   return <ProtectedRoute requiredRoles={['HOSPITAL_STAFF', 'HOSPITAL_ADMIN']}>{children}</ProtectedRoute>
+}
+
+function SRC({ children }) {
+  return <ProtectedRoute requiredRoles={['SRC_STAFF']}>{children}</ProtectedRoute>
 }
 
 function AdminOnly({ children }) {
@@ -73,6 +87,15 @@ export default function App() {
           <Route path="/hospital/dashboard"   element={<Hospital><HospitalDashboard /></Hospital>} />
           <Route path="/hospital/request"     element={<Hospital><RequestBlood /></Hospital>} />
           <Route path="/hospital/my-requests" element={<Hospital><MyRequests /></Hospital>} />
+
+          {/* SRC routes */}
+          <Route path="/src/home"              element={<SRC><SRCHome /></SRC>} />
+          <Route path="/src/alerts"            element={<SRC><AlertsFromHSA /></SRC>} />
+          <Route path="/src/donor-information" element={<SRC><DonorInformation /></SRC>} />
+          <Route path="/src/drive-planning"    element={<SRC><DrivePlanning /></SRC>} />
+          <Route path="/src/donation-drives"   element={<SRC><DonationDrives /></SRC>} />
+          <Route path="/src/edit-drive"         element={<SRC><DriveEdit /></SRC>} />
+          <Route path="/src/donor-outreach"    element={<SRC><DonorOutreach /></SRC>} />
 
           {/* User management */}
           <Route path="/hsa/users"      element={<HSA><UserManagement /></HSA>} />
