@@ -42,10 +42,15 @@ export default function Login() {
     setLoading(true)
     try {
       const user = await login(email, password)
+      if (user.role !== role.value) {
+        const actualLabel = ROLES.find(r => r.value === user.role)?.label ?? user.role
+        throw Object.assign(new Error('role_mismatch'), { actualLabel })
+      }
       if (user.role === 'ADMIN') navigate('/admin/users')
       else navigate(user.role === 'HSA' ? '/hsa/dashboard' : '/src/home')
-    } catch {
-      setError('Invalid email or password.')
+    } catch (err) {
+      if (err.message === 'role_mismatch') setError(`Please sign in as ${err.actualLabel}.`)
+      else setError('Invalid email or password.')
     } finally {
       setLoading(false)
     }
