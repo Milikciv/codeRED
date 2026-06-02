@@ -8,13 +8,13 @@ import HsaDashboard from './pages/hsa/Dashboard'
 import Forecasting from './pages/hsa/Forecasting'
 import BloodTypeAnalytics from './pages/hsa/forecasting/BloodTypeAnalytics'
 import Recommendations from './pages/hsa/forecasting/Recommendations'
-import BloodAllocation from './pages/hsa/BloodAllocation'
 import AlertsToSRC from './pages/hsa/AlertsToSRC'
-import Hotspots from './pages/hsa/Hotspots'
-import HotspotInsights from './pages/hsa/hotspots/Insights'
-import BloodbankPerformance from './pages/hsa/hotspots/BloodbankPerformance'
-import DonorMap from './pages/hsa/hotspots/DonorMap'
-import HsaRequests from './pages/hsa/Requests'
+
+// SRC hotspot pages
+import Hotspots from './pages/src/hotspots/Hotspots'
+import HotspotInsights from './pages/src/hotspots/Insights'
+import BloodbankPerformance from './pages/src/hotspots/BloodbankPerformance'
+import DonorMap from './pages/src/hotspots/DonorMap'
 
 // Hospital pages
 import HospitalDashboard from './pages/hospital/Dashboard'
@@ -77,13 +77,7 @@ export default function App() {
           <Route path="/hsa/forecasting" element={<HSA><Forecasting /></HSA>} />
           <Route path="/hsa/forecasting/blood-type-analytics" element={<HSA><BloodTypeAnalytics /></HSA>} />
           <Route path="/hsa/forecasting/recommendations"      element={<HSA><Recommendations /></HSA>} />
-          <Route path="/hsa/allocation"  element={<HSA><BloodAllocation /></HSA>} />
           <Route path="/hsa/alerts"      element={<HSA><AlertsToSRC /></HSA>} />
-          <Route path="/hsa/requests"    element={<HSA><HsaRequests /></HSA>} />
-          <Route path="/hsa/hotspots"    element={<HSA><Hotspots /></HSA>} />
-          <Route path="/hsa/hotspots/insights"              element={<HSA><HotspotInsights /></HSA>} />
-          <Route path="/hsa/hotspots/bloodbank-performance" element={<HSA><BloodbankPerformance /></HSA>} />
-          <Route path="/hsa/hotspots/map"                   element={<HSA><DonorMap /></HSA>} />
 
           {/* Hospital routes */}
           <Route path="/hospital/dashboard"   element={<Hospital><HospitalDashboard /></Hospital>} />
@@ -104,7 +98,6 @@ export default function App() {
           <Route path="/src/hotspots/bloodbank-performance" element={<SRC><BloodbankPerformance /></SRC>} />
 
           {/* User management */}
-          <Route path="/hsa/users"      element={<HSA><UserManagement /></HSA>} />
           <Route path="/hospital/users" element={<AdminOnly><UserManagement /></AdminOnly>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
