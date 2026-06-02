@@ -1,15 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
-import {
-  DONOR_STATS, DONORS_BY_BLOOD_TYPE, DONORS_BY_AGE,
-  DONORS_BY_LOCATION, RESPONSE_RATE_TREND
-} from './mockData'
+import LoadingScreen from '../../components/common/LoadingScreen'
+import api from '../../api/axios'
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  LineChart, Line, ReferenceLine
+  LineChart, Line,
 } from 'recharts'
-import { Users, CalendarDays, TrendingUp, TrendingDown, Info, MapPin, Filter, Calendar } from 'lucide-react'
+import { Users, CalendarDays, TrendingUp, TrendingDown, Info, Filter, Calendar } from 'lucide-react'
 
 function TrendBadge({ pct, positive }) {
   const up = positive !== false
@@ -43,8 +41,41 @@ const CustomBarLabel = ({ x, y, width, value }) => (
   <text x={x + width / 2} y={y - 4} textAnchor="middle" fontSize={10} fill="#6B7280">{value}%</text>
 )
 
+const BLOOD_TYPE_COLORS = {
+  'O+': '#EF4444',
+  'A+': '#F97316',
+  'B+': '#EAB308',
+  'O-': '#22C55E',
+  'A-': '#3B82F6',
+  'AB+': '#8B5CF6',
+  'B-': '#EC4899',
+  'AB-': '#14B8A6',
+}
+
+function getBloodTypeColor(type) {
+  return BLOOD_TYPE_COLORS[type] ?? '#9CA3AF'
+}
+
 export default function DonorInformation() {
+  const [data, setData]           = useState(null)
   const [showDatePicker, setShowDatePicker] = useState(false)
+  const [loading, setLoading]     = useState(true)
+
+  useEffect(() => {
+    api.get('/donors/stats').then(r => setData(r.data)).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return (
+    <PageLayout title="Donor Information & Summary" subtitle="Overview of the current donor pool and key insights">
+      <LoadingScreen variant="general" />
+    </PageLayout>
+  )
+
+  const summary          = data?.summary ?? {}
+  const byBloodType      = data?.byBloodType ?? []
+  const byAge            = data?.byAge ?? []
+  const byLocation       = data?.byLocation ?? []
+  const responseRateTrend = data?.responseRateTrend ?? []
 
   return (
     <PageLayout
@@ -70,25 +101,25 @@ export default function DonorInformation() {
         <KpiCard
           icon={<Users className="w-5 h-5 text-primary" />}
           label="Active Donors"
-          value={DONOR_STATS.activeDonors.toLocaleString()}
+          value={(summary.activeDonors ?? 0).toLocaleString()}
           trendPct={4.2} trendPositive={true} trendLabel="vs last month"
         />
         <KpiCard
           icon={<CalendarDays className="w-5 h-5 text-primary" />}
           label="Eligible Repeat Donors"
-          value={DONOR_STATS.eligibleRepeat.toLocaleString()}
+          value={(summary.eligibleRepeat ?? 0).toLocaleString()}
           trendPct={3.6} trendPositive={true} trendLabel="vs last month"
         />
         <KpiCard
           icon={<Users className="w-5 h-5 text-gray-400" />}
           label="Dormant Donors"
-          value={DONOR_STATS.dormant.toLocaleString()}
+          value={(summary.dormant ?? 0).toLocaleString()}
           trendPct={2.1} trendPositive={false} trendLabel="vs last month"
         />
         <KpiCard
           icon={<TrendingUp className="w-5 h-5 text-primary" />}
           label="Past Response Rate"
-          value={`${DONOR_STATS.responseRate}%`}
+          value={`${summary.responseRate ?? 0}%`}
           trendPct={2.8} trendPositive={true} trendLabel="vs last campaign"
         />
       </div>
@@ -101,32 +132,19 @@ export default function DonorInformation() {
           <div className="flex items-center gap-2">
             <div className="relative flex-shrink-0">
               <PieChart width={120} height={120}>
-                <Pie
-                  data={DONORS_BY_BLOOD_TYPE}
-                  dataKey="count"
-                  cx={55}
-                  cy={55}
-                  innerRadius={32}
-                  outerRadius={55}
-                  startAngle={90}
-                  endAngle={-270}
-                >
-                  {DONORS_BY_BLOOD_TYPE.map((d, i) => (
-                    <Cell key={i} fill={d.color} />
-                  ))}
+                <Pie data={byBloodType} dataKey="count" cx={55} cy={55} innerRadius={32} outerRadius={55} startAngle={90} endAngle={-270}>
+                  {byBloodType.map((d, i) => <Cell key={i} fill={getBloodTypeColor(d.type)} />)}
                 </Pie>
               </PieChart>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <div className="text-[9px] text-gray-400">Total Donors</div>
-                <div className="text-xs font-bold text-gray-800">
-                  {DONOR_STATS.activeDonors.toLocaleString()}
-                </div>
+                <div className="text-xs font-bold text-gray-800">{(summary.activeDonors ?? 0).toLocaleString()}</div>
               </div>
             </div>
             <div className="space-y-1 text-xs flex-1">
-              {DONORS_BY_BLOOD_TYPE.map(d => (
+              {byBloodType.map(d => (
                 <div key={d.type} className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: d.color }} />
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: getBloodTypeColor(d.type) }} />
                   <span className="text-gray-700 font-medium w-5">{d.type}</span>
                   <span className="text-gray-500 ml-auto">{d.count.toLocaleString()}</span>
                   <span className="text-gray-400 w-10 text-right">({d.pct}%)</span>
@@ -143,19 +161,16 @@ export default function DonorInformation() {
         <div className="card p-4">
           <h3 className="font-semibold text-sm text-gray-800 mb-3">Donors by Age Group</h3>
           <ResponsiveContainer width="100%" height={150}>
-            <BarChart data={DONORS_BY_AGE} margin={{ top: 14, right: 4, left: -28, bottom: 0 }}>
+            <BarChart data={byAge} margin={{ top: 14, right: 4, left: -28, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
               <XAxis dataKey="group" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
               <YAxis tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
-              <Tooltip
-                contentStyle={{ fontSize: 11 }}
-                formatter={(v) => [v.toLocaleString(), 'Donors']}
-              />
+              <Tooltip contentStyle={{ fontSize: 11 }} formatter={(v) => [v.toLocaleString(), 'Donors']} />
               <Bar dataKey="count" fill="#FECACA" radius={[3, 3, 0, 0]} label={<CustomBarLabel />} />
             </BarChart>
           </ResponsiveContainer>
           <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-            {DONORS_BY_AGE.map(d => (
+            {byAge.map(d => (
               <span key={d.group} className="text-[9px] text-gray-400">{d.group}: {d.pct}%</span>
             ))}
           </div>
@@ -164,13 +179,11 @@ export default function DonorInformation() {
         {/* Donors by Location (Top 5) */}
         <div className="card p-4">
           <h3 className="font-semibold text-sm text-gray-800 mb-3">Donors by Location (Top 5)</h3>
-          {/* Mini map placeholder */}
           <div className="relative rounded-lg overflow-hidden bg-rose-50 border border-rose-100 mb-3" style={{ height: 100 }}>
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="text-xs text-rose-300 font-medium">Singapore</span>
             </div>
-            {/* Positioned circles representing hotspot density */}
-            {DONORS_BY_LOCATION.map((loc, i) => {
+            {byLocation.map((loc, i) => {
               const positions = [
                 { top: '55%', left: '78%' },
                 { top: '60%', left: '25%' },
@@ -192,9 +205,8 @@ export default function DonorInformation() {
               )
             })}
           </div>
-          {/* Ranked list */}
           <div className="space-y-1.5">
-            {DONORS_BY_LOCATION.map((loc) => (
+            {byLocation.map((loc) => (
               <div key={loc.name} className="flex items-center gap-2 text-xs">
                 <span className="w-4 h-4 rounded-full bg-primary flex items-center justify-center text-white font-bold text-[9px] flex-shrink-0">
                   {loc.rank}
@@ -213,28 +225,12 @@ export default function DonorInformation() {
         <div className="card p-4">
           <h3 className="font-semibold text-sm text-gray-800 mb-3">Past Response Rate Trend</h3>
           <ResponsiveContainer width="100%" height={140}>
-            <LineChart data={RESPONSE_RATE_TREND} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+            <LineChart data={responseRateTrend} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
-              <YAxis
-                tick={{ fontSize: 9 }}
-                tickLine={false}
-                axisLine={false}
-                domain={[0, 40]}
-                tickFormatter={v => `${v}%`}
-              />
-              <Tooltip
-                contentStyle={{ fontSize: 11 }}
-                formatter={(v) => [`${v}%`, 'Response Rate']}
-              />
-              <Line
-                type="monotone"
-                dataKey="rate"
-                stroke="#C41230"
-                strokeWidth={2}
-                dot={{ fill: '#C41230', r: 4 }}
-                activeDot={{ r: 6 }}
-              />
+              <YAxis tick={{ fontSize: 9 }} tickLine={false} axisLine={false} domain={[0, 40]} tickFormatter={v => `${v}%`} />
+              <Tooltip contentStyle={{ fontSize: 11 }} formatter={(v) => [`${v}%`, 'Response Rate']} />
+              <Line type="monotone" dataKey="rate" stroke="#C41230" strokeWidth={2} dot={{ fill: '#C41230', r: 4 }} activeDot={{ r: 6 }} />
             </LineChart>
           </ResponsiveContainer>
           <div className="flex items-center gap-1.5 mt-1 justify-center text-[10px] text-gray-400">
@@ -248,13 +244,13 @@ export default function DonorInformation() {
           <h3 className="font-semibold text-sm text-gray-800 mb-3">Key Takeaways</h3>
           <div className="space-y-3">
             {[
-              { icon: Users,      color: 'bg-red-100',    iconColor: 'text-primary',
+              { icon: Users,        color: 'bg-red-100',    iconColor: 'text-primary',
                 text: 'Active donor base grew by 4.2% compared to last month.' },
-              { icon: CalendarDays, color: 'bg-blue-100', iconColor: 'text-blue-600',
-                text: '74,320 donors are eligible for repeat donation.' },
-              { icon: Users,      color: 'bg-purple-100', iconColor: 'text-purple-600',
-                text: 'Improve re-engagement for 54,130 dormant donors.' },
-              { icon: TrendingUp, color: 'bg-green-100',  iconColor: 'text-green-600',
+              { icon: CalendarDays, color: 'bg-blue-100',   iconColor: 'text-blue-600',
+                text: `${(summary.eligibleRepeat ?? 0).toLocaleString()} donors are eligible for repeat donation.` },
+              { icon: Users,        color: 'bg-purple-100', iconColor: 'text-purple-600',
+                text: `Improve re-engagement for ${(summary.dormant ?? 0).toLocaleString()} dormant donors.` },
+              { icon: TrendingUp,   color: 'bg-green-100',  iconColor: 'text-green-600',
                 text: 'Response rate improved by 2.8% from last campaign.' },
             ].map(({ icon: Icon, color, iconColor, text }, i) => (
               <div key={i} className="flex items-start gap-3">

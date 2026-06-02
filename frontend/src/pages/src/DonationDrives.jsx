@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout'
-import { MOCK_UPCOMING_DRIVES, MOCK_DRIVE_HISTORY } from './mockData'
+import LoadingScreen from '../../components/common/LoadingScreen'
+import api from '../../api/axios'
 import {
   CalendarDays, Clock, Droplets, MapPin, ExternalLink,
   MoreVertical, Plus, History, BarChart2,
@@ -20,24 +21,16 @@ const STATUS_BADGE = {
 }
 
 const BLOOD_COLOR = {
-  'O-':  '#EF4444',
-  'O+':  '#F97316',
-  'A+':  '#3B82F6',
-  'A-':  '#8B5CF6',
-  'B+':  '#22C55E',
-  'B-':  '#EC4899',
-  'AB+': '#14B8A6',
-  'AB-': '#6366F1',
+  'O-':  '#EF4444', 'O+':  '#F97316', 'A+':  '#3B82F6',
+  'A-':  '#8B5CF6', 'B+':  '#22C55E', 'B-':  '#EC4899',
+  'AB+': '#14B8A6', 'AB-': '#6366F1',
 }
 
 function DriveImage({ location }) {
   const colors = ['#FEE2E2', '#FED7AA', '#D1FAE5', '#DBEAFE']
   const bg = colors[location.length % colors.length]
   return (
-    <div
-      className="w-28 h-20 rounded-lg flex-shrink-0 flex items-center justify-center text-center"
-      style={{ background: bg }}
-    >
+    <div className="w-28 h-20 rounded-lg flex-shrink-0 flex items-center justify-center text-center" style={{ background: bg }}>
       <MapPin className="w-6 h-6 text-gray-400" />
     </div>
   )
@@ -99,10 +92,7 @@ function DriveDetailDrawer({ drive, onClose, navigate, initialEditing = false })
 
   return (
     <>
-      {/* Backdrop */}
       <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
-
-      {/* Drawer panel */}
       <div className="fixed right-0 top-0 h-full w-[440px] bg-white z-50 shadow-2xl flex flex-col overflow-hidden">
 
         {/* Header */}
@@ -110,10 +100,7 @@ function DriveDetailDrawer({ drive, onClose, navigate, initialEditing = false })
           {isEditing ? (
             <>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsEditing(false)}
-                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"
-                >
+                <button onClick={() => setIsEditing(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <span className="font-semibold text-gray-900 text-base">Edit Drive</span>
@@ -144,20 +131,16 @@ function DriveDetailDrawer({ drive, onClose, navigate, initialEditing = false })
         </div>
 
         {isEditing ? (
-          /* ── Edit form ── */
           <>
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5">Venue Name</label>
                 <input className={inputCls} value={form.location} onChange={e => set('location', e.target.value)} />
               </div>
-
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5">Full Address</label>
                 <input className={inputCls} value={form.address} onChange={e => set('address', e.target.value)} />
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1.5">Date</label>
@@ -168,7 +151,6 @@ function DriveDetailDrawer({ drive, onClose, navigate, initialEditing = false })
                   <input className={inputCls} value={form.time} onChange={e => set('time', e.target.value)} placeholder="e.g. 10:00 AM – 4:00 PM" />
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1.5">Blood Type</label>
@@ -183,7 +165,6 @@ function DriveDetailDrawer({ drive, onClose, navigate, initialEditing = false })
                   </select>
                 </div>
               </div>
-
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5">Expected Donors</label>
                 <div className="flex items-center gap-2">
@@ -192,7 +173,6 @@ function DriveDetailDrawer({ drive, onClose, navigate, initialEditing = false })
                   <input type="number" min={0} className={inputCls} value={form.expectedMax} onChange={e => set('expectedMax', Number(e.target.value))} placeholder="Max" />
                 </div>
               </div>
-
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5">Staff Assigned</label>
                 <div className="relative">
@@ -200,26 +180,17 @@ function DriveDetailDrawer({ drive, onClose, navigate, initialEditing = false })
                   <input type="number" min={0} className={`${inputCls} pl-8`} value={form.staffAssigned} onChange={e => set('staffAssigned', Number(e.target.value))} />
                 </div>
               </div>
-
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5">Notes</label>
                 <textarea rows={3} className={`${inputCls} resize-none`} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Add any relevant notes…" />
               </div>
             </div>
-
-            {/* Edit footer */}
             <div className="px-5 py-4 border-t border-gray-100 flex-shrink-0 space-y-2">
               <div className="flex gap-2">
-                <button
-                  onClick={() => setIsEditing(false)}
-                  className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-2 text-sm hover:bg-gray-50"
-                >
+                <button onClick={() => setIsEditing(false)} className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-2 text-sm hover:bg-gray-50">
                   Discard
                 </button>
-                <button
-                  onClick={() => setIsEditing(false)}
-                  className="flex-1 flex items-center justify-center gap-1.5 btn-primary py-2 text-sm"
-                >
+                <button onClick={() => setIsEditing(false)} className="flex-1 flex items-center justify-center gap-1.5 btn-primary py-2 text-sm">
                   <Save className="w-4 h-4" /> Save Changes
                 </button>
               </div>
@@ -232,10 +203,8 @@ function DriveDetailDrawer({ drive, onClose, navigate, initialEditing = false })
             </div>
           </>
         ) : (
-          /* ── Detail view ── */
           <>
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-gray-50 rounded-xl p-3">
                   <div className="text-[10px] text-gray-400 font-medium mb-1">Blood Type</div>
@@ -288,7 +257,7 @@ function DriveDetailDrawer({ drive, onClose, navigate, initialEditing = false })
                 <div className="text-xs font-medium text-gray-500 mb-2.5">Preparation Status</div>
                 <div className="space-y-2.5">
                   <CheckItem done={drive.venueConfirmed} label="Venue Confirmed" sub={drive.venueConfirmed ? drive.address : 'Pending confirmation'} />
-                  <CheckItem done={drive.outreachSent} label="Outreach Sent" sub={drive.outreachSent ? `${drive.outreachCount.toLocaleString()} donors contacted` : 'Not yet sent'} />
+                  <CheckItem done={drive.outreachSent} label="Outreach Sent" sub={drive.outreachSent ? `${(drive.outreachCount ?? 0).toLocaleString()} donors contacted` : 'Not yet sent'} />
                   <CheckItem done={drive.staffAssigned >= 2} label="Staff Assigned" sub={drive.staffAssigned > 0 ? `${drive.staffAssigned} staff member${drive.staffAssigned > 1 ? 's' : ''} assigned` : 'No staff assigned yet'} />
                 </div>
               </div>
@@ -303,18 +272,11 @@ function DriveDetailDrawer({ drive, onClose, navigate, initialEditing = false })
               )}
             </div>
 
-            {/* Detail footer */}
             <div className="flex gap-2 px-5 py-4 border-t border-gray-100 flex-shrink-0">
-              <button
-                onClick={() => { navigate('/src/donor-outreach'); onClose() }}
-                className="flex-1 flex items-center justify-center gap-1.5 btn-primary py-2 text-sm"
-              >
+              <button onClick={() => { navigate('/src/donor-outreach'); onClose() }} className="flex-1 flex items-center justify-center gap-1.5 btn-primary py-2 text-sm">
                 <Megaphone className="w-4 h-4" /> Send Outreach
               </button>
-              <button
-                onClick={() => setIsEditing(true)}
-                className="flex items-center justify-center gap-1.5 border border-gray-200 text-gray-600 rounded-xl px-4 py-2 text-sm hover:bg-gray-50"
-              >
+              <button onClick={() => setIsEditing(true)} className="flex items-center justify-center gap-1.5 border border-gray-200 text-gray-600 rounded-xl px-4 py-2 text-sm hover:bg-gray-50">
                 <Pencil className="w-3.5 h-3.5" /> Edit Drive
               </button>
             </div>
@@ -322,7 +284,6 @@ function DriveDetailDrawer({ drive, onClose, navigate, initialEditing = false })
         )}
       </div>
 
-      {/* Delete confirmation modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
@@ -349,6 +310,7 @@ const UPCOMING_FILTERS = ['All', 'Planned', 'Confirmed']
 
 export default function DonationDrives() {
   const navigate = useNavigate()
+  const [drives, setDrives]               = useState([])
   const [tab, setTab]                     = useState('upcoming')
   const [filter, setFilter]               = useState('All')
   const [driveMenu, setDriveMenu]         = useState(null)
@@ -356,20 +318,33 @@ export default function DonationDrives() {
   const [historyPage, setHistoryPage]     = useState(1)
   const [selectedDrive, setSelectedDrive] = useState(null)
   const [openInEdit, setOpenInEdit]       = useState(false)
+  const [loading, setLoading]             = useState(true)
+
+  useEffect(() => {
+    api.get('/drives').then(r => setDrives(r.data)).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return (
+    <PageLayout title="Donation Drives" subtitle="Manage all blood donation drives.">
+      <LoadingScreen variant="general" />
+    </PageLayout>
+  )
+
+  const upcomingDrives = drives.filter(d => d.status !== 'Completed')
+  const historyDrives  = drives.filter(d => d.status === 'Completed')
 
   function openDriveDrawer(drive, editing = false) {
     setSelectedDrive(drive)
     setOpenInEdit(editing)
   }
-
   function closeDriveDrawer() {
     setSelectedDrive(null)
     setOpenInEdit(false)
   }
 
-  const filtered      = filter === 'All' ? MOCK_UPCOMING_DRIVES : MOCK_UPCOMING_DRIVES.filter(d => d.status === filter)
+  const filtered      = filter === 'All' ? upcomingDrives : upcomingDrives.filter(d => d.status === filter)
   const upcomingPag   = usePagination(filtered, UPCOMING_PAGE_SIZE)
-  const historyPag    = usePagination(MOCK_DRIVE_HISTORY, HISTORY_PAGE_SIZE)
+  const historyPag    = usePagination(historyDrives, HISTORY_PAGE_SIZE)
   const upcomingItems = upcomingPag.slice(upcomingPage)
   const historyItems  = historyPag.slice(historyPage)
 
@@ -378,15 +353,11 @@ export default function DonationDrives() {
       title="Donation Drives"
       subtitle="Manage all blood donation drives."
       actions={
-        <button
-          onClick={() => navigate('/src/drive-planning')}
-          className="flex items-center gap-1.5 btn-primary px-4 py-2 text-sm shadow-lg"
-        >
+        <button onClick={() => navigate('/src/drive-planning')} className="flex items-center gap-1.5 btn-primary px-4 py-2 text-sm shadow-lg">
           <Plus className="w-4 h-4" /> Create New Drive
         </button>
       }
     >
-
       {/* Tabs */}
       <div className="flex gap-0 border-b border-gray-200 mb-4">
         {[
@@ -407,11 +378,10 @@ export default function DonationDrives() {
 
       {tab === 'upcoming' && (
         <div>
-          {/* Filter pills */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex gap-1.5 flex-wrap">
               {UPCOMING_FILTERS.map(f => {
-                const count = f === 'All' ? MOCK_UPCOMING_DRIVES.length : MOCK_UPCOMING_DRIVES.filter(d => d.status === f).length
+                const count = f === 'All' ? upcomingDrives.length : upcomingDrives.filter(d => d.status === f).length
                 return (
                   <button
                     key={f}
@@ -550,10 +520,7 @@ export default function DonationDrives() {
                     <td className="px-4 py-3 text-primary font-semibold">{d.unitsCollected} units</td>
                     <td className="px-4 py-3"><ConversionCell rate={d.conversionRate} /></td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => navigate(`/src/drive-planning?alertId=${d.linkedAlert}`)}
-                        className="text-primary font-medium hover:underline"
-                      >
+                      <button onClick={() => navigate(`/src/drive-planning?alertId=${d.linkedAlert}`)} className="text-primary font-medium hover:underline">
                         {d.linkedAlert}
                       </button>
                     </td>

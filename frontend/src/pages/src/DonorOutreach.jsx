@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
+import LoadingScreen from '../../components/common/LoadingScreen'
 import { PieChart, Pie, Cell } from 'recharts'
-import { MOCK_UPCOMING_DRIVES } from './mockData'
+import api from '../../api/axios'
 import {
   CalendarDays, Clock, Droplets, MapPin, ExternalLink,
   Users, Send, ChevronDown, CheckSquare, Square,
@@ -9,33 +10,11 @@ import {
   Bookmark, Target, Star, Info,
 } from 'lucide-react'
 
-// Stats keyed by drive ID
-const DRIVE_STATS = {
-  'DD-001': { hsaShortage: 420, expectedCollection: 180, shortfall: 240, progressPct: 43, confidence: 87, lastUpdated: '30 May 2026, 08:15 AM' },
-  'DD-002': { hsaShortage: 260, expectedCollection: 120, shortfall: 140, progressPct: 46, confidence: 82, lastUpdated: '29 May 2026, 02:30 PM' },
-  'DD-003': { hsaShortage: 150, expectedCollection: 90,  shortfall: 60,  progressPct: 60, confidence: 79, lastUpdated: '28 May 2026, 11:00 AM' },
-  'DD-004': { hsaShortage: 310, expectedCollection: 145, shortfall: 165, progressPct: 47, confidence: 74, lastUpdated: '27 May 2026, 09:45 AM' },
-}
-
-const OUTREACH_DATA = {
-  'DD-001': { recipients: 86, expectedResponders: 18, expectedUnits: 180, responseRate: 21, confidence: 87 },
-  'DD-002': { recipients: 72, expectedResponders: 15, expectedUnits: 120, responseRate: 21, confidence: 82 },
-  'DD-003': { recipients: 65, expectedResponders: 14, expectedUnits: 90,  responseRate: 22, confidence: 79 },
-  'DD-004': { recipients: 78, expectedResponders: 16, expectedUnits: 145, responseRate: 21, confidence: 74 },
-}
-
 const STATUS_BADGE = {
   Planned:   'bg-green-50 text-green-700 border border-green-200',
   Confirmed: 'bg-blue-50 text-blue-700 border border-blue-200',
   Completed: 'bg-gray-100 text-gray-500 border border-gray-200',
 }
-
-const AI_CRITERIA = [
-  'O- Donors',
-  'Within 5 km',
-  'Last donation > 12 weeks',
-  'Previously attended community drives',
-]
 
 const MESSAGE_VARIANTS = [
   {
@@ -67,8 +46,6 @@ const MESSAGE_VARIANTS = [
   },
 ]
 
-const SMS_MESSAGE = MESSAGE_VARIANTS[2].full
-
 function ProgressDonut({ pct }) {
   const data = [{ value: pct }, { value: 100 - pct }]
   return (
@@ -92,10 +69,7 @@ function SelectDropdown({ label, value, options, icon }) {
   return (
     <div className="relative">
       {label && <div className="text-[10px] text-gray-400 font-medium mb-1.5">{label}</div>}
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white hover:bg-gray-50"
-      >
+      <button onClick={() => setOpen(!open)} className="flex items-center gap-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white hover:bg-gray-50">
         {icon && <span className="text-primary flex-shrink-0">{icon}</span>}
         <span className="flex-1 text-left">{selected}</span>
         <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
@@ -118,10 +92,7 @@ function CheckFilter({ label, defaultChecked }) {
   const [checked, setChecked] = useState(defaultChecked)
   return (
     <button onClick={() => setChecked(!checked)} className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900">
-      {checked
-        ? <CheckSquare className="w-4 h-4 text-primary flex-shrink-0" />
-        : <Square className="w-4 h-4 text-gray-300 flex-shrink-0" />
-      }
+      {checked ? <CheckSquare className="w-4 h-4 text-primary flex-shrink-0" /> : <Square className="w-4 h-4 text-gray-300 flex-shrink-0" />}
       {label}
     </button>
   )
@@ -151,23 +122,18 @@ function PhoneMockup({ message }) {
 }
 
 function AIModal({ drive, onCancel, onUse }) {
-  const stats = OUTREACH_DATA[drive.id] ?? OUTREACH_DATA['DD-001']
-  const driveStats = DRIVE_STATS[drive.id] ?? DRIVE_STATS['DD-001']
-
   const criteria = [
-    { label: `${drive.bloodType} Donors`,          sub: 'High need blood type for this alert' },
-    { label: 'Within 5 km',                         sub: 'Higher response from nearby donors' },
-    { label: 'Last donation > 12 weeks',            sub: 'Eligible and more likely to donate' },
-    { label: 'Previously attended drives',          sub: '2.1x more likely to respond' },
+    { label: `${drive.bloodType} Donors`,       sub: 'High need blood type for this alert' },
+    { label: 'Within 5 km',                      sub: 'Higher response from nearby donors' },
+    { label: 'Last donation > 12 weeks',         sub: 'Eligible and more likely to donate' },
+    { label: 'Previously attended drives',        sub: '2.1x more likely to respond' },
   ]
-
   const whyRows = [
-    { icon: <Users className="w-4 h-4 text-gray-400" />,      label: 'Response rate',      value: '21%',         valueColor: 'text-gray-900', sub: '+8% vs. other audiences' },
-    { icon: <CalendarDays className="w-4 h-4 text-gray-400" />, label: 'Historical turnout', value: `${stats.expectedResponders} donors`, valueColor: 'text-primary', sub: 'Avg. per similar drive' },
-    { icon: <MapPin className="w-4 h-4 text-gray-400" />,      label: 'Location match',     value: '5 km',        valueColor: 'text-primary', sub: `High concentration of ${drive.bloodType} donors` },
-    { icon: <Clock className="w-4 h-4 text-gray-400" />,       label: 'Availability',       value: '72%',         valueColor: 'text-gray-900', sub: 'Available this weekend' },
+    { icon: <Users className="w-4 h-4 text-gray-400" />,        label: 'Response rate',     value: '21%',   valueColor: 'text-gray-900', sub: '+8% vs. other audiences' },
+    { icon: <CalendarDays className="w-4 h-4 text-gray-400" />, label: 'Historical turnout', value: `${drive.expectedResponders ?? 18} donors`, valueColor: 'text-primary', sub: 'Avg. per similar drive' },
+    { icon: <MapPin className="w-4 h-4 text-gray-400" />,       label: 'Location match',    value: '5 km',  valueColor: 'text-primary', sub: `High concentration of ${drive.bloodType} donors` },
+    { icon: <Clock className="w-4 h-4 text-gray-400" />,        label: 'Availability',      value: '72%',   valueColor: 'text-gray-900', sub: 'Available this weekend' },
   ]
-
   const breakdown = [
     { label: 'Champions', count: 12, pct: 14, color: '#EF4444' },
     { label: 'Regular',   count: 38, pct: 44, color: '#3B82F6' },
@@ -177,7 +143,6 @@ function AIModal({ drive, onCancel, onUse }) {
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-2xl w-[620px] mx-4 flex flex-col max-h-[90vh]">
-        {/* Header */}
         <div className="flex items-start justify-between px-6 pt-6 pb-4">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
@@ -188,12 +153,8 @@ function AIModal({ drive, onCancel, onUse }) {
         <p className="text-xs text-gray-500 px-6 pb-4">
           Our AI analysed historical data, donor behaviour and location insights to recommend the audience most likely to respond.
         </p>
-
-        {/* Body: two columns */}
         <div className="flex gap-4 px-6 pb-4 overflow-y-auto">
-          {/* Left column */}
           <div className="flex-1 flex flex-col gap-3">
-            {/* Recommended Audience */}
             <div className="bg-gray-50 rounded-xl p-4">
               <div className="text-xs font-semibold text-gray-700 mb-3">Recommended Audience</div>
               <div className="space-y-3">
@@ -210,28 +171,22 @@ function AIModal({ drive, onCancel, onUse }) {
                 ))}
               </div>
             </div>
-
-            {/* Turnout + Confidence */}
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-gray-50 rounded-xl p-3">
                 <div className="text-[10px] text-gray-400 mb-1">Expected turnout</div>
-                <div className="text-2xl font-bold text-gray-900">{stats.expectedResponders}</div>
+                <div className="text-2xl font-bold text-gray-900">{drive.expectedResponders ?? 18}</div>
                 <div className="text-xs text-gray-400">donors</div>
               </div>
               <div className="bg-gray-50 rounded-xl p-3">
                 <div className="text-[10px] text-gray-400 mb-1">Confidence</div>
                 <div className="flex items-end gap-2">
-                  <div className="text-2xl font-bold text-green-600">{stats.confidence}%</div>
+                  <div className="text-2xl font-bold text-green-600">{drive.outreachConfidence ?? 87}%</div>
                   <span className="mb-0.5 px-1.5 py-0.5 bg-green-50 text-green-700 text-[9px] font-semibold rounded-full border border-green-100">High</span>
                 </div>
               </div>
             </div>
-
           </div>
-
-          {/* Right column */}
           <div className="w-56 flex flex-col gap-3 flex-shrink-0">
-            {/* Why this audience */}
             <div>
               <div className="text-xs font-semibold text-gray-700 mb-3">Why this audience?</div>
               <div className="space-y-3">
@@ -249,8 +204,6 @@ function AIModal({ drive, onCancel, onUse }) {
                 ))}
               </div>
             </div>
-
-            {/* Audience Breakdown */}
             <div>
               <div className="text-xs font-semibold text-gray-700 mb-3">Audience Breakdown</div>
               <div className="flex items-center gap-3">
@@ -272,14 +225,10 @@ function AIModal({ drive, onCancel, onUse }) {
             </div>
           </div>
         </div>
-
-        {/* Info note — full width */}
         <div className="mx-6 mb-4 flex items-start gap-2.5 bg-blue-50 rounded-xl px-4 py-3 text-[11px] text-blue-700">
           <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-500" />
-          This recommendation is expected to collect up to {stats.expectedUnits} units and close {driveStats.progressPct}% of the forecasted shortage.
+          This recommendation is expected to collect up to {drive.expectedUnits ?? 180} units and close {drive.progressPct ?? 43}% of the forecasted shortage.
         </div>
-
-        {/* Footer */}
         <div className="flex gap-3 px-6 py-4 border-t border-gray-100">
           <button onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50">Cancel</button>
           <button onClick={onUse} className="flex-1 py-2.5 text-sm font-semibold btn-primary rounded-xl">Use Recommendation</button>
@@ -298,9 +247,7 @@ function MessageVariantsModal({ selected, onSelect, onClose }) {
             <h3 className="font-bold text-gray-900 text-base">AI Message Variants</h3>
             <p className="text-xs text-gray-400 mt-0.5">Select message to send</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-0.5">
-            <X className="w-4 h-4" />
-          </button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-0.5"><X className="w-4 h-4" /></button>
         </div>
         <div className="grid grid-cols-3 gap-3 mb-5">
           {MESSAGE_VARIANTS.map(v => {
@@ -330,12 +277,8 @@ function MessageVariantsModal({ selected, onSelect, onClose }) {
           })}
         </div>
         <div className="flex justify-end gap-3">
-          <button onClick={onClose} className="px-5 py-2.5 text-sm font-medium border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50">
-            Cancel
-          </button>
-          <button onClick={onClose} className="px-5 py-2.5 text-sm font-semibold btn-primary rounded-xl">
-            Use Selected
-          </button>
+          <button onClick={onClose} className="px-5 py-2.5 text-sm font-medium border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50">Cancel</button>
+          <button onClick={onClose} className="px-5 py-2.5 text-sm font-semibold btn-primary rounded-xl">Use Selected</button>
         </div>
       </div>
     </div>
@@ -343,18 +286,49 @@ function MessageVariantsModal({ selected, onSelect, onClose }) {
 }
 
 export default function DonorOutreach() {
-  const [selectedDriveId, setSelectedDriveId] = useState('DD-001')
+  const [drives, setDrives]               = useState([])
+  const [selectedDriveId, setSelectedDriveId] = useState(null)
   const [showDriveDropdown, setShowDriveDropdown] = useState(false)
-  const [showAIModal, setShowAIModal] = useState(false)
-  const [showVariants, setShowVariants] = useState(false)
+  const [showAIModal, setShowAIModal]     = useState(false)
+  const [showVariants, setShowVariants]   = useState(false)
   const [selectedVariant, setSelectedVariant] = useState(MESSAGE_VARIANTS[2])
-  const [aiApplied, setAiApplied] = useState(false)
-  const [sending, setSending] = useState(false)
-  const [sent, setSent] = useState(false)
+  const [aiApplied, setAiApplied]         = useState(false)
+  const [sending, setSending]             = useState(false)
+  const [sent, setSent]                   = useState(false)
+  const [loading, setLoading]             = useState(true)
 
-  const drive = MOCK_UPCOMING_DRIVES.find(d => d.id === selectedDriveId) ?? MOCK_UPCOMING_DRIVES[0]
-  const stats = DRIVE_STATS[drive.id] ?? DRIVE_STATS['DD-001']
-  const outreach = OUTREACH_DATA[drive.id] ?? OUTREACH_DATA['DD-001']
+  useEffect(() => {
+    api.get('/drives').then(r => {
+      const upcoming = r.data.filter(d => d.status !== 'Completed')
+      setDrives(upcoming)
+      if (upcoming.length > 0) setSelectedDriveId(upcoming[0].id)
+    }).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+
+  const drive = drives.find(d => d.id === selectedDriveId) ?? drives[0]
+
+  if (loading) return (
+    <PageLayout title="Donor Outreach" subtitle="Reach the right donors for your upcoming drive.">
+      <LoadingScreen variant="general" />
+    </PageLayout>
+  )
+
+  const stats = drive ? {
+    hsaShortage:        drive.hsaShortage        ?? 0,
+    expectedCollection: drive.expectedCollection ?? 0,
+    shortfall:          drive.shortfall          ?? 0,
+    progressPct:        drive.progressPct        ?? 0,
+    confidence:         drive.outreachConfidence ?? 0,
+    lastUpdated:        drive.outreachLastUpdated ?? '',
+  } : {}
+
+  const outreach = drive ? {
+    recipients:        drive.outreachRecipients  ?? 0,
+    expectedResponders: drive.expectedResponders ?? 0,
+    expectedUnits:     drive.expectedUnits       ?? 0,
+    responseRate:      drive.outreachResponseRate ?? 0,
+    confidence:        drive.outreachConfidence  ?? 0,
+  } : {}
 
   const handleUseRecommendation = () => { setShowAIModal(false); setAiApplied(true) }
   const handleSend = () => { setSending(true); setTimeout(() => { setSending(false); setSent(true) }, 1500) }
@@ -369,7 +343,7 @@ export default function DonorOutreach() {
       </button>
       {showDriveDropdown && (
         <div className="absolute right-0 mt-1.5 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden">
-          {MOCK_UPCOMING_DRIVES.map(d => (
+          {drives.map(d => (
             <button
               key={d.id}
               onClick={() => { setSelectedDriveId(d.id); setShowDriveDropdown(false); setAiApplied(false); setSent(false) }}
@@ -408,8 +382,7 @@ export default function DonorOutreach() {
             <div className="ml-auto flex flex-col items-end gap-1">
               <div className="flex items-center gap-3">
                 <button className="flex items-center gap-2 px-5 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
-                  <Bookmark className="w-4 h-4" />
-                  Save as Draft
+                  <Bookmark className="w-4 h-4" /> Save as Draft
                 </button>
                 <button
                   onClick={handleSend}
@@ -426,9 +399,8 @@ export default function DonorOutreach() {
         </div>
       }
     >
-      {/* ── Top: unified drive info + stats card ── */}
+      {/* Drive info + stats card */}
       <div className="card mb-4 flex divide-x divide-gray-100">
-        {/* Left: Selected Drive */}
         <div className="p-5 w-72 flex-shrink-0">
           <div className="text-[11px] font-bold text-primary mb-2 tracking-wide uppercase">Selected Drive</div>
           <div className="flex items-start gap-2 mb-2.5">
@@ -462,17 +434,15 @@ export default function DonorOutreach() {
           </div>
         </div>
 
-        {/* Right: Stats */}
         <div className="p-5 flex-1 flex flex-col">
           <div className="flex items-center justify-end gap-1.5 text-xs text-gray-400 mb-4">
-            <RefreshCw className="w-3 h-3" />
-            Last updated: {stats.lastUpdated}
+            <RefreshCw className="w-3 h-3" /> Last updated: {stats.lastUpdated}
           </div>
           <div className="flex items-stretch divide-x divide-gray-100 flex-1">
             {[
-              { label: 'HSA Forecasted Shortage', value: stats.hsaShortage,         unit: 'units', color: 'text-primary'    },
-              { label: 'Expected Collection',     value: stats.expectedCollection,   unit: 'units', color: 'text-green-600'  },
-              { label: 'Shortfall Remaining',     value: stats.shortfall,            unit: 'units', color: 'text-amber-500'  },
+              { label: 'HSA Forecasted Shortage', value: stats.hsaShortage,         unit: 'units', color: 'text-primary'   },
+              { label: 'Expected Collection',     value: stats.expectedCollection,   unit: 'units', color: 'text-green-600' },
+              { label: 'Shortfall Remaining',     value: stats.shortfall,            unit: 'units', color: 'text-amber-500' },
             ].map(col => (
               <div key={col.label} className="flex-1 px-5 first:pl-0 flex flex-col">
                 <div className="text-xs text-gray-400 h-8 leading-tight text-center">{col.label}</div>
@@ -502,34 +472,19 @@ export default function DonorOutreach() {
         </div>
       </div>
 
-      {/* ── Main 3-col section ── */}
+      {/* Main 3-col section */}
       <div className="grid gap-4 mb-24" style={{ gridTemplateColumns: '260px 1fr 320px' }}>
 
-        {/* Left: Audience */}
+        {/* Audience */}
         <div className="card p-4">
           <div className="flex items-center gap-2 mb-4">
             <Users className="w-4 h-4 text-primary" />
             <h3 className="font-semibold text-sm text-gray-800">Audience</h3>
           </div>
           <div className="space-y-3">
-            <SelectDropdown
-              label="Blood Type"
-              value={drive.bloodType}
-              options={['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+']}
-              icon={<Droplets className="w-3.5 h-3.5" />}
-            />
-            <SelectDropdown
-              label="Radius"
-              value="5 km"
-              options={['2 km', '5 km', '10 km', '15 km', '20 km']}
-              icon={<MapPin className="w-3.5 h-3.5" />}
-            />
-            <SelectDropdown
-              label="Last Donated"
-              value="> 12 weeks"
-              options={['> 8 weeks', '> 12 weeks', '> 16 weeks', 'Any']}
-              icon={<CalendarDays className="w-3.5 h-3.5" />}
-            />
+            <SelectDropdown label="Blood Type" value={drive.bloodType} options={['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+']} icon={<Droplets className="w-3.5 h-3.5" />} />
+            <SelectDropdown label="Radius" value="5 km" options={['2 km', '5 km', '10 km', '15 km', '20 km']} icon={<MapPin className="w-3.5 h-3.5" />} />
+            <SelectDropdown label="Last Donated" value="> 12 weeks" options={['> 8 weeks', '> 12 weeks', '> 16 weeks', 'Any']} icon={<CalendarDays className="w-3.5 h-3.5" />} />
             <div className="pt-1 space-y-3">
               <CheckFilter label="Previous Responders" defaultChecked={true} />
               <CheckFilter label="Weekend Availability" defaultChecked={true} />
@@ -540,7 +495,7 @@ export default function DonorOutreach() {
           </button>
         </div>
 
-        {/* Middle: AI recommendation zone */}
+        {/* AI recommendation zone */}
         <div className="card p-4 flex flex-col items-center justify-center">
           {aiApplied ? (
             <div className="text-center w-full max-w-xs">
@@ -583,14 +538,13 @@ export default function DonorOutreach() {
                 onClick={() => setShowAIModal(true)}
                 className="flex items-center gap-2 px-5 py-2.5 border border-primary text-primary text-sm font-semibold rounded-lg hover:bg-red-50 transition-colors mx-auto"
               >
-                <Sparkles className="w-4 h-4" />
-                Get AI Recommendation
+                <Sparkles className="w-4 h-4" /> Get AI Recommendation
               </button>
             </div>
           )}
         </div>
 
-        {/* Right: Message Preview + Outreach Summary */}
+        {/* Message Preview + Outreach Summary */}
         <div className="space-y-4">
           <div className="card p-4">
             <div className="flex items-center gap-2 mb-4">
@@ -627,10 +581,10 @@ export default function DonorOutreach() {
             </div>
             <div className="space-y-2.5">
               {[
-                { icon: <Users className="w-3.5 h-3.5" />,      label: 'Recipients Selected',   value: `${outreach.recipients} donors` },
-                { icon: <MapPin className="w-3.5 h-3.5" />,     label: 'Expected Responders',   value: `${outreach.expectedResponders} donors` },
-                { icon: <Droplets className="w-3.5 h-3.5" />,   label: 'Expected Units',        value: `${outreach.expectedUnits} units` },
-                { icon: <Target className="w-3.5 h-3.5" />,     label: 'Response Rate (Est.)',  value: `${outreach.responseRate}%` },
+                { icon: <Users className="w-3.5 h-3.5" />,       label: 'Recipients Selected',  value: `${outreach.recipients} donors` },
+                { icon: <MapPin className="w-3.5 h-3.5" />,      label: 'Expected Responders',  value: `${outreach.expectedResponders} donors` },
+                { icon: <Droplets className="w-3.5 h-3.5" />,    label: 'Expected Units',       value: `${outreach.expectedUnits} units` },
+                { icon: <Target className="w-3.5 h-3.5" />,      label: 'Response Rate (Est.)', value: `${outreach.responseRate}%` },
                 { icon: <CheckSquare className="w-3.5 h-3.5" />, label: 'Confidence',           value: `${outreach.confidence}%`, badge: 'High' },
               ].map(row => (
                 <div key={row.label} className="flex items-center gap-2 text-xs">
@@ -647,9 +601,7 @@ export default function DonorOutreach() {
         </div>
       </div>
 
-      {showAIModal && (
-        <AIModal drive={drive} onCancel={() => setShowAIModal(false)} onUse={handleUseRecommendation} />
-      )}
+      {showAIModal && <AIModal drive={drive} onCancel={() => setShowAIModal(false)} onUse={handleUseRecommendation} />}
       {showVariants && (
         <MessageVariantsModal
           selected={selectedVariant.id}

@@ -1,8 +1,8 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout'
-import {
-  MOCK_ALERTS, MOCK_UPCOMING_DRIVES, DONOR_STATS, DONORS_BY_BLOOD_TYPE,
-} from './mockData'
+import LoadingScreen from '../../components/common/LoadingScreen'
+import api from '../../api/axios'
 import {
   Bell, Droplets, CalendarDays, Users, Map, Send,
   ChevronRight, AlertTriangle, ExternalLink, TrendingUp,
@@ -19,17 +19,20 @@ const SEVERITY_CONFIG = {
   Low:      { bg: 'bg-green-50',  border: 'border-green-200',  badge: 'bg-green-100 text-green-700',   dot: 'bg-green-500',  bar: '#22C55E' },
 }
 
-const forecastData = MOCK_ALERTS.map(a => ({
-  type: a.bloodType,
-  units: a.forecastedShortage,
-  severity: a.severity,
-  window: a.shortageWindow,
-  id: a.id,
-}))
+const BLOOD_TYPE_COLORS = {
+  'O+': '#EF4444',
+  'A+': '#F97316',
+  'B+': '#EAB308',
+  'O-': '#22C55E',
+  'A-': '#3B82F6',
+  'AB+': '#8B5CF6',
+  'B-': '#EC4899',
+  'AB-': '#14B8A6',
+}
 
-const totalShortage = MOCK_ALERTS.reduce((s, a) => s + a.forecastedShortage, 0)
-const criticalCount  = MOCK_ALERTS.filter(a => a.severity === 'Critical').length
-const highCount      = MOCK_ALERTS.filter(a => a.severity === 'High').length
+function getBloodTypeColor(type) {
+  return BLOOD_TYPE_COLORS[type] ?? '#9CA3AF'
+}
 
 function CustomTooltip({ active, payload }) {
   if (!active || !payload?.length) return null
@@ -50,7 +53,36 @@ function CustomTooltip({ active, payload }) {
 
 export default function SRCHome() {
   const navigate = useNavigate()
-  const criticalAlert = MOCK_ALERTS.find(a => a.severity === 'Critical')
+  const [alerts, setAlerts]         = useState([])
+  const [drives, setDrives]         = useState([])
+  const [donorStats, setDonorStats] = useState(null)
+  const [loading, setLoading]       = useState(true)
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/src-alerts').then(r => setAlerts(r.data)).catch(() => {}),
+      api.get('/drives').then(r => setDrives(r.data)).catch(() => {}),
+      api.get('/donors/stats').then(r => setDonorStats(r.data)).catch(() => {}),
+    ]).finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return (
+    <PageLayout title="Home" subtitle="Overview of your blood donation operations.">
+      <LoadingScreen variant="general" />
+    </PageLayout>
+  )
+
+  const upcomingDrives = drives.filter(d => d.status !== 'Completed')
+  const forecastData   = alerts.map(a => ({
+    type: a.bloodType, units: a.forecastedShortage,
+    severity: a.severity, window: a.shortageWindow, id: a.id,
+  }))
+  const totalShortage  = alerts.reduce((s, a) => s + (a.forecastedShortage ?? 0), 0)
+  const criticalCount  = alerts.filter(a => a.severity === 'Critical').length
+  const highCount      = alerts.filter(a => a.severity === 'High').length
+  const criticalAlert  = alerts.find(a => a.severity === 'Critical')
+  const byBloodType    = donorStats?.byBloodType ?? []
+  const summary        = donorStats?.summary ?? {}
 
   return (
     <PageLayout title="Home" subtitle="Overview of your blood donation operations.">
@@ -90,7 +122,7 @@ export default function SRCHome() {
             <span className="text-xs text-gray-500 font-medium">Active Alerts</span>
             <Bell className="w-4 h-4 text-gray-400" />
           </div>
-          <div className="text-3xl font-bold text-gray-900 mb-1">{MOCK_ALERTS.length}</div>
+          <div className="text-3xl font-bold text-gray-900 mb-1">{alerts.length}</div>
           <div className="flex items-center gap-1.5 flex-wrap">
             {criticalCount > 0 && (
               <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-bold">{criticalCount} Critical</span>
@@ -107,7 +139,7 @@ export default function SRCHome() {
             <Droplets className="w-4 h-4 text-primary" />
           </div>
           <div className="text-3xl font-bold text-primary mb-1">{totalShortage.toLocaleString()}</div>
-          <div className="text-xs text-gray-400">units across {MOCK_ALERTS.length} blood types</div>
+          <div className="text-xs text-gray-400">units across {alerts.length} blood types</div>
         </div>
 
         <div
@@ -118,10 +150,10 @@ export default function SRCHome() {
             <span className="text-xs text-gray-500 font-medium">Upcoming Drives</span>
             <CalendarDays className="w-4 h-4 text-gray-400" />
           </div>
-          <div className="text-3xl font-bold text-gray-900 mb-1">{MOCK_UPCOMING_DRIVES.length}</div>
+          <div className="text-3xl font-bold text-gray-900 mb-1">{upcomingDrives.length}</div>
           <div className="text-xs text-gray-400">
-            {MOCK_UPCOMING_DRIVES.filter(d => d.status === 'Confirmed').length} confirmed ·{' '}
-            {MOCK_UPCOMING_DRIVES.filter(d => d.status === 'Planned').length} planned
+            {upcomingDrives.filter(d => d.status === 'Confirmed').length} confirmed ·{' '}
+            {upcomingDrives.filter(d => d.status === 'Planned').length} planned
           </div>
         </div>
 
@@ -133,8 +165,8 @@ export default function SRCHome() {
             <span className="text-xs text-gray-500 font-medium">Donor Response Rate</span>
             <Users className="w-4 h-4 text-gray-400" />
           </div>
-          <div className="text-3xl font-bold text-gray-900 mb-1">{DONOR_STATS.responseRate}%</div>
-          <div className="text-xs text-gray-400">{DONOR_STATS.activeDonors.toLocaleString()} active donors</div>
+          <div className="text-3xl font-bold text-gray-900 mb-1">{summary.responseRate ?? '—'}%</div>
+          <div className="text-xs text-gray-400">{(summary.activeDonors ?? 0).toLocaleString()} active donors</div>
         </div>
       </div>
 
@@ -159,17 +191,8 @@ export default function SRCHome() {
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={forecastData} margin={{ top: 8, right: 4, left: -16, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
-              <XAxis
-                dataKey="type"
-                tick={{ fontSize: 11, fill: '#6B7280' }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 11, fill: '#9CA3AF' }}
-                axisLine={false}
-                tickLine={false}
-              />
+              <XAxis dataKey="type" tick={{ fontSize: 11, fill: '#6B7280' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F9FAFB' }} />
               <ReferenceLine y={0} stroke="#E5E7EB" />
               <Bar dataKey="units" radius={[4, 4, 0, 0]} maxBarSize={48}>
@@ -180,14 +203,10 @@ export default function SRCHome() {
             </BarChart>
           </ResponsiveContainer>
 
-          {/* Window breakdown */}
           <div className="mt-3 divide-y divide-gray-50">
             {forecastData.map((d, i) => (
               <div key={i} className="flex items-center gap-2 text-xs py-1.5">
-                <span
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ background: SEVERITY_CONFIG[d.severity]?.bar ?? '#A3A3A3' }}
-                />
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: SEVERITY_CONFIG[d.severity]?.bar ?? '#A3A3A3' }} />
                 <span className="font-bold text-gray-800 w-7">{d.type}</span>
                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex-shrink-0 ${SEVERITY_CONFIG[d.severity]?.badge ?? ''}`}>
                   {d.severity}
@@ -204,7 +223,6 @@ export default function SRCHome() {
             ))}
           </div>
 
-          {/* Colour legend */}
           <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-50 text-[10px] text-gray-400">
             {['Critical', 'High', 'Medium'].map(s => (
               <div key={s} className="flex items-center gap-1">
@@ -224,13 +242,10 @@ export default function SRCHome() {
             </button>
           </div>
           <div className="space-y-2 flex-1">
-            {MOCK_ALERTS.map(a => {
+            {alerts.map(a => {
               const cfg = SEVERITY_CONFIG[a.severity] ?? SEVERITY_CONFIG.Medium
               return (
-                <div
-                  key={a.id}
-                  className={`rounded-lg border px-3 py-2.5 ${cfg.bg} ${cfg.border}`}
-                >
+                <div key={a.id} className={`rounded-lg border px-3 py-2.5 ${cfg.bg} ${cfg.border}`}>
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-1.5">
                       <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
@@ -270,15 +285,12 @@ export default function SRCHome() {
               <h3 className="font-semibold text-sm text-gray-800">Upcoming Drives</h3>
               <p className="text-xs text-gray-400 mt-0.5">Scheduled donation drives</p>
             </div>
-            <button
-              onClick={() => navigate('/src/donation-drives')}
-              className="text-xs text-primary font-medium hover:underline"
-            >
+            <button onClick={() => navigate('/src/donation-drives')} className="text-xs text-primary font-medium hover:underline">
               Manage all
             </button>
           </div>
           <div className="space-y-2">
-            {MOCK_UPCOMING_DRIVES.map(d => {
+            {upcomingDrives.map(d => {
               const filled = Math.round((d.confirmedDonors / d.expectedDonorsMax) * 100)
               return (
                 <div key={d.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
@@ -300,13 +312,9 @@ export default function SRCHome() {
                         <Droplets className="w-3 h-3" />{d.bloodType}
                       </span>
                     </div>
-                    {/* Fill bar */}
                     <div className="flex items-center gap-2 mt-1.5">
                       <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary rounded-full"
-                          style={{ width: `${Math.min(filled, 100)}%` }}
-                        />
+                        <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(filled, 100)}%` }} />
                       </div>
                       <span className="text-[10px] text-gray-400 flex-shrink-0">
                         {d.confirmedDonors}/{d.expectedDonorsMax} confirmed
@@ -332,21 +340,20 @@ export default function SRCHome() {
             </div>
             <div className="grid grid-cols-2 gap-2 mb-3">
               <div className="bg-gray-50 rounded-lg p-2.5 text-center">
-                <div className="text-xl font-bold text-gray-800">{(DONOR_STATS.activeDonors / 1000).toFixed(0)}k</div>
+                <div className="text-xl font-bold text-gray-800">{((summary.activeDonors ?? 0) / 1000).toFixed(0)}k</div>
                 <div className="text-[10px] text-gray-400">Active donors</div>
               </div>
               <div className="bg-gray-50 rounded-lg p-2.5 text-center">
-                <div className="text-xl font-bold text-gray-800">{(DONOR_STATS.eligibleRepeat / 1000).toFixed(0)}k</div>
+                <div className="text-xl font-bold text-gray-800">{((summary.eligibleRepeat ?? 0) / 1000).toFixed(0)}k</div>
                 <div className="text-[10px] text-gray-400">Eligible repeat</div>
               </div>
             </div>
-            {/* Top blood types */}
             <div className="space-y-1.5">
-              {DONORS_BY_BLOOD_TYPE.slice(0, 3).map(t => (
+              {byBloodType.slice(0, 3).map(t => (
                 <div key={t.type} className="flex items-center gap-2 text-xs">
                   <span className="w-7 font-bold text-gray-700">{t.type}</span>
                   <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${t.pct}%`, background: t.color }} />
+                    <div className="h-full rounded-full" style={{ width: `${t.pct}%`, background: getBloodTypeColor(t.type) }} />
                   </div>
                   <span className="text-gray-400 w-8 text-right">{t.pct}%</span>
                 </div>
@@ -359,11 +366,11 @@ export default function SRCHome() {
             <h3 className="font-semibold text-sm text-gray-800 mb-2">Quick Actions</h3>
             <div className="space-y-0.5">
               {[
-                { label: 'View HSA Alerts',    icon: Bell,          to: '/src/alerts' },
-                { label: 'Plan a Drive',        icon: Map,           to: '/src/drive-planning' },
-                { label: 'Donor Outreach',      icon: Send,          to: '/src/donor-outreach' },
-                { label: 'Donation Drives',     icon: CalendarDays,  to: '/src/donation-drives' },
-                { label: 'Donor Information',   icon: TrendingUp,    to: '/src/donor-information' },
+                { label: 'View HSA Alerts',  icon: Bell,         to: '/src/alerts' },
+                { label: 'Plan a Drive',      icon: Map,          to: '/src/drive-planning' },
+                { label: 'Donor Outreach',    icon: Send,         to: '/src/donor-outreach' },
+                { label: 'Donation Drives',   icon: CalendarDays, to: '/src/donation-drives' },
+                { label: 'Donor Information', icon: TrendingUp,   to: '/src/donor-information' },
               ].map(({ label, icon: Icon, to }) => (
                 <button
                   key={to}

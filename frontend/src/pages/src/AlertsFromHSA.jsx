@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout'
-import { MOCK_ALERTS } from './mockData'
+import LoadingScreen from '../../components/common/LoadingScreen'
+import api from '../../api/axios'
 import { ChevronRight, Clock, Droplets, AlertTriangle, CheckCircle, X, Map } from 'lucide-react'
 import Pagination, { usePagination } from '../../components/common/Pagination'
 
@@ -16,21 +17,29 @@ const SEVERITY_CONFIG = {
 
 export default function AlertsFromHSA() {
   const navigate = useNavigate()
+  const [alerts, setAlerts] = useState([])
   const [filter, setFilter] = useState('All')
   const [selected, setSelected] = useState(null)
-
   const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(true)
 
-  const filters = ['All', 'Critical', 'High', 'Medium']
-  const filtered = filter === 'All' ? MOCK_ALERTS : MOCK_ALERTS.filter(a => a.severity === filter)
+  useEffect(() => {
+    api.get('/src-alerts').then(r => setAlerts(r.data)).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return (
+    <PageLayout title="Alerts from HSA" subtitle="Review blood shortage alerts issued by the Health Sciences Authority.">
+      <LoadingScreen variant="forecasting" />
+    </PageLayout>
+  )
+
+  const filters  = ['All', 'Critical', 'High', 'Medium']
+  const filtered = filter === 'All' ? alerts : alerts.filter(a => a.severity === filter)
   const { totalItems, totalPages, slice } = usePagination(filtered, PAGE_SIZE)
   const pageItems = slice(page)
 
   const handleFilterChange = (f) => { setFilter(f); setPage(1) }
-
-  const handlePlanDrive = (alertId) => {
-    navigate(`/src/drive-planning?alertId=${alertId}`)
-  }
+  const handlePlanDrive    = (alertId) => navigate(`/src/drive-planning?alertId=${alertId}`)
 
   return (
     <PageLayout
@@ -49,7 +58,6 @@ export default function AlertsFromHSA() {
           const cfg = SEVERITY_CONFIG[selected.severity] ?? SEVERITY_CONFIG.Medium
           return (
             <>
-              {/* Drawer header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                 <h3 className="font-semibold text-gray-800">Alert Details</h3>
                 <div className="flex items-center gap-2">
@@ -59,15 +67,10 @@ export default function AlertsFromHSA() {
                   </button>
                 </div>
               </div>
-
-              {/* Drawer body */}
               <div className="flex-1 overflow-y-auto px-5 py-4">
-                {/* Severity banner */}
                 <div className={`rounded-lg px-3 py-2 mb-5 text-xs font-medium ${cfg.badge}`}>
                   {selected.severity} severity — action required within the shortage window
                 </div>
-
-                {/* Details list */}
                 <div className="space-y-3 text-xs mb-6">
                   <h4 className="font-semibold text-gray-700 text-sm">Alert Overview</h4>
                   {[
@@ -84,8 +87,6 @@ export default function AlertsFromHSA() {
                     </div>
                   ))}
                 </div>
-
-                {/* Recommended action */}
                 <div className="mb-6">
                   <h4 className="font-semibold text-gray-700 text-sm mb-2">Recommended Action</h4>
                   <div className="bg-gray-50 rounded-lg px-3 py-3 text-xs text-gray-700 leading-relaxed">
@@ -93,8 +94,6 @@ export default function AlertsFromHSA() {
                   </div>
                 </div>
               </div>
-
-              {/* Drawer footer */}
               <div className="px-5 py-4 border-t border-gray-100">
                 <button
                   onClick={() => handlePlanDrive(selected.id)}
@@ -115,9 +114,7 @@ export default function AlertsFromHSA() {
             key={f}
             onClick={() => handleFilterChange(f)}
             className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-              filter === f
-                ? 'bg-primary text-white border-primary'
-                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+              filter === f ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
             }`}
           >
             {f}
@@ -145,11 +142,7 @@ export default function AlertsFromHSA() {
             {pageItems.map((alert) => {
               const cfg = SEVERITY_CONFIG[alert.severity] ?? SEVERITY_CONFIG.Medium
               return (
-                <tr
-                  key={alert.id}
-                  onClick={() => setSelected(alert)}
-                  className="hover:bg-gray-50 cursor-pointer"
-                >
+                <tr key={alert.id} onClick={() => setSelected(alert)} className="hover:bg-gray-50 cursor-pointer">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot}`} />
@@ -157,18 +150,14 @@ export default function AlertsFromHSA() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full font-semibold ${cfg.badge}`}>
-                      {alert.severity}
-                    </span>
+                    <span className={`px-2 py-0.5 rounded-full font-semibold ${cfg.badge}`}>{alert.severity}</span>
                   </td>
                   <td className="px-4 py-3">
                     <span className="flex items-center gap-1 font-semibold text-primary">
                       <Droplets className="w-3 h-3" /> {alert.bloodType}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-semibold text-gray-900">
-                    {alert.forecastedShortage.toLocaleString()} units
-                  </td>
+                  <td className="px-4 py-3 font-semibold text-gray-900">{alert.forecastedShortage.toLocaleString()} units</td>
                   <td className="px-4 py-3 text-gray-700">{alert.shortageWindow}</td>
                   <td className="px-4 py-3 text-gray-700">{alert.recommendedAction}</td>
                   <td className="px-4 py-3 text-gray-400 whitespace-nowrap">
@@ -191,13 +180,7 @@ export default function AlertsFromHSA() {
         </table>
       </div>
 
-      <Pagination
-        page={page}
-        totalPages={totalPages}
-        totalItems={totalItems}
-        pageSize={PAGE_SIZE}
-        onPageChange={setPage}
-      />
+      <Pagination page={page} totalPages={totalPages} totalItems={totalItems} pageSize={PAGE_SIZE} onPageChange={setPage} />
     </PageLayout>
   )
 }

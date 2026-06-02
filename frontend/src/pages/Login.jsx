@@ -17,17 +17,8 @@ const CREDENTIALS = {
   HSA:           { email: 'winnie@hsa.gov.sg',      password: 'password123' },
 }
 
-const SRC_MOCK_USER = {
-  id: 'src-001',
-  email: 'winnie@redcross.org.sg',
-  name: 'Winnie Koh',
-  role: 'SRC_STAFF',
-  hospitalName: 'Singapore Red Cross',
-  designation: 'SRC Staff',
-}
-
 export default function Login() {
-  const { login, mockLogin } = useAuth()
+  const { login } = useAuth()
   const navigate = useNavigate()
 
   const [role, setRole] = useState(ROLES[0])
@@ -50,13 +41,6 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      if (role.value === 'SRC_STAFF') {
-        const creds = CREDENTIALS.SRC_STAFF
-        if (email !== creds.email || password !== creds.password) throw new Error('invalid')
-        mockLogin(SRC_MOCK_USER)
-        navigate('/src/alerts')
-        return
-      }
       const user = await login(email, password)
       if (user.role === 'ADMIN') navigate('/admin/users')
       else navigate(user.role === 'HSA' ? '/hsa/dashboard' : '/src/home')

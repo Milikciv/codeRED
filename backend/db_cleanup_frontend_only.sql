@@ -22,7 +22,11 @@ ALTER TABLE users DROP COLUMN IF EXISTS hospital_id;
 -- 3. Hospital transfer/allocation workflow was removed from the frontend/backend.
 DROP TABLE IF EXISTS blood_transfers CASCADE;
 
--- 4. Ensure the dedicated admin account exists.
+-- 4. Display colours are derived in the frontend, not stored as data.
+ALTER TABLE donor_demographics DROP COLUMN IF EXISTS color;
+ALTER TABLE donor_hotspots DROP COLUMN IF EXISTS color;
+
+-- 5. Ensure the dedicated admin account exists.
 INSERT INTO users (
   email,
   password,
@@ -42,3 +46,24 @@ VALUES (
 ON CONFLICT (email) DO UPDATE
 SET role = 'ADMIN',
     designation = 'System Administrator';
+
+-- 6. Ensure the default SRC staff account exists.
+INSERT INTO users (
+  email,
+  password,
+  name,
+  designation,
+  contact_number,
+  role
+)
+VALUES (
+  'winnie@redcross.org.sg',
+  '$2a$10$KYVbZ5JFVfqu0oV98LnF5eTk4QAp4CJdF1BZ8IX8sRe7jsBtW3nHe',
+  'Winnie Koh',
+  'SRC Staff',
+  NULL,
+  'SRC_STAFF'
+)
+ON CONFLICT (email) DO UPDATE
+SET role = 'SRC_STAFF',
+    designation = 'SRC Staff';
