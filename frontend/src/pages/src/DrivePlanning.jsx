@@ -269,9 +269,17 @@ export default function DrivePlanning() {
       <div className="grid grid-cols-5 gap-4">
         {/* Left: Hotspot map */}
         <div className="col-span-3 card p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-semibold text-sm text-gray-800">Hotspots</h3>
-            <Info className="w-3.5 h-3.5 text-gray-400" />
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-sm text-gray-800">Hotspots</h3>
+              <Info className="w-3.5 h-3.5 text-gray-400" />
+            </div>
+            <button
+              onClick={() => navigate('/src/hotspots')}
+              className="text-xs text-primary font-medium hover:underline"
+            >
+              View More
+            </button>
           </div>
           <p className="text-xs text-gray-400 mb-3">
             Scores are calculated based on multiple factors to find the best drive locations.

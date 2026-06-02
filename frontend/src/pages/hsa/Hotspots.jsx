@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout'
+import { useAuth } from '../../context/AuthContext'
 import PageError from '../../components/common/PageError'
 import api from '../../api/axios'
-import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
-} from 'recharts'
 import { Calendar } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { peopleOutline, locationOutline, statsChartOutline, mapOutline, pinOutline } from 'ionicons/icons'
@@ -13,17 +11,44 @@ import DateRangePicker, { formatDateRange } from '../../components/common/DateRa
 import LoadingScreen from '../../components/common/LoadingScreen'
 
 
-const LOCATION_OPTIONS = ['Bloodbank @ HSA', 'SGH', 'NUH', 'KKH', 'CGH', 'TTSH', 'NGH']
+
+const MOCK_DATA = {
+  mostActiveAgeGroup: '31-50 Years Old',
+  mostActiveAgeGroupPct: 52,
+  activeHotspots: 20,
+  highestDonorZone: 'Central (Outram)',
+  highestDonorZoneCount: 1726,
+  insights: [
+    { name: 'Ang Mo Kio Hotspot', color: 'red', potentialDonors: 627, ageGroup: '31-50 Years Old', recommendation: 'Deploy community donation drive at Ang Mo Kio Community Club' },
+    { name: 'Youth Bedok Cluster', color: 'orange', potentialDonors: 283, ageGroup: '16-30 Years Old', recommendation: 'Partner with nearby institutions' },
+  ],
+  communityDrives: [
+    { name: 'Community Drive @ Boon Lay MRT...', donors: 3948, lastDrive: '11-12 November 2025' },
+    { name: 'Community Drive @ Yew Tee CC', donors: 3456, lastDrive: '19-20 November 2025' },
+    { name: 'Community Drive @ Ang Mo Kio CC', donors: 2876, lastDrive: '28-29 November 2025' },
+    { name: 'Community Drive @ Serangoon CC', donors: 2545, lastDrive: '1-2 December 2025' },
+    { name: 'Community Drive @ Tampines M...', donors: 2344, lastDrive: '5-6 December 2025' },
+  ],
+  ageGroupData: [
+    { month: 'Feb', total: 800, age16to30: 300, age31to50: 350, above50: 150 },
+    { month: 'Mar', total: 900, age16to30: 320, age31to50: 400, above50: 180 },
+    { month: 'Apr', total: 950, age16to30: 340, age31to50: 420, above50: 190 },
+    { month: 'May 01', total: 1000, age16to30: 350, age31to50: 450, above50: 200 },
+    { month: 'May 15', total: 1050, age16to30: 360, age31to50: 470, above50: 220 },
+    { month: 'May 21', total: 1100, age16to30: 380, age31to50: 490, above50: 230 },
+  ],
+}
 
 export default function Hotspots() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const base = user?.role === 'SRC_STAFF' ? '/src' : '/hsa'
   const [data, setData]               = useState(null)
   const [loading, setLoading]         = useState(true)
   const [error, setError]             = useState(false)
   const [openDropdown, setOpenDropdown] = useState(null)
   const [dateStart, setDateStart]     = useState(new Date(2026, 1, 18))
   const [dateEnd, setDateEnd]         = useState(new Date(2026, 4, 17))
-  const [location, setLocation]       = useState('Bloodbank @ HSA')
 
   const fetchData = () => {
     setError(false)
@@ -34,7 +59,14 @@ export default function Hotspots() {
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => {
+    if (user?.role === 'SRC_STAFF') {
+      setData(MOCK_DATA)
+      setLoading(false)
+      return
+    }
+    fetchData()
+  }, [])
 
   if (loading) return (
     <PageLayout title="Hotspots" subtitle="Monitor blood donation hotspots to plan donation drives more efficiently">
@@ -106,7 +138,7 @@ export default function Hotspots() {
         <div className="card p-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-semibold text-sm text-gray-800">Hotspot Insights and Suggestions</h3>
-            <button onClick={() => navigate('/hsa/hotspots/map')} className="text-xs text-primary font-medium">View Detailed Map</button>
+            <button onClick={() => navigate(`${base}/hotspots/map`)} className="text-xs text-primary font-medium">View Detailed Map</button>
           </div>
           <div className="bg-gray-100 rounded-xl h-56 flex items-center justify-center text-gray-400 text-sm relative overflow-hidden">
             <div className="absolute inset-0 opacity-10">
@@ -142,7 +174,7 @@ export default function Hotspots() {
         <div className="card p-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-semibold text-sm text-gray-800">Hotspot Insights and Suggestions</h3>
-            <button onClick={() => navigate('/hsa/hotspots/insights')} className="text-xs text-primary font-medium">View All</button>
+            <button onClick={() => navigate(`${base}/hotspots/insights`)} className="text-xs text-primary font-medium">View All</button>
           </div>
           {data.insights?.length > 0 ? (
             <div className="space-y-3">
@@ -171,88 +203,36 @@ export default function Hotspots() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        {/* Age group chart */}
-        <div className="card p-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold text-sm text-gray-800">Blood Donors by Age Group</h3>
-            <div className="relative">
-              <button
-                onClick={() => setOpenDropdown(openDropdown === 'location' ? null : 'location')}
-                className="flex items-center gap-1.5 px-2 py-1 border border-gray-300 rounded text-xs bg-white hover:bg-gray-50"
-              >
-                {location} ▾
-              </button>
-              {openDropdown === 'location' && (
-                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-36">
-                  {LOCATION_OPTIONS.map(l => (
-                    <button
-                      key={l}
-                      onClick={() => { setLocation(l); setOpenDropdown(null) }}
-                      className={`w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 ${location === l ? 'text-primary font-medium' : 'text-gray-700'}`}
-                    >
-                      {l}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          {data.ageGroupData?.length > 0 ? (
-            <ResponsiveContainer width="100%" height={180}>
-              <LineChart data={data.ageGroupData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                <XAxis dataKey="month" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
-                <Tooltip contentStyle={{ fontSize: 11 }} />
-                <ReferenceLine y={500} stroke="#EF4444" strokeDasharray="4 2" />
-                <Line type="monotone" dataKey="total" stroke="#111827" strokeWidth={2} dot={false} name="Total" />
-                <Line type="monotone" dataKey="age16to30" stroke="#14B8A6" strokeWidth={2} dot={false} name="16-30 Years" />
-                <Line type="monotone" dataKey="age31to50" stroke="#F59E0B" strokeWidth={2} dot={false} name="31-50 Years" />
-                <Line type="monotone" dataKey="above50" stroke="#EF4444" strokeWidth={1.5} dot={false} name="Above 50" />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-48 flex items-center justify-center text-sm text-gray-400">No chart data available</div>
-          )}
-          <div className="flex gap-3 mt-1 text-xs text-gray-500 justify-center">
-            <span className="flex items-center gap-1"><span className="w-3 border-t-2 border-gray-900 inline-block" />Total</span>
-            <span className="flex items-center gap-1"><span className="w-3 border-t-2 border-teal-400 inline-block" />16-30</span>
-            <span className="flex items-center gap-1"><span className="w-3 border-t-2 border-yellow-400 inline-block" />31-50</span>
-            <span className="flex items-center gap-1"><span className="w-3 border-t-2 border-red-400 inline-block" />50+</span>
-          </div>
+      {/* Community drives table */}
+      <div className="card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-sm text-gray-800">Top Performing Community Drives <span className="text-gray-400 font-normal text-xs">(3 Months Ago)</span></h3>
+          <button onClick={() => navigate(`${base}/hotspots/bloodbank-performance`)} className="text-xs text-primary font-medium">View All</button>
         </div>
-
-        {/* Community drives table */}
-        <div className="card p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-sm text-gray-800">Top Performing Community Drives <span className="text-gray-400 font-normal text-xs">(3 Months Ago)</span></h3>
-            <button onClick={() => navigate('/hsa/hotspots/bloodbank-performance')} className="text-xs text-primary font-medium">View All</button>
-          </div>
-          {data.communityDrives?.length > 0 ? (
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-gray-500 border-b border-gray-100">
-                  <th className="text-left pb-1.5 font-medium">Community Drive</th>
-                  <th className="text-right pb-1.5 font-medium">No. of Donors</th>
-                  <th className="text-right pb-1.5 font-medium">Last Community Drive</th>
+        {data.communityDrives?.length > 0 ? (
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-gray-500 border-b border-gray-100">
+                <th className="text-left pb-1.5 font-medium">Community Drive</th>
+                <th className="text-right pb-1.5 font-medium">No. of Donors</th>
+                <th className="text-right pb-1.5 font-medium">Last Community Drive</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.communityDrives.map((d, i) => (
+                <tr key={i} className="border-b border-gray-50">
+                  <td className="py-1.5 text-gray-700">{d.name}</td>
+                  <td className="py-1.5 text-right font-semibold text-gray-800">{d.donors.toLocaleString()}</td>
+                  <td className="py-1.5 text-right text-gray-500">{d.lastDrive}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {data.communityDrives.map((d, i) => (
-                  <tr key={i} className="border-b border-gray-50">
-                    <td className="py-1.5 text-gray-700">{d.name}</td>
-                    <td className="py-1.5 text-right font-semibold text-gray-800">{d.donors.toLocaleString()}</td>
-                    <td className="py-1.5 text-right text-gray-500">{d.lastDrive}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-32 text-center">
-              <p className="text-sm text-gray-400">No community drives to display</p>
-            </div>
-          )}
-        </div>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-32 text-center">
+            <p className="text-sm text-gray-400">No community drives to display</p>
+          </div>
+        )}
       </div>
     </PageLayout>
   )

@@ -9,6 +9,7 @@ import Forecasting from './pages/hsa/Forecasting'
 import BloodTypeAnalytics from './pages/hsa/forecasting/BloodTypeAnalytics'
 import Recommendations from './pages/hsa/forecasting/Recommendations'
 import BloodAllocation from './pages/hsa/BloodAllocation'
+import AlertsToSRC from './pages/hsa/AlertsToSRC'
 import Hotspots from './pages/hsa/Hotspots'
 import HotspotInsights from './pages/hsa/hotspots/Insights'
 import BloodbankPerformance from './pages/hsa/hotspots/BloodbankPerformance'
@@ -77,6 +78,7 @@ export default function App() {
           <Route path="/hsa/forecasting/blood-type-analytics" element={<HSA><BloodTypeAnalytics /></HSA>} />
           <Route path="/hsa/forecasting/recommendations"      element={<HSA><Recommendations /></HSA>} />
           <Route path="/hsa/allocation"  element={<HSA><BloodAllocation /></HSA>} />
+          <Route path="/hsa/alerts"      element={<HSA><AlertsToSRC /></HSA>} />
           <Route path="/hsa/requests"    element={<HSA><HsaRequests /></HSA>} />
           <Route path="/hsa/hotspots"    element={<HSA><Hotspots /></HSA>} />
           <Route path="/hsa/hotspots/insights"              element={<HSA><HotspotInsights /></HSA>} />
@@ -96,6 +98,10 @@ export default function App() {
           <Route path="/src/donation-drives"   element={<SRC><DonationDrives /></SRC>} />
           <Route path="/src/edit-drive"         element={<SRC><DriveEdit /></SRC>} />
           <Route path="/src/donor-outreach"    element={<SRC><DonorOutreach /></SRC>} />
+          <Route path="/src/hotspots"                        element={<SRC><Hotspots /></SRC>} />
+          <Route path="/src/hotspots/map"                   element={<SRC><DonorMap /></SRC>} />
+          <Route path="/src/hotspots/insights"              element={<SRC><HotspotInsights /></SRC>} />
+          <Route path="/src/hotspots/bloodbank-performance" element={<SRC><BloodbankPerformance /></SRC>} />
 
           {/* User management */}
           <Route path="/hsa/users"      element={<HSA><UserManagement /></HSA>} />

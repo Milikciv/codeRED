@@ -7,12 +7,9 @@ import {
 } from 'lucide-react'
 
 const HSA_NAV = [
-  { to: '/hsa/dashboard',   icon: Home,             label: 'Home' },
-  { to: '/hsa/forecasting', icon: TrendingUp,        label: 'Forecasting' },
-  { to: '/hsa/allocation',  icon: Droplets,          label: 'Blood Allocation' },
-  { to: '/hsa/requests',    icon: ArrowRightLeft,    label: 'Transfers' },
-  { to: '/hsa/hotspots',    icon: MapPin,            label: 'Hotspots' },
-  { to: '/hsa/users',       icon: Users,             label: 'Users' },
+  { to: '/hsa/dashboard',   icon: Home,       label: 'Home' },
+  { to: '/hsa/forecasting', icon: TrendingUp,  label: 'Demand Forecasting' },
+  { to: '/hsa/alerts',      icon: Bell,        label: 'Alerts' },
 ]
 
 const HOSPITAL_NAV = [
