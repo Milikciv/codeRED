@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import PageLayout from '../../../components/layout/PageLayout'
 import ConfirmModal from '../../../components/common/ConfirmModal'
 import Toast from '../../../components/common/Toast'
 import { X, MapPin, Calendar } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { mapOutline } from 'ionicons/icons'
+import { ease } from '../../../lib/motion'
 
 const INITIAL_INSIGHTS = [
   {
@@ -104,8 +106,17 @@ export default function HotspotInsights() {
       )}
 
       <div className="space-y-4">
+        <AnimatePresence initial={false}>
         {insights.map(ins => (
-          <div key={ins.id} className={`border rounded-2xl p-5 ${ins.cardBg}`}>
+          <motion.div
+            key={ins.id}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, x: 24, transition: { duration: 0.2 } }}
+            transition={{ duration: 0.25, ease }}
+            layout
+            className={`border rounded-2xl p-5 ${ins.cardBg}`}
+          >
             <div className="flex items-start gap-5">
               {/* Heatmap thumbnail */}
               <div className="w-28 h-24 bg-white/60 rounded-xl flex-shrink-0 overflow-hidden border border-white/80 relative flex items-center justify-center">
@@ -167,8 +178,9 @@ export default function HotspotInsights() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         ))}
+        </AnimatePresence>
 
         {insights.length === 0 && (
           <div className="card p-10 text-center text-gray-400 text-sm">All hotspot recommendations have been dismissed.</div>

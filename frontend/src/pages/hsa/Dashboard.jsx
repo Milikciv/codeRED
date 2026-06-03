@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import PageLayout from '../../components/layout/PageLayout'
 import StatCard from '../../components/common/StatCard'
 import AlertCard from '../../components/common/AlertCard'
@@ -137,8 +138,8 @@ export default function HsaDashboard() {
 
       {/* Alerts modal */}
       {showAlerts && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 modal-backdrop-enter">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col modal-content-enter">
             <div className="p-5 border-b border-gray-100 flex items-center gap-3">
               <div className="w-9 h-9 bg-red-100 rounded-full flex items-center justify-center">
                 <AlertTriangle className="w-5 h-5 text-primary" />
@@ -162,44 +163,24 @@ export default function HsaDashboard() {
       )}
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 mb-4">
-        <StatCard
-          icon={<Droplets className="w-5 h-5 text-primary" />}
-          label="Blood Units"
-          value={`${summary.percentage}%`}
-          sub="of ideal"
-          linkText="View details"
-          onLink={() => navigate('/hsa/forecasting/blood-type-analytics')}
-          highlight
-        />
-        <StatCard
-          icon={<IonIcon icon={waterOutline} style={{ fontSize: '1.5rem', color: '#C20000' }} />}
-          label="Critical Blood Types"
-          value={summary.criticalTypeCount}
-          sub={criticalTypes.join(', ')}
-          highlight
-        />
-        <StatCard
-          icon={<IonIcon icon={medkitOutline} style={{ fontSize: '1.5rem', color: '#6366f1' }} />}
-          label="Hospitals Critical"
-          value="2"
-          linkText="View hospitals"
-          onLink={() => navigate('/hsa/forecasting/blood-type-analytics')}
-        />
-        <StatCard
-          icon={<Clock className="w-5 h-5 text-orange-400" />}
-          label="Expiring Soon"
-          value={expiringTotal.toLocaleString()}
-          sub="within 7 days"
-        />
-        <StatCard
-          icon={<Users className="w-5 h-5 text-yellow-500" />}
-          label="Active Requests"
-          value={activeRequests || 2}
-          linkText="View requests"
-          onLink={() => navigate('/hsa/alerts')}
-        />
-      </div>
+      <motion.div
+        className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 mb-4"
+        initial="hidden"
+        animate="visible"
+        variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.07 } } }}
+      >
+        {[
+          <StatCard key="units" icon={<Droplets className="w-5 h-5 text-primary" />} label="Blood Units" value={`${summary.percentage}%`} sub="of ideal" linkText="View details" onLink={() => navigate('/hsa/forecasting/blood-type-analytics')} highlight />,
+          <StatCard key="critical" icon={<IonIcon icon={waterOutline} style={{ fontSize: '1.5rem', color: '#C20000' }} />} label="Critical Blood Types" value={summary.criticalTypeCount} sub={criticalTypes.join(', ')} highlight />,
+          <StatCard key="hospitals" icon={<IonIcon icon={medkitOutline} style={{ fontSize: '1.5rem', color: '#6366f1' }} />} label="Hospitals Critical" value="2" linkText="View hospitals" onLink={() => navigate('/hsa/forecasting/blood-type-analytics')} />,
+          <StatCard key="expiring" icon={<Clock className="w-5 h-5 text-orange-400" />} label="Expiring Soon" value={expiringTotal.toLocaleString()} sub="within 7 days" />,
+          <StatCard key="requests" icon={<Users className="w-5 h-5 text-yellow-500" />} label="Active Requests" value={activeRequests || 2} linkText="View requests" onLink={() => navigate('/hsa/alerts')} />,
+        ].map((card, i) => (
+          <motion.div key={i} variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 } }}>
+            {card}
+          </motion.div>
+        ))}
+      </motion.div>
 
       {/* Main grid
           Desktop priority: urgent actions → current state → future context

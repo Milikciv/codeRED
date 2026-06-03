@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { motion } from 'framer-motion'
 import PageLayout from '../components/layout/PageLayout'
 import Toast from '../components/common/Toast'
 import ConfirmModal from '../components/common/ConfirmModal'
@@ -317,19 +318,28 @@ export default function UserManagement() {
         />
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+      <motion.div
+        className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4"
+        initial="hidden"
+        animate="visible"
+        variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.07 } } }}
+      >
         {[
           ['Total Users', stats.total, 'text-gray-900'],
           ['Admins', stats.admins, 'text-gray-900'],
           ['HSA Users', stats.hsa, 'text-primary'],
           ['SRC Staff', stats.src, 'text-blue-600'],
         ].map(([label, value, color]) => (
-          <div key={label} className="card p-4">
+          <motion.div
+            key={label}
+            variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 } }}
+            className="card p-4"
+          >
             <div className="text-xs text-gray-500 font-medium">{label}</div>
             <div className={`text-2xl font-bold mt-1 ${color}`}>{value}</div>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       <div className="card overflow-hidden overflow-x-auto">
         <div className="p-4 border-b border-gray-100 flex flex-wrap items-center gap-3 justify-between min-w-[320px]">
@@ -372,9 +382,18 @@ export default function UserManagement() {
               <th className="text-right px-4 py-3 font-medium text-xs">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <motion.tbody
+            key={`${roleFilter}-${search}`}
+            initial="hidden"
+            animate="visible"
+            variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.03 } } }}
+          >
             {filtered.map(user => (
-              <tr key={user.id} className="border-b border-gray-50 hover:bg-gray-50">
+              <motion.tr
+                key={user.id}
+                variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.2 } } }}
+                className="border-b border-gray-50 hover:bg-gray-50"
+              >
                 <td className="px-4 py-3 font-medium text-gray-800">{user.name}</td>
                 <td className="px-4 py-3 text-gray-600">{user.email}</td>
                 <td className="px-4 py-3"><RoleBadge role={user.role} /></td>
@@ -398,9 +417,9 @@ export default function UserManagement() {
                     </button>
                   </div>
                 </td>
-              </tr>
+              </motion.tr>
             ))}
-          </tbody>
+          </motion.tbody>
         </table>
 
         {filtered.length === 0 && (

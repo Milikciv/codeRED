@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { ChevronDown, Eye, EyeOff } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { businessOutline, heartOutline } from 'ionicons/icons'
+import { motion } from 'framer-motion'
 
 const ROLES = [
   { value: 'ADMIN',         label: 'Admin',                  icon: businessOutline },
@@ -69,7 +70,12 @@ export default function Login() {
       <div className="absolute inset-0 bg-white/30" />
 
       {/* Login Card */}
-      <div className="relative z-10 w-full max-w-sm bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl px-8 py-8">
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+        className="relative z-10 w-full max-w-sm bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl px-8 py-8"
+      >
         <h1 className="text-4xl font-bold text-center text-primary mb-8">Login</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -161,7 +167,7 @@ export default function Login() {
           <strong>Demo:</strong> Select a role above then use<br/>
           <span className="font-mono">{CREDENTIALS[role.value].email}</span> / <span className="font-mono">password123</span>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

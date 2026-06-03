@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import PageLayout from '../../components/layout/PageLayout'
 import LoadingScreen from '../../components/common/LoadingScreen'
 import api from '../../api/axios'
@@ -138,11 +139,22 @@ export default function AlertsFromHSA() {
               <th className="text-left px-4 py-3 font-medium">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <motion.tbody
+            key={`${filter}-${page}`}
+            className="divide-y divide-gray-50"
+            initial="hidden"
+            animate="visible"
+            variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.03 } } }}
+          >
             {pageItems.map((alert) => {
               const cfg = SEVERITY_CONFIG[alert.severity] ?? SEVERITY_CONFIG.Medium
               return (
-                <tr key={alert.id} onClick={() => setSelected(alert)} className="hover:bg-gray-50 cursor-pointer">
+                <motion.tr
+                  key={alert.id}
+                  variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.2 } } }}
+                  onClick={() => setSelected(alert)}
+                  className="hover:bg-gray-50 cursor-pointer"
+                >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot}`} />
@@ -173,10 +185,10 @@ export default function AlertsFromHSA() {
                       Plan Drive <ChevronRight className="w-3 h-3" />
                     </button>
                   </td>
-                </tr>
+                </motion.tr>
               )
             })}
-          </tbody>
+          </motion.tbody>
         </table>
       </div>
 

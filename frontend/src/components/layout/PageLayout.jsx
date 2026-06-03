@@ -27,7 +27,7 @@ export default function PageLayout({ title, subtitle, breadcrumb, isHome, action
             actions={actions}
             onMenuToggle={() => setSidebarOpen(o => !o)}
           />
-          <div className="p-4 lg:p-5">
+          <div className="p-4 lg:p-5 page-enter-animate">
             {children}
           </div>
         </main>

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import PageLayout from '../../components/layout/PageLayout'
 import LoadingScreen from '../../components/common/LoadingScreen'
 import api from '../../api/axios'
+import { staggerContainer, listItem, listItemX, ease } from '../../lib/motion'
 import {
   Bell, Droplets, CalendarDays, Users, Map, Send,
   ChevronRight, AlertTriangle, ExternalLink, TrendingUp,
@@ -115,8 +117,14 @@ export default function SRCHome() {
       )}
 
       {/* ── KPI row ───────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
-        <div
+      <motion.div
+        className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4"
+        initial="hidden"
+        animate="visible"
+        variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.07 } } }}
+      >
+        <motion.div
+          variants={listItem}
           onClick={() => navigate('/src/alerts')}
           className="card p-4 cursor-pointer hover:shadow-md transition-shadow"
         >
@@ -133,18 +141,19 @@ export default function SRCHome() {
               <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-[10px] font-bold">{highCount} High</span>
             )}
           </div>
-        </div>
+        </motion.div>
 
-        <div className="card p-4">
+        <motion.div variants={listItem} className="card p-4">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs text-gray-500 font-medium">Total Forecasted Shortage</span>
             <Droplets className="w-4 h-4 text-primary" />
           </div>
           <div className="text-2xl sm:text-3xl font-bold text-primary mb-1">{totalShortage.toLocaleString()}</div>
           <div className="text-xs text-gray-400">units across {alerts.length} blood types</div>
-        </div>
+        </motion.div>
 
-        <div
+        <motion.div
+          variants={listItem}
           onClick={() => navigate('/src/donation-drives')}
           className="card p-4 cursor-pointer hover:shadow-md transition-shadow"
         >
@@ -157,9 +166,10 @@ export default function SRCHome() {
             {upcomingDrives.filter(d => d.status === 'Confirmed').length} confirmed ·{' '}
             {upcomingDrives.filter(d => d.status === 'Planned').length} planned
           </div>
-        </div>
+        </motion.div>
 
-        <div
+        <motion.div
+          variants={listItem}
           onClick={() => navigate('/src/donor-information')}
           className="card p-4 cursor-pointer hover:shadow-md transition-shadow"
         >
@@ -169,8 +179,8 @@ export default function SRCHome() {
           </div>
           <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{summary.responseRate ?? '—'}%</div>
           <div className="text-xs text-gray-400">{(summary.activeDonors ?? 0).toLocaleString()} active donors</div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* ── Main row: forecasting + alert list ────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
@@ -243,11 +253,16 @@ export default function SRCHome() {
               View all
             </button>
           </div>
-          <div className="space-y-2 flex-1">
+          <motion.div
+            className="space-y-2 flex-1"
+            initial="hidden"
+            animate="visible"
+            variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06, delayChildren: 0.15 } } }}
+          >
             {alerts.map(a => {
               const cfg = SEVERITY_CONFIG[a.severity] ?? SEVERITY_CONFIG.Medium
               return (
-                <div key={a.id} className={`rounded-lg border px-3 py-2.5 ${cfg.bg} ${cfg.border}`}>
+                <motion.div key={a.id} variants={listItemX} className={`rounded-lg border px-3 py-2.5 ${cfg.bg} ${cfg.border}`}>
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-1.5">
                       <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
@@ -264,10 +279,10 @@ export default function SRCHome() {
                     <span className="font-semibold text-gray-700">{a.forecastedShortage} units</span>
                   </div>
                   <div className="text-[10px] text-gray-400 mt-0.5">{a.shortageWindow}</div>
-                </div>
+                </motion.div>
               )
             })}
-          </div>
+          </motion.div>
           <button
             onClick={() => navigate('/src/alerts')}
             className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
