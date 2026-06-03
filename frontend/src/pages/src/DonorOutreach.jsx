@@ -16,36 +16,6 @@ const STATUS_BADGE = {
   Completed: 'bg-gray-100 text-gray-500 border border-gray-200',
 }
 
-const MESSAGE_VARIANTS = [
-  {
-    id: 'A',
-    name: 'Urgent Appeal',
-    preview: 'Help us meet the urgent need for O- blood this weekend.',
-    responseRate: 21,
-    rateColor: 'text-green-600',
-    recommended: false,
-    full: `Urgent O- donors needed near Tampines Community Plaza this Saturday.\n\nHelp us meet the urgent need for O- blood this weekend.\n\nBook your slot today.\n\nTap to register: bit.ly/sav3lives`,
-  },
-  {
-    id: 'B',
-    name: 'Community Impact',
-    preview: 'Your donation can help patients in our community.',
-    responseRate: 17,
-    rateColor: 'text-amber-500',
-    recommended: false,
-    full: `O- donors needed near Tampines Community Plaza this Saturday.\n\nYour donation can help patients in our community.\n\nBook your slot today.\n\nTap to register: bit.ly/sav3lives`,
-  },
-  {
-    id: 'C',
-    name: 'Life-Saving Focus',
-    preview: 'One donation can save up to 3 lives. Be a lifesaver today.',
-    responseRate: 24,
-    rateColor: 'text-green-600',
-    recommended: true,
-    full: `Urgent O- donors needed near Tampines Community Plaza this Saturday.\n\nYour donation can help prevent an upcoming shortage.\n\nBook your slot today.\n\nTap to register: bit.ly/sav3lives`,
-  },
-]
-
 function ProgressDonut({ pct }) {
   const data = [{ value: pct }, { value: 100 - pct }]
   return (
@@ -123,7 +93,7 @@ function PhoneMockup({ message }) {
 
 function AIModal({ drive, onCancel, onUse }) {
   const criteria = [
-    { label: `${drive.bloodType} Donors`,       sub: 'High need blood type for this alert' },
+    { label: `${drive.bloodType} Donors`,      sub: 'High need blood type for this alert' },
     { label: 'Within 5 km',                      sub: 'Higher response from nearby donors' },
     { label: 'Last donation > 12 weeks',         sub: 'Eligible and more likely to donate' },
     { label: 'Previously attended drives',        sub: '2.1x more likely to respond' },
@@ -238,7 +208,7 @@ function AIModal({ drive, onCancel, onUse }) {
   )
 }
 
-function MessageVariantsModal({ selected, onSelect, onClose }) {
+function MessageVariantsModal({ variants, selected, onSelect, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-2xl w-[680px] p-6 mx-4">
@@ -250,7 +220,7 @@ function MessageVariantsModal({ selected, onSelect, onClose }) {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-0.5"><X className="w-4 h-4" /></button>
         </div>
         <div className="grid grid-cols-3 gap-3 mb-5">
-          {MESSAGE_VARIANTS.map(v => {
+          {variants.map(v => {
             const isSelected = selected === v.id
             return (
               <button
@@ -291,12 +261,17 @@ export default function DonorOutreach() {
   const [showDriveDropdown, setShowDriveDropdown] = useState(false)
   const [showAIModal, setShowAIModal]     = useState(false)
   const [showVariants, setShowVariants]   = useState(false)
-  const [selectedVariant, setSelectedVariant] = useState(MESSAGE_VARIANTS[2])
   const [aiApplied, setAiApplied]         = useState(false)
   const [sending, setSending]             = useState(false)
   const [sent, setSent]                   = useState(false)
   const [loading, setLoading]             = useState(true)
 
+  // NEW STATES FOR AI MESSAGES
+  const [messageVariants, setMessageVariants] = useState([])
+  const [selectedVariant, setSelectedVariant] = useState(null)
+  const [aiLoading, setAiLoading]         = useState(false)
+
+  // Fetch initial drives
   useEffect(() => {
     api.get('/drives').then(r => {
       const upcoming = r.data.filter(d => d.status !== 'Completed')
@@ -304,6 +279,43 @@ export default function DonorOutreach() {
       if (upcoming.length > 0) setSelectedDriveId(upcoming[0].id)
     }).catch(() => {}).finally(() => setLoading(false))
   }, [])
+
+  // Fetch Gemini AI Messages whenever the selected drive changes
+  useEffect(() => {
+    const drive = drives.find(d => d.id === selectedDriveId) ?? drives[0];
+    if (!drive) return;
+
+    const fetchAiMessages = async () => {
+      setAiLoading(true);
+      try {
+        const type = encodeURIComponent(drive.bloodType || 'O+');
+        const context = encodeURIComponent(`Expected shortfall of ${drive.shortfall || 'several'} units`);
+        
+        // Call your new Spring Boot endpoint!
+        const response = await api.get(`/forecast/outreach-messages?bloodType=${type}&context=${context}`);
+        
+        // Map the strings from Gemini into the object format the UI expects
+        const formattedVariants = response.data.map((msg, idx) => ({
+          id: String.fromCharCode(65 + idx), // A, B, C
+          name: `Gemini AI Variant ${idx + 1}`,
+          preview: msg.substring(0, 45) + '...',
+          responseRate: [24, 21, 18][idx] || 20, // Mock UI response rates
+          rateColor: ['text-green-600', 'text-green-600', 'text-amber-500'][idx] || 'text-green-600',
+          recommended: idx === 0, // Recommend the first AI variant
+          full: msg
+        }));
+
+        setMessageVariants(formattedVariants);
+        setSelectedVariant(formattedVariants[0]); // Select the first one by default
+      } catch (error) {
+        console.error("Failed to fetch AI variants", error);
+      } finally {
+        setAiLoading(false);
+      }
+    };
+
+    fetchAiMessages();
+  }, [selectedDriveId, drives]);
 
   const drive = drives.find(d => d.id === selectedDriveId) ?? drives[0]
 
@@ -440,7 +452,7 @@ export default function DonorOutreach() {
           </div>
           <div className="flex flex-wrap sm:flex-nowrap items-stretch divide-y sm:divide-y-0 sm:divide-x divide-gray-100 flex-1">
             {[
-              { label: 'HSA Forecasted Shortage', value: stats.hsaShortage,         unit: 'units', color: 'text-primary'   },
+              { label: 'HSA Forecasted Shortage', value: stats.hsaShortage,        unit: 'units', color: 'text-primary'   },
               { label: 'Expected Collection',     value: stats.expectedCollection,   unit: 'units', color: 'text-green-600' },
               { label: 'Shortfall Remaining',     value: stats.shortfall,            unit: 'units', color: 'text-amber-500' },
             ].map(col => (
@@ -551,27 +563,35 @@ export default function DonorOutreach() {
               <MessageSquare className="w-4 h-4 text-primary" />
               <h3 className="font-semibold text-sm text-gray-800">Message Preview</h3>
             </div>
-            <div className="flex gap-3 items-start">
-              <PhoneMockup message={selectedVariant.full} />
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] text-gray-400 font-medium mb-1">Selected Message</div>
-                <div className="flex items-start gap-1.5 flex-wrap mb-2">
-                  <span className="text-sm font-bold text-gray-900">{selectedVariant.name}</span>
-                  {selectedVariant.recommended && (
-                    <span className="px-1.5 py-0.5 bg-green-50 text-green-700 text-[9px] font-semibold rounded-full border border-green-100">Best performing</span>
-                  )}
-                </div>
-                <p className="text-[10px] text-gray-500 leading-relaxed mb-3">{selectedVariant.preview}</p>
-                <div className="text-[10px] text-gray-400 mb-0.5">Expected Response Rate</div>
-                <div className={`text-xl font-bold ${selectedVariant.rateColor}`}>{selectedVariant.responseRate}%</div>
-                <button
-                  onClick={() => setShowVariants(true)}
-                  className="mt-3 w-full py-1.5 border border-gray-200 text-xs font-medium text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  View Other Variants
-                </button>
+            
+            {aiLoading || !selectedVariant ? (
+              <div className="flex flex-col items-center justify-center py-8 text-sm text-gray-500 gap-3">
+                <Sparkles className="w-5 h-5 animate-pulse text-primary" />
+                <span>Gemini AI is drafting messages...</span>
               </div>
-            </div>
+            ) : (
+              <div className="flex gap-3 items-start">
+                <PhoneMockup message={selectedVariant.full} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] text-gray-400 font-medium mb-1">Selected Message</div>
+                  <div className="flex items-start gap-1.5 flex-wrap mb-2">
+                    <span className="text-sm font-bold text-gray-900">{selectedVariant.name}</span>
+                    {selectedVariant.recommended && (
+                      <span className="px-1.5 py-0.5 bg-green-50 text-green-700 text-[9px] font-semibold rounded-full border border-green-100">Best performing</span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-500 leading-relaxed mb-3">{selectedVariant.preview}</p>
+                  <div className="text-[10px] text-gray-400 mb-0.5">Expected Response Rate</div>
+                  <div className={`text-xl font-bold ${selectedVariant.rateColor}`}>{selectedVariant.responseRate}%</div>
+                  <button
+                    onClick={() => setShowVariants(true)}
+                    className="mt-3 w-full py-1.5 border border-gray-200 text-xs font-medium text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    View Other Variants
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="card p-4">
@@ -604,7 +624,8 @@ export default function DonorOutreach() {
       {showAIModal && <AIModal drive={drive} onCancel={() => setShowAIModal(false)} onUse={handleUseRecommendation} />}
       {showVariants && (
         <MessageVariantsModal
-          selected={selectedVariant.id}
+          variants={messageVariants}
+          selected={selectedVariant?.id}
           onSelect={(v) => setSelectedVariant(v)}
           onClose={() => setShowVariants(false)}
         />
