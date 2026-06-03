@@ -378,18 +378,25 @@ const MESSAGE_VARIANTS = [
   },
 ]
 
-function TabPushNotifications({ drive }) {
+function TabPushNotifications({ drive, aiVariants = [], aiLoading = false }) {
+  const variants = aiVariants.length > 0 ? aiVariants : MESSAGE_VARIANTS
   const [variantIdx, setVariantIdx] = useState(0)
   const [sent, setSent]     = useState(false)
   const [sending, setSending] = useState(false)
   const [prevRespondersOnly, setPrevRespondersOnly] = useState(true)
   const [editedBodies, setEditedBodies] = useState(() =>
-    Object.fromEntries(MESSAGE_VARIANTS.map(v => [v.id, v.body]))
+    Object.fromEntries(variants.map(v => [v.id, v.body]))
   )
 
-  const variant = MESSAGE_VARIANTS[variantIdx]
-  const body = editedBodies[variant.id]
-  const isDirty = body !== variant.body
+  useEffect(() => {
+    setVariantIdx(0)
+    setEditedBodies(Object.fromEntries(variants.map(v => [v.id, v.body])))
+    setSent(false)
+  }, [aiVariants.length]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const variant = variants[variantIdx] ?? variants[0]
+  const body = editedBodies[variant?.id] ?? ''
+  const isDirty = body !== variant?.body
 
   const handleBodyChange = (e) => {
     setEditedBodies(prev => ({ ...prev, [variant.id]: e.target.value }))
@@ -513,7 +520,12 @@ function TabPushNotifications({ drive }) {
               {/* Group 1: variant selection + name + response rate */}
               <div className="flex flex-col gap-2">
                 <div className="flex gap-1.5 flex-wrap">
-                  {MESSAGE_VARIANTS.map((v, i) => (
+                  {aiLoading && (
+                    <span className="flex items-center gap-1.5 px-3 py-1 text-xs text-gray-400">
+                      <Sparkles className="w-3 h-3 animate-pulse text-primary" />Gemini AI drafting…
+                    </span>
+                  )}
+                  {!aiLoading && variants.map((v, i) => (
                     <button
                       key={v.id}
                       onClick={() => handlePickVariant(i)}
@@ -1211,6 +1223,8 @@ export default function DonorOutreach() {
   const [activeTab, setActiveTab]       = useState('ai')
   const [showCombined, setShowCombined] = useState(false)
   const [loading, setLoading]           = useState(true)
+  const [messageVariants, setMessageVariants] = useState([])
+  const [aiLoading, setAiLoading]       = useState(false)
 
   useEffect(() => {
     api.get('/drives')
@@ -1222,6 +1236,28 @@ export default function DonorOutreach() {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    const drive = drives.find(d => d.id === selectedDriveId) ?? drives[0]
+    if (!drive) return
+    setAiLoading(true)
+    const type = encodeURIComponent(drive.bloodType || 'O+')
+    const context = encodeURIComponent(`Expected shortfall of ${drive.shortfall || 'several'} units`)
+    api.get(`/forecast/outreach-messages?bloodType=${type}&context=${context}`)
+      .then(r => {
+        const formatted = r.data.map((msg, idx) => ({
+          id: String.fromCharCode(65 + idx),
+          name: `AI Variant ${idx + 1}`,
+          badge: idx === 0 ? 'AI Recommended' : 'AI Generated',
+          badgeColor: idx === 0 ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700',
+          body: msg,
+          responseRate: [24, 21, 18][idx] ?? 20,
+        }))
+        setMessageVariants(formatted)
+      })
+      .catch(() => setMessageVariants([]))
+      .finally(() => setAiLoading(false))
+  }, [selectedDriveId, drives])
 
   const drive = drives.find(d => d.id === selectedDriveId) ?? drives[0]
 
@@ -1328,7 +1364,7 @@ export default function DonorOutreach() {
       {/* Tab content */}
       <div key={activeTab} className="page-enter-animate">
         {activeTab === 'ai'     && <TabAIRecommended onViewCombined={() => setShowCombined(true)} />}
-        {activeTab === 'push'   && <TabPushNotifications drive={drive} />}
+        {activeTab === 'push'   && <TabPushNotifications drive={drive} aiVariants={messageVariants} aiLoading={aiLoading} />}
         {activeTab === 'youth'  && <TabYouthCampaigns drive={drive} />}
         {activeTab === 'collab' && <TabCollaborations />}
       </div>
