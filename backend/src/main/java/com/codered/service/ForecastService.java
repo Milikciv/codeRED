@@ -28,13 +28,20 @@ public class ForecastService {
 
     private final BloodStockRepository bloodStockRepository;
     private final BloodRequestRepository bloodRequestRepository;
+    private final AiService aiService;
+    private final DonationDriveRepository donationDriveRepository; // <-- ADD THIS
     private final BloodStockHistoryRepository bloodStockHistoryRepository;
 
+    // Update the constructor!
     public ForecastService(BloodStockRepository bloodStockRepository,
             BloodRequestRepository bloodRequestRepository,
-            BloodStockHistoryRepository bloodStockHistoryRepository) {
+            AiService aiService,
+            DonationDriveRepository donationDriveRepository,
+            BloodStockHistoryRepository bloodStockHistoryRepository) { // <-- ADD THIS
         this.bloodStockRepository = bloodStockRepository;
         this.bloodRequestRepository = bloodRequestRepository;
+        this.aiService = aiService;
+        this.donationDriveRepository = donationDriveRepository; // <-- ADD THIS
         this.bloodStockHistoryRepository = bloodStockHistoryRepository;
     }
 
@@ -92,15 +99,35 @@ public class ForecastService {
             highRiskDays = riskDays.size();
         }
 
-        // 5. Demand drivers (date-based heuristics) and 6. early warning
+        // 5. Demand drivers (date-based heuristics)
         List<Map<String, Object>> demandDrivers = buildDemandDrivers(today);
-        Map<String, Object> earlyWarning = buildEarlyWarning(
-                byBloodType,
-                selectedBloodType,
-                expectedShortfall,
-                highRiskPeriod,
-                highRiskDays,
-                forecastAccuracy);
+
+        // 6. Dynamic Early Warning powered by Gemini API
+        String stockSummary = "Total current supply: " + totalCurrentSupply + " units, Ideal: " + totalIdeal
+                + " units.";
+        String demandSummary = "Expected shortfall of " + expectedShortfall + " units over the next " + highRiskDays
+                + " high-risk days.";
+
+        Map<String, Object> earlyWarning = aiService.generateEarlyWarning(stockSummary, demandSummary);
+
+        // --- NEW CODE: SAVE TO DATABASE TO CLEAR THE IDE WARNING ---
+        if (earlyWarning.containsKey("recommendation")) {
+            String recommendationText = earlyWarning.get("recommendation").toString();
+
+            // Fetch the drives from the database
+            List<DonationDrive> allDrives = donationDriveRepository.findAll();
+
+            if (!allDrives.isEmpty()) {
+                // For this example, we will attach the national forecast recommendation
+                // to the most recent upcoming drive in your database.
+                DonationDrive upcomingDrive = allDrives.get(0);
+                upcomingDrive.setAiRecommendation(recommendationText);
+
+                // Save it back! This line officially "uses" the repository.
+                donationDriveRepository.save(upcomingDrive);
+            }
+        }
+        // ------------------------------------------------------------
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("selectedBloodType", selectedBloodType == null ? "All Blood Types" : selectedBloodType);

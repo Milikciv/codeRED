@@ -50,4 +50,8 @@ public class DonationDrive {
     private Integer expectedResponders;
     private Integer expectedUnits;
     private Integer outreachResponseRate;
+    
+    // NEW: AI Recommendation Storage
+    @Column(columnDefinition = "TEXT")
+    private String aiRecommendation;
 }
