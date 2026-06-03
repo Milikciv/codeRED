@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageLayout from '../../../components/layout/PageLayout'
-import { Calendar } from 'lucide-react'
+import { Calendar, ChevronDown } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { peopleOutline, locationOutline, statsChartOutline, mapOutline, pinOutline } from 'ionicons/icons'
 import DateRangePicker, { formatDateRange } from '../../../components/common/DateRangePicker'
@@ -31,34 +31,34 @@ export default function Hotspots() {
   const [dateStart, setDateStart] = useState(new Date(2026, 1, 18))
   const [dateEnd, setDateEnd] = useState(new Date(2026, 4, 17))
 
-  return (
-    <PageLayout title="Hotspots" subtitle="Monitor blood donation hotspots to plan donation drives more efficiently">
-      {/* Date filter */}
-      <div className="flex justify-end mb-4">
-        <div className="relative">
-          <button
-            onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white hover:bg-gray-50"
-          >
-            <Calendar className="w-3.5 h-3.5 text-gray-500" />
-            {formatDateRange(dateStart, dateEnd)}
-            <span className="text-gray-400">▾</span>
-          </button>
-          {openDropdown === 'date' && (
-            <div className="absolute right-0 top-full mt-1 z-20">
-              <DateRangePicker
-                start={dateStart}
-                end={dateEnd}
-                onChange={(s, e) => { setDateStart(s); setDateEnd(e) }}
-                onClose={() => setOpenDropdown(null)}
-              />
-            </div>
-          )}
+  const dateActions = (
+    <div className="relative">
+      <button
+        onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
+      >
+        <Calendar className="w-3.5 h-3.5 text-gray-500" />
+        {formatDateRange(dateStart, dateEnd)}
+        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${openDropdown === 'date' ? 'rotate-180' : ''}`} />
+      </button>
+      {openDropdown === 'date' && (
+        <div className="absolute right-0 top-full mt-1 z-20">
+          <DateRangePicker
+            start={dateStart}
+            end={dateEnd}
+            onChange={(s, e) => { setDateStart(s); setDateEnd(e) }}
+            onClose={() => setOpenDropdown(null)}
+          />
         </div>
-      </div>
+      )}
+    </div>
+  )
+
+  return (
+    <PageLayout title="Hotspots" subtitle="Monitor blood donation hotspots to plan donation drives more efficiently" actions={dateActions}>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         <div className="card p-4 flex items-center gap-3">
           <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center"><IonIcon icon={peopleOutline} style={{ fontSize: '1.5rem', color: '#f97316' }} /></div>
           <div>
@@ -84,7 +84,7 @@ export default function Hotspots() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         {/* Map */}
         <div className="card p-4">
           <div className="flex items-center justify-between mb-2">

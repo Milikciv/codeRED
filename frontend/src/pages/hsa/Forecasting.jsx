@@ -7,7 +7,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
   Area, AreaChart,
 } from 'recharts'
-import { TrendingUp, AlertTriangle, Calendar, Shield } from 'lucide-react'
+import { TrendingUp, AlertTriangle, Calendar, Shield, ChevronDown } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { sunnyOutline, bandageOutline, calendarOutline, giftOutline, statsChartOutline, waterOutline, trendingDownOutline, informationCircleOutline } from 'ionicons/icons'
 import LoadingScreen from '../../components/common/LoadingScreen'
@@ -29,7 +29,7 @@ function ForecastingSkeleton() {
         <div className="h-9 w-32 bg-red-100 rounded-lg" />
         <div className="h-9 w-44 bg-red-100 rounded-lg" />
       </div>
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="card p-4 space-y-2">
             <div className="h-3 bg-red-100 rounded w-3/4" />
@@ -38,8 +38,8 @@ function ForecastingSkeleton() {
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-2 card p-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 card p-4">
           <div className="h-4 bg-red-100 rounded w-52 mb-4" />
           <div className="h-56 bg-red-50 rounded-lg" />
           <div className="h-8 bg-red-50 rounded mt-2" />
@@ -49,7 +49,7 @@ function ForecastingSkeleton() {
           {[...Array(8)].map((_, i) => <div key={i} className="h-8 bg-red-50 rounded mb-1" />)}
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="card p-4">
           <div className="h-4 bg-red-100 rounded w-32 mb-3" />
           <div className="grid grid-cols-4 gap-3">
@@ -80,13 +80,63 @@ export default function Forecasting() {
   const fetchData = () => {
     setError(false)
     setLoading(true)
-    api.get('/forecast')
+    api.get('/forecast', {
+      params: bloodType === 'All Blood Types' ? {} : { bloodType },
+    })
       .then(r => setData(r.data))
       .catch(() => setError(true))
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData() }, [bloodType])
+
+  const forecastingActions = (
+    <div className="flex items-center gap-2">
+      <div className="relative">
+        <button
+          onClick={() => setOpenDropdown(openDropdown === 'bloodType' ? null : 'bloodType')}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
+        >
+          <IonIcon icon={waterOutline} style={{ fontSize: '0.875rem', color: '#C20000' }} />
+          {bloodType}
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${openDropdown === 'bloodType' ? 'rotate-180' : ''}`} />
+        </button>
+        {openDropdown === 'bloodType' && (
+          <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-36">
+            {BLOOD_TYPE_OPTIONS.map(t => (
+              <button
+                key={t}
+                onClick={() => { setBloodType(t); setOpenDropdown(null) }}
+                className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${bloodType === t ? 'text-primary font-medium' : 'text-gray-700'}`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="relative">
+        <button
+          onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
+        >
+          <Calendar className="w-3.5 h-3.5 text-gray-500" />
+          {formatDateRange(dateStart, dateEnd)}
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${openDropdown === 'date' ? 'rotate-180' : ''}`} />
+        </button>
+        {openDropdown === 'date' && (
+          <div className="absolute right-0 top-full mt-1 z-20">
+            <DateRangePicker
+              start={dateStart}
+              end={dateEnd}
+              onChange={(s, e) => { setDateStart(s); setDateEnd(e) }}
+              onClose={() => setOpenDropdown(null)}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  )
 
   if (loading) return (
     <PageLayout title="Demand Forecasting" subtitle="AI powered predictions to stay ahead of shortages">
@@ -101,54 +151,9 @@ export default function Forecasting() {
   )
 
   return (
-    <PageLayout title="Demand Forecasting" subtitle="AI powered predictions to stay ahead of shortages">
-      {/* Filters */}
-      <div className="flex justify-end gap-2 mb-4">
-        <div className="relative">
-          <button
-            onClick={() => setOpenDropdown(openDropdown === 'bloodType' ? null : 'bloodType')}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white hover:bg-gray-50"
-          >
-            <IonIcon icon={waterOutline} style={{ fontSize: '1rem', color: '#C41230' }} /> {bloodType} <span className="text-gray-400">▾</span>
-          </button>
-          {openDropdown === 'bloodType' && (
-            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-36">
-              {BLOOD_TYPE_OPTIONS.map(t => (
-                <button
-                  key={t}
-                  onClick={() => { setBloodType(t); setOpenDropdown(null) }}
-                  className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${bloodType === t ? 'text-primary font-medium' : 'text-gray-700'}`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="relative">
-          <button
-            onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white hover:bg-gray-50"
-          >
-            <Calendar className="w-3.5 h-3.5 text-gray-500" />
-            {formatDateRange(dateStart, dateEnd)}
-            <span className="text-gray-400">▾</span>
-          </button>
-          {openDropdown === 'date' && (
-            <div className="absolute right-0 top-full mt-1 z-20">
-              <DateRangePicker
-                start={dateStart}
-                end={dateEnd}
-                onChange={(s, e) => { setDateStart(s); setDateEnd(e) }}
-                onClose={() => setOpenDropdown(null)}
-              />
-            </div>
-          )}
-        </div>
-      </div>
-
+    <PageLayout title="Demand Forecasting" subtitle="AI powered predictions to stay ahead of shortages" actions={forecastingActions}>
       {/* KPI cards */}
-      <div className="grid grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <div className="card p-4">
           <div className="flex items-center gap-2 mb-1">
             <TrendingUp className="w-4 h-4 text-primary" />
@@ -183,11 +188,13 @@ export default function Forecasting() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Main forecast chart */}
-        <div className="card p-4 col-span-2">
+        <div className="card p-4 lg:col-span-2">
           <div className="flex items-center gap-2 mb-3">
-            <h3 className="font-semibold text-sm text-gray-800">Overall Blood Demand Forecast</h3>
+            <h3 className="font-semibold text-sm text-gray-800">
+              {bloodType === 'All Blood Types' ? 'Overall Blood Demand Forecast' : `${bloodType} Blood Demand Forecast`}
+            </h3>
             <IonIcon icon={informationCircleOutline} style={{ fontSize: '0.875rem', color: '#9ca3af' }} />
           </div>
           <div className="flex items-center gap-4 mb-3 text-xs text-gray-500">
@@ -211,8 +218,8 @@ export default function Forecasting() {
                 <Tooltip contentStyle={{ fontSize: 11 }} />
                 <ReferenceLine y={1200} stroke="#EF4444" strokeDasharray="4 2" strokeWidth={1.5} />
                 <Area type="monotone" dataKey="upper" stroke="#D1D5DB" strokeWidth={1} fill="url(#riskGrad)" dot={false} />
-                <Line type="monotone" dataKey="actual" stroke="#C41230" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="forecast" stroke="#C41230" strokeWidth={2} strokeDasharray="6 3" dot={false} />
+                <Line type="monotone" dataKey="actual" stroke="#C20000" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="forecast" stroke="#C20000" strokeWidth={2} strokeDasharray="6 3" dot={false} />
                 <Line type="monotone" dataKey="lower" stroke="#D1D5DB" strokeWidth={1} dot={false} />
               </AreaChart>
             </ResponsiveContainer>
@@ -258,7 +265,7 @@ export default function Forecasting() {
       </div>
 
       {/* Bottom row */}
-      <div className="grid grid-cols-2 gap-4 mt-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
         {/* Demand Drivers */}
         <div className="card p-4">
           <div className="flex items-center justify-between mb-3">

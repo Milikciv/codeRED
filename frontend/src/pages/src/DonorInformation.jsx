@@ -97,7 +97,7 @@ export default function DonorInformation() {
     >
 
       {/* KPI row */}
-      <div className="grid grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         <KpiCard
           icon={<Users className="w-5 h-5 text-primary" />}
           label="Active Donors"
@@ -125,7 +125,7 @@ export default function DonorInformation() {
       </div>
 
       {/* Charts row */}
-      <div className="grid grid-cols-3 gap-4 mb-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-5">
         {/* Donors by Blood Type — donut */}
         <div className="card p-4">
           <h3 className="font-semibold text-sm text-gray-800 mb-3">Donors by Blood Type</h3>
@@ -220,7 +220,7 @@ export default function DonorInformation() {
       </div>
 
       {/* Bottom row */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Response rate trend */}
         <div className="card p-4">
           <h3 className="font-semibold text-sm text-gray-800 mb-3">Past Response Rate Trend</h3>
@@ -230,7 +230,7 @@ export default function DonorInformation() {
               <XAxis dataKey="month" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
               <YAxis tick={{ fontSize: 9 }} tickLine={false} axisLine={false} domain={[0, 40]} tickFormatter={v => `${v}%`} />
               <Tooltip contentStyle={{ fontSize: 11 }} formatter={(v) => [`${v}%`, 'Response Rate']} />
-              <Line type="monotone" dataKey="rate" stroke="#C41230" strokeWidth={2} dot={{ fill: '#C41230', r: 4 }} activeDot={{ r: 6 }} />
+              <Line type="monotone" dataKey="rate" stroke="#C20000" strokeWidth={2} dot={{ fill: '#C20000', r: 4 }} activeDot={{ r: 6 }} />
             </LineChart>
           </ResponsiveContainer>
           <div className="flex items-center gap-1.5 mt-1 justify-center text-[10px] text-gray-400">

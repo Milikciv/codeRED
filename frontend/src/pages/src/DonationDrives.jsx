@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import PageLayout from '../../components/layout/PageLayout'
 import LoadingScreen from '../../components/common/LoadingScreen'
 import api from '../../api/axios'
+import { ease } from '../../lib/motion'
 import {
   CalendarDays, Clock, Droplets, MapPin, ExternalLink,
   MoreVertical, Plus, History, BarChart2,
@@ -92,8 +94,21 @@ function DriveDetailDrawer({ drive, onClose, navigate, initialEditing = false })
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
-      <div className="fixed right-0 top-0 h-full w-[440px] bg-white z-50 shadow-2xl flex flex-col overflow-hidden">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="fixed inset-0 bg-black/30 z-40"
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+        className="fixed right-0 top-0 h-full w-full sm:w-[440px] bg-white z-50 shadow-2xl flex flex-col overflow-hidden"
+      >
 
         {/* Header */}
         <div className="flex items-start justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
@@ -282,11 +297,11 @@ function DriveDetailDrawer({ drive, onClose, navigate, initialEditing = false })
             </div>
           </>
         )}
-      </div>
+      </motion.div>
 
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 modal-backdrop-enter">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 modal-content-enter">
             <h3 className="font-semibold text-gray-900 text-base mb-1">Delete this drive?</h3>
             <p className="text-sm text-gray-500 mb-5">
               This will permanently remove <span className="font-medium text-gray-700">{form.location}</span>. This cannot be undone.
@@ -398,16 +413,25 @@ export default function DonationDrives() {
             <span className="text-xs text-gray-400">{filtered.length} drive{filtered.length !== 1 ? 's' : ''}</span>
           </div>
 
-          <div className="space-y-3">
+          <AnimatePresence mode="wait">
+          <motion.div
+            key={`${filter}-${upcomingPage}`}
+            className="space-y-3"
+            initial="hidden"
+            animate="visible"
+            exit={{ opacity: 0, transition: { duration: 0.1 } }}
+            variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06 } } }}
+          >
             {upcomingItems.map((drive) => (
-              <div
+              <motion.div
                 key={drive.id}
-                className="card p-4 flex items-center gap-4 cursor-pointer hover:shadow-md transition-shadow"
+                variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease } } }}
+                className="card p-4 flex flex-col sm:flex-row sm:items-center gap-4 cursor-pointer hover:shadow-md transition-shadow"
                 onClick={() => openDriveDrawer(drive)}
               >
                 <DriveImage location={drive.location} />
 
-                <div className="min-w-0 w-44">
+                <div className="min-w-0 sm:w-44">
                   <div className="font-semibold text-sm text-gray-900 truncate">{drive.location}</div>
                   <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
                     <MapPin className="w-3 h-3 flex-shrink-0" />
@@ -415,9 +439,9 @@ export default function DonationDrives() {
                   </div>
                 </div>
 
-                <div className="h-10 w-px bg-gray-100 flex-shrink-0" />
+                <div className="hidden sm:block h-10 w-px bg-gray-100 flex-shrink-0" />
 
-                <div className="grid grid-cols-4 gap-3 flex-1 min-w-0">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-1 min-w-0">
                   <div className="min-w-0">
                     <div className="text-[10px] text-gray-400 font-medium mb-1 whitespace-nowrap">Blood Type</div>
                     <BloodTypePip type={drive.bloodType} />
@@ -446,7 +470,7 @@ export default function DonationDrives() {
                   </div>
                 </div>
 
-                <div className="h-10 w-px bg-gray-100 flex-shrink-0" />
+                <div className="hidden sm:block h-10 w-px bg-gray-100 flex-shrink-0" />
 
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <div>
@@ -482,9 +506,10 @@ export default function DonationDrives() {
                     )}
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
+          </AnimatePresence>
 
           <Pagination
             page={upcomingPage}
@@ -498,8 +523,8 @@ export default function DonationDrives() {
 
       {tab === 'history' && (
         <div>
-          <div className="card overflow-hidden">
-            <table className="w-full text-xs">
+          <div className="card overflow-x-auto">
+            <table className="w-full text-xs min-w-[700px]">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
                   {['Location', 'Date', 'Target Blood Type', 'Actual Turnout', 'Units Collected', 'Conversion Rate', 'Linked Alert', 'Actions'].map(h => (
@@ -545,14 +570,16 @@ export default function DonationDrives() {
         </div>
       )}
 
-      {selectedDrive && (
-        <DriveDetailDrawer
-          drive={selectedDrive}
-          onClose={closeDriveDrawer}
-          navigate={navigate}
-          initialEditing={openInEdit}
-        />
-      )}
+      <AnimatePresence>
+        {selectedDrive && (
+          <DriveDetailDrawer
+            drive={selectedDrive}
+            onClose={closeDriveDrawer}
+            navigate={navigate}
+            initialEditing={openInEdit}
+          />
+        )}
+      </AnimatePresence>
     </PageLayout>
   )
 }

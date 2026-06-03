@@ -1,0 +1,239 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-03T00:00:00.000Z",
+  "title": "Design System: codeRED",
+  "extensions": {
+    "colorMeta": {
+      "alert-crimson": {
+        "role": "primary",
+        "displayName": "Alert Crimson",
+        "canonical": "oklch(33.6% 0.208 27.8)",
+        "tonalRamp": ["#3D0000", "#6B0000", "#800000", "#A10000", "#C20000", "#FFB3B3", "#FFDADA", "#FFF5F5"]
+      },
+      "alert-crimson-deep": {
+        "role": "primary",
+        "displayName": "Alert Crimson Deep",
+        "canonical": "oklch(28.9% 0.173 27.2)",
+        "tonalRamp": ["#3D0000", "#6B0000", "#800000", "#A10000", "#C20000", "#FFB3B3", "#FFDADA", "#FFF5F5"]
+      },
+      "surface-body": {
+        "role": "neutral",
+        "displayName": "Body Canvas",
+        "canonical": "oklch(98.1% 0.001 247)",
+        "tonalRamp": ["#111827", "#1F2937", "#374151", "#4B5563", "#6B7280", "#9CA3AF", "#E5E7EB", "#F9FAFB"]
+      },
+      "surface-card": {
+        "role": "neutral",
+        "displayName": "Card White",
+        "canonical": "oklch(100% 0 0)",
+        "tonalRamp": ["#111827", "#1F2937", "#374151", "#4B5563", "#6B7280", "#D1D5DB", "#F3F4F6", "#FFFFFF"]
+      },
+      "ink-primary": {
+        "role": "neutral",
+        "displayName": "Ink Primary",
+        "canonical": "oklch(26.4% 0.010 247)",
+        "tonalRamp": ["#111827", "#1F2937", "#374151", "#4B5563", "#6B7280", "#9CA3AF", "#D1D5DB", "#F9FAFB"]
+      },
+      "status-amber": {
+        "role": "secondary",
+        "displayName": "Warning Amber",
+        "canonical": "oklch(79.5% 0.160 73.4)",
+        "tonalRamp": ["#7A4E00", "#B37200", "#CC8A00", "#E09A00", "#FEAE25", "#FFC85C", "#FFD98F", "#FFFADA"]
+      },
+      "status-green": {
+        "role": "secondary",
+        "displayName": "Adequate Green",
+        "canonical": "oklch(65.0% 0.097 147)",
+        "tonalRamp": ["#1A3D1A", "#2E5E2E", "#3D7A3D", "#4D934D", "#63A363", "#8DBE8D", "#B8D9B8", "#EBF5EB"]
+      },
+      "status-blue": {
+        "role": "secondary",
+        "displayName": "Info Blue",
+        "canonical": "oklch(62.3% 0.211 250)",
+        "tonalRamp": ["#001A3D", "#00328A", "#005BC7", "#0070E0", "#0088FF", "#40AAFF", "#80C8FF", "#E6F3FF"]
+      }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Headline", "purpose": "Page banner titles only. Overlaid on banner images." },
+      "title": { "displayName": "Title", "purpose": "Section headings inside cards and panels." },
+      "body": { "displayName": "Body", "purpose": "Alert messages, descriptions, prose content." },
+      "label": { "displayName": "Label", "purpose": "Tags, form labels, table headers, badge text, metadata." }
+    },
+    "shadows": [
+      {
+        "name": "flat",
+        "value": "none",
+        "purpose": "All resting data cards, section panels, table containers. Default state."
+      },
+      {
+        "name": "ambient-low",
+        "value": "0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)",
+        "purpose": "Interactive elements at rest: user chip, explicitly interactive cards."
+      },
+      {
+        "name": "overlay",
+        "value": "0 4px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)",
+        "purpose": "Modals and dialogs. Communicates the element floats above the full page layer."
+      },
+      {
+        "name": "floating",
+        "value": "0 8px 24px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06)",
+        "purpose": "Toast notifications, dropdown menus, user chip on hover."
+      }
+    ],
+    "motion": [
+      {
+        "name": "duration-fast",
+        "value": "150ms",
+        "purpose": "Button hover/active, nav item transitions, icon color changes."
+      },
+      {
+        "name": "duration-standard",
+        "value": "200ms",
+        "purpose": "Sidebar collapse/expand, modal entry, dropdown open."
+      },
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0, 0, 0.2, 1)",
+        "purpose": "Standard easing for state transitions. Elements decelerate into their final position."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main action trigger. Alert Crimson background. Used for respond, save, submit, confirm actions.",
+      "html": "<button class=\"ds-btn-primary\">Respond to request</button>",
+      "css": ".ds-btn-primary { background: #C20000; color: #FFFFFF; padding: 8px 16px; border-radius: 8px; font-family: \"Funnel Sans\", Inter, system-ui, sans-serif; font-size: 15px; font-weight: 500; line-height: 1.5; border: none; cursor: pointer; transition: background-color 150ms cubic-bezier(0, 0, 0.2, 1); display: inline-flex; align-items: center; gap: 6px; } .ds-btn-primary:hover { background: #A10000; } .ds-btn-primary:active { background: #800000; } .ds-btn-primary:focus-visible { outline: 2px solid #C20000; outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary and cancel actions. Transparent with subtle border. Pairs with the primary button in any action group.",
+      "html": "<button class=\"ds-btn-outline\">Cancel</button>",
+      "css": ".ds-btn-outline { background: transparent; color: #4B5563; padding: 8px 16px; border-radius: 8px; font-family: \"Funnel Sans\", Inter, system-ui, sans-serif; font-size: 15px; font-weight: 500; line-height: 1.5; border: 1px solid #E5E7EB; cursor: pointer; transition: background-color 150ms cubic-bezier(0, 0, 0.2, 1); display: inline-flex; align-items: center; gap: 6px; } .ds-btn-outline:hover { background: #F9FAFB; } .ds-btn-outline:focus-visible { outline: 2px solid #C20000; outline-offset: 2px; } .ds-btn-outline:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Primary grouping surface. Flat at rest. White background against gray-50 body is sufficient depth signal.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-title\">Blood Stock Overview</div><p class=\"ds-card-body\">Current vs ideal units across the hospital network. Updated every 15 minutes.</p></div>",
+      "css": ".ds-card { background: #FFFFFF; border: 1px solid #F3F4F6; border-radius: 12px; padding: 16px; font-family: \"Funnel Sans\", Inter, system-ui, sans-serif; } .ds-card-title { font-size: 15px; font-weight: 600; color: #1F2937; line-height: 1.4; margin-bottom: 4px; } .ds-card-body { font-size: 13px; color: #6B7280; line-height: 1.5; margin: 0; }"
+    },
+    {
+      "name": "Priority Badges",
+      "kind": "chip",
+      "refersTo": "badge-critical",
+      "description": "Severity labels on alerts, requests, and notifications. Sentence-case text. Color + text redundancy always.",
+      "html": "<div style=\"display:flex;gap:8px;flex-wrap:wrap\"><span class=\"ds-badge ds-badge-critical\">Critical risk</span><span class=\"ds-badge ds-badge-high\">High risk</span><span class=\"ds-badge ds-badge-medium\">Medium risk</span><span class=\"ds-badge ds-badge-low\">Low risk</span></div>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; font-family: \"Funnel Sans\", Inter, system-ui, sans-serif; font-size: 13px; font-weight: 600; padding: 2px 8px; border-radius: 9999px; white-space: nowrap; line-height: 1.25; } .ds-badge-critical { background: #FEE2E2; color: #B91C1C; } .ds-badge-high { background: #FFEDD5; color: #C2410C; } .ds-badge-medium { background: #FEF9C3; color: #A16207; } .ds-badge-low { background: #DCFCE7; color: #15803D; }"
+    },
+    {
+      "name": "Alert Card",
+      "kind": "card",
+      "refersTo": "badge-critical",
+      "description": "Time-sensitive blood supply notification surface. Always shows priority badge, icon, title, and message. Dismissible.",
+      "html": "<div class=\"ds-alert-card ds-alert-critical\"><svg class=\"ds-alert-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z\"/><line x1=\"12\" y1=\"9\" x2=\"12\" y2=\"13\"/><line x1=\"12\" y1=\"17\" x2=\"12.01\" y2=\"17\"/></svg><div class=\"ds-alert-content\"><div class=\"ds-alert-header\"><span class=\"ds-badge ds-badge-critical\">Critical risk</span><span class=\"ds-alert-title\">O- stock at SGH critical</span></div><p class=\"ds-alert-message\">Stock at 18% of ideal. Immediate restocking required.</p></div><button class=\"ds-alert-dismiss\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" width=\"16\" height=\"16\"><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/><line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/></svg></button></div>",
+      "css": ".ds-badge { display:inline-flex;align-items:center;font-family:\"Funnel Sans\",Inter,system-ui,sans-serif;font-size:13px;font-weight:600;padding:2px 8px;border-radius:9999px;white-space:nowrap;line-height:1.25; } .ds-badge-critical { background:#FEE2E2;color:#B91C1C; } .ds-alert-card { display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:8px;border-width:1px;border-style:solid;font-family:\"Funnel Sans\",Inter,system-ui,sans-serif; } .ds-alert-critical { background:#FEF2F2;border-color:#FECACA; } .ds-alert-icon { width:20px;height:20px;flex-shrink:0;margin-top:2px;color:#EF4444; } .ds-alert-content { flex:1;min-width:0; } .ds-alert-header { display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px; } .ds-alert-title { font-size:15px;font-weight:600;color:#1F2937; } .ds-alert-message { font-size:13px;color:#4B5563;margin:0;line-height:1.4; } .ds-alert-dismiss { background:none;border:none;cursor:pointer;color:#9CA3AF;padding:0;display:flex;align-items:center;flex-shrink:0; } .ds-alert-dismiss:hover { color:#4B5563; }"
+    },
+    {
+      "name": "Stat Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "KPI summary tile. Icon well, large value, optional label and action link. Highlight variant uses Alert Crimson for the value.",
+      "html": "<div class=\"ds-stat-card\"><div class=\"ds-stat-icon-wrap ds-stat-icon-primary\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" width=\"20\" height=\"20\"><path d=\"M12 2.69l5.66 5.66a8 8 0 11-11.31 0z\"/></svg></div><div class=\"ds-stat-body\"><div class=\"ds-stat-label\">Blood Units</div><div class=\"ds-stat-value ds-stat-highlight\">85%</div><div class=\"ds-stat-sub\">Of ideal</div><button class=\"ds-stat-link\">View details →</button></div></div>",
+      "css": ".ds-stat-card { display:flex;gap:12px;background:#FFFFFF;border:1px solid #F3F4F6;border-radius:12px;padding:16px;font-family:\"Funnel Sans\",Inter,system-ui,sans-serif; } .ds-stat-icon-wrap { width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0; } .ds-stat-icon-primary { background:#FFDADA;color:#C20000; } .ds-stat-body { min-width:0; } .ds-stat-label { font-size:13px;color:#6B7280;font-weight:500;line-height:1.25; } .ds-stat-value { font-size:24px;font-weight:700;color:#1F2937;margin-top:2px;line-height:1.2; } .ds-stat-highlight { color:#C20000; } .ds-stat-sub { font-size:13px;color:#6B7280;margin-top:2px; } .ds-stat-link { background:none;border:none;padding:0;cursor:pointer;font-size:13px;color:#C20000;font-weight:500;margin-top:4px;display:flex;align-items:center;gap:2px;font-family:inherit; } .ds-stat-link:hover { text-decoration:underline; }"
+    },
+    {
+      "name": "Sidebar Navigation",
+      "kind": "nav",
+      "refersTo": "button-primary",
+      "description": "Left sidebar nav items showing active (crimson) and default (gray) states.",
+      "html": "<nav class=\"ds-sidebar-nav\"><a class=\"ds-nav-item ds-nav-active\" href=\"#\"><svg class=\"ds-nav-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z\"/><polyline points=\"9 22 9 12 15 12 15 22\"/></svg><span>Home</span></a><a class=\"ds-nav-item\" href=\"#\"><svg class=\"ds-nav-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><polyline points=\"22 12 18 12 15 21 9 3 6 12 2 12\"/></svg><span>Demand Forecasting</span></a><a class=\"ds-nav-item\" href=\"#\"><svg class=\"ds-nav-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0\"/></svg><span>Alerts</span><span class=\"ds-nav-badge\">4</span></a></nav>",
+      "css": ".ds-sidebar-nav { display:flex;flex-direction:column;gap:2px;padding:8px; } .ds-nav-item { display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;font-family:\"Funnel Sans\",Inter,system-ui,sans-serif;font-size:15px;font-weight:500;text-decoration:none;color:#4B5563;transition:background-color 150ms cubic-bezier(0,0,0.2,1),color 150ms cubic-bezier(0,0,0.2,1); } .ds-nav-item:hover { background:#F9FAFB;color:#1F2937; } .ds-nav-active { background:#FFF5F5;color:#C20000; } .ds-nav-active .ds-nav-icon { color:#C20000; } .ds-nav-icon { width:16px;height:16px;flex-shrink:0;color:#6B7280; } .ds-nav-badge { margin-left:auto;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:9999px;background:#C20000;color:#FFFFFF;font-size:10px;font-weight:700;padding:0 4px; }"
+    },
+    {
+      "name": "Toast Notification",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "Floating feedback surface. Fixed top-right. Auto-dismiss at 4s. Four types: success, warning, error, info.",
+      "html": "<div class=\"ds-toast ds-toast-success\"><svg class=\"ds-toast-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><polyline points=\"20 6 9 17 4 12\"/></svg><div class=\"ds-toast-body\"><div class=\"ds-toast-title\">Alert dismissed</div><div class=\"ds-toast-message\">The alert has been marked as resolved.</div></div><button class=\"ds-toast-close\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" width=\"16\" height=\"16\"><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/><line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/></svg></button></div>",
+      "css": ".ds-toast { display:flex;align-items:flex-start;gap:12px;background:#FFFFFF;border:1px solid #D1D5DB;border-radius:12px;padding:16px;max-width:350px;font-family:\"Funnel Sans\",Inter,system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,0.10),0 2px 8px rgba(0,0,0,0.06); } .ds-toast-success { border-color:#BBF7D0; } .ds-toast-icon { width:20px;height:20px;flex-shrink:0;margin-top:1px; } .ds-toast-success .ds-toast-icon { color:#22C55E; } .ds-toast-body { flex:1; } .ds-toast-title { font-size:15px;font-weight:600;color:#15803D;line-height:1.4; } .ds-toast-message { font-size:13px;color:#6B7280;margin-top:2px;line-height:1.4; } .ds-toast-close { background:none;border:none;cursor:pointer;color:#9CA3AF;padding:0;display:flex;align-items:center;flex-shrink:0; } .ds-toast-close:hover { color:#4B5563; }"
+    },
+    {
+      "name": "Blood Stock Dot Legend",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "Signature component. 12x12px status dots for the hospital x blood-type matrix. Legend is non-optional — color is never the only channel.",
+      "html": "<div class=\"ds-stock-legend\"><div class=\"ds-stock-item\"><span class=\"ds-dot ds-dot-good\"></span><span class=\"ds-dot-label\">Good (70–100%)</span></div><div class=\"ds-stock-item\"><span class=\"ds-dot ds-dot-low\"></span><span class=\"ds-dot-label\">Low (40–69%)</span></div><div class=\"ds-stock-item\"><span class=\"ds-dot ds-dot-critical\"></span><span class=\"ds-dot-label\">Critical (0–39%)</span></div><div class=\"ds-stock-item\"><span class=\"ds-dot ds-dot-none\"></span><span class=\"ds-dot-label\">No data</span></div></div>",
+      "css": ".ds-stock-legend { display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-family:\"Funnel Sans\",Inter,system-ui,sans-serif;padding:8px 0; } .ds-stock-item { display:flex;align-items:center;gap:4px; } .ds-dot { display:inline-block;width:12px;height:12px;border-radius:50%;flex-shrink:0; } .ds-dot-good { background:#22C55E; } .ds-dot-low { background:#FACC15; } .ds-dot-critical { background:#EF4444; } .ds-dot-none { background:#D1D5DB; } .ds-dot-label { font-size:13px;color:#6B7280;line-height:1.25; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Field Coordinator",
+    "overview": "codeRED is a tool built for people in motion: coordinators, analysts, and field staff who carry the weight of national blood supply decisions. The visual system reflects their reality — minimal friction, maximum clarity, and a calm authority that does not add noise to an already demanding job. Nothing decorates. Every element earns its position by doing work.\n\nThe palette is deliberately restrained. Alert Crimson (#C20000) is a brand anchor and a severity signal, not a decoration. It appears on primary actions, active navigation states, and critical status indicators. Its rarity is the point: when something is red, users know it means something.\n\nThis system explicitly rejects the aesthetic of generic government portals (cluttered, low-contrast, dated form layouts) and consumer health apps (soft pastels, patient-facing wellness tone). codeRED is a professional instrument.",
+    "keyCharacteristics": [
+      "Single-family type system (Funnel Sans) with weight-driven hierarchy — no display face",
+      "Alert Crimson used on ≤10% of any given screen",
+      "Flat surfaces at rest; depth emerges only through interaction layer (modal, toast, dropdown)",
+      "Complete semantic status vocabulary (amber, green, blue, red) used consistently across all surfaces",
+      "Status indicators always paired with text labels — color is never the only channel"
+    ],
+    "rules": [
+      {
+        "name": "The Alert Crimson Rule",
+        "body": "Alert Crimson (#C20000) appears on ≤10% of any given screen. It is the accent, not the canvas. Every use is either a primary action, an active state, or a critical severity signal. Using it for decoration is a mistake.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tint Pairing Rule",
+        "body": "Every semantic status color (amber, green, blue, red) has a light tint counterpart. Status surfaces always use the light tint as background and the saturated color for icons, text, and borders. Never full-saturation status backgrounds on large surfaces.",
+        "section": "colors"
+      },
+      {
+        "name": "The Weight-Contrast Rule",
+        "body": "Hierarchy is expressed through weight, not size alone. A title and body text may share the same 15px size; 600 vs 400 weight is sufficient differentiation for dashboard contexts.",
+        "section": "typography"
+      },
+      {
+        "name": "The One-Family Rule",
+        "body": "Funnel Sans is the only typeface in this system. No decorative display face on dashboard surfaces. This is a tool, and its type should disappear into the task.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "Surfaces are flat at rest. Shadow appears only when an element lifts above the content plane to float (modal, toast, dropdown) or when an element gains interactive lift on hover. A card that bears data but is not interactive has no shadow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use Alert Crimson (#C20000) exclusively for primary actions, active states, and critical severity.",
+      "Do pair every color-coded status indicator with a text label. Color alone fails users with color vision deficiencies.",
+      "Do keep body text at Ink Primary (#1F2937) on card surfaces. Using Ink Muted for body copy fails WCAG AA contrast.",
+      "Do use the semantic status color vocabulary (crimson, amber, green, blue) consistently across all surfaces.",
+      "Do write button labels as verb + object: 'Respond to request', 'Dismiss alert', 'View all requests'.",
+      "Do use skeleton loading states instead of center-screen spinners inside data panels.",
+      "Do assign shadow weight according to layer position: flat for data cards, ambient low for interactive elements, overlay for modals, floating for toasts."
+    ],
+    "donts": [
+      "Don't use Alert Crimson as a background color on any surface larger than a badge pill.",
+      "Don't design for a generic government portal aesthetic: cluttered layouts, low-contrast type, excessive borders as section dividers.",
+      "Don't adopt consumer health app aesthetics: soft pastel palettes, rounded-friendly type, patient-facing wellness tone.",
+      "Don't use gradient text (background-clip: text with a gradient). Alert Crimson as a solid color carries more authority.",
+      "Don't use a colored border-left or border-right greater than 1px as an accent stripe. Use full borders with tinted backgrounds instead.",
+      "Don't add decorative motion. All animation conveys state: loading, entry, dismiss, hover feedback.",
+      "Don't invent a new status color outside the four semantic roles (crimson, amber, green, blue).",
+      "Don't use the 36px headline size inside content panels — it is reserved for page banner titles only."
+    ]
+  }
+}

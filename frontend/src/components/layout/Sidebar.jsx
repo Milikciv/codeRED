@@ -43,7 +43,15 @@ export default function Sidebar({ open = true, onToggle }) {
 
   return (
     <aside
-      className={`h-screen sticky top-0 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 overflow-hidden transition-all duration-200 ${open ? 'w-52' : 'w-14'}`}
+      className={`
+        fixed inset-y-0 left-0 z-40 h-full
+        lg:sticky lg:top-0 lg:z-auto lg:h-screen
+        bg-white border-r border-gray-100 flex flex-col flex-shrink-0 overflow-hidden transition-all duration-200
+        ${open
+          ? 'w-52 translate-x-0'
+          : 'w-52 -translate-x-full lg:translate-x-0 lg:w-14'
+        }
+      `}
     >
       {/* Logo + toggle */}
       <div className="px-4 py-4 flex-shrink-0 flex items-center justify-between min-w-0">

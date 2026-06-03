@@ -30,9 +30,9 @@ export default function BloodbankPerformance() {
       subtitle="Monitor blood donation hotspots to plan donation drives more efficiently"
       breadcrumb={['Hotspots', 'Performance Across Bloodbanks']}
     >
-      <div className="card p-5">
+      <div className="card p-5 overflow-x-auto">
         <p className="text-xs text-gray-500 mb-4">Only Top 20 Community Drives from at least 3 months ago are displayed.</p>
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[480px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="text-left px-4 py-3 font-medium text-gray-600">Community Drive</th>

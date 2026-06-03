@@ -10,3 +10,5 @@ backend/target/
 .vscode/
 dist/
 build/
+.claude/
+.agents/

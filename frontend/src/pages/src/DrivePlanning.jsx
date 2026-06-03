@@ -63,7 +63,7 @@ function ConfidenceRing({ pct }) {
       <circle cx={45} cy={45} r={r} fill="none" stroke="#F3F4F6" strokeWidth={8} />
       <circle
         cx={45} cy={45} r={r} fill="none"
-        stroke="#C41230" strokeWidth={8}
+        stroke="#C20000" strokeWidth={8}
         strokeDasharray={circ}
         strokeDashoffset={offset}
         strokeLinecap="round"
@@ -269,7 +269,7 @@ export default function DrivePlanning() {
     >
       {/* Alert context bar */}
       {selectedAlert && (
-        <div className="bg-white border border-gray-200 rounded-xl px-5 py-3 mb-4 flex items-center gap-6 flex-wrap shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-xl px-5 py-3 mb-4 flex items-center gap-4 sm:gap-6 overflow-x-auto shadow-sm no-scrollbar">
           <div className="flex items-center gap-2">
             <Droplets className="w-4 h-4 text-primary flex-shrink-0" />
             <span className="text-xs text-gray-400 font-medium">Active HSA Alert</span>
@@ -297,10 +297,10 @@ export default function DrivePlanning() {
       )}
 
       {/* Main two-column layout */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
         {/* Left: Hotspot map */}
-        <div className="col-span-3 card p-4">
+        <div className="lg:col-span-3 card p-4">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-sm text-gray-800">Hotspots</h3>
@@ -382,7 +382,7 @@ export default function DrivePlanning() {
 
         {/* Right: Recommended drive card */}
         {drive && (
-          <div className="col-span-2 card p-4 flex flex-col gap-3">
+          <div className="lg:col-span-2 card p-4 flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-sm text-gray-800">Recommended Drive</h3>
               <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">AI</span>

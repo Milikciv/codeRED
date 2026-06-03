@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import PageLayout from '../../components/layout/PageLayout'
 import LoadingScreen from '../../components/common/LoadingScreen'
 import api from '../../api/axios'
+import { staggerContainer, listItem, listItemX, ease } from '../../lib/motion'
 import {
   Bell, Droplets, CalendarDays, Users, Map, Send,
   ChevronRight, AlertTriangle, ExternalLink, TrendingUp,
@@ -89,23 +91,25 @@ export default function SRCHome() {
 
       {/* ── Critical alert urgency banner ─────────────────────────── */}
       {criticalAlert && (
-        <div className="bg-red-50 border border-red-200 rounded-xl px-5 py-4 mb-4 flex items-center gap-4">
-          <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-            <AlertTriangle className="w-4 h-4 text-red-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-0.5">
-              <span className="text-xs font-bold text-red-700 uppercase tracking-wide">Critical Alert Active</span>
-              <span className="font-mono text-xs font-semibold text-red-500">{criticalAlert.id}</span>
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 sm:px-5 sm:py-4 mb-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5 sm:mt-0">
+              <AlertTriangle className="w-4 h-4 text-red-600" />
             </div>
-            <p className="text-sm font-medium text-red-800">{criticalAlert.recommendedAction}</p>
-            <p className="text-xs text-red-400 mt-0.5">
-              Shortage window: {criticalAlert.shortageWindow} · {criticalAlert.forecastedShortage} units of {criticalAlert.bloodType}
-            </p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                <span className="text-xs font-bold text-red-700 uppercase">Critical alert active</span>
+                <span className="font-mono text-xs font-semibold text-red-500">{criticalAlert.id}</span>
+              </div>
+              <p className="text-sm font-medium text-red-800">{criticalAlert.recommendedAction}</p>
+              <p className="text-xs text-red-400 mt-0.5">
+                Shortage window: {criticalAlert.shortageWindow} · {criticalAlert.forecastedShortage} units of {criticalAlert.bloodType}
+              </p>
+            </div>
           </div>
           <button
             onClick={() => navigate(`/src/drive-planning?alertId=${criticalAlert.id}`)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition-colors flex-shrink-0"
+            className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition-colors sm:flex-shrink-0"
           >
             Plan Drive <ChevronRight className="w-3.5 h-3.5" />
           </button>
@@ -113,8 +117,14 @@ export default function SRCHome() {
       )}
 
       {/* ── KPI row ───────────────────────────────────────────────── */}
-      <div className="grid grid-cols-4 gap-4 mb-4">
-        <div
+      <motion.div
+        className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4"
+        initial="hidden"
+        animate="visible"
+        variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.07 } } }}
+      >
+        <motion.div
+          variants={listItem}
           onClick={() => navigate('/src/alerts')}
           className="card p-4 cursor-pointer hover:shadow-md transition-shadow"
         >
@@ -122,7 +132,7 @@ export default function SRCHome() {
             <span className="text-xs text-gray-500 font-medium">Active Alerts</span>
             <Bell className="w-4 h-4 text-gray-400" />
           </div>
-          <div className="text-3xl font-bold text-gray-900 mb-1">{alerts.length}</div>
+          <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{alerts.length}</div>
           <div className="flex items-center gap-1.5 flex-wrap">
             {criticalCount > 0 && (
               <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-bold">{criticalCount} Critical</span>
@@ -131,18 +141,19 @@ export default function SRCHome() {
               <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-[10px] font-bold">{highCount} High</span>
             )}
           </div>
-        </div>
+        </motion.div>
 
-        <div className="card p-4">
+        <motion.div variants={listItem} className="card p-4">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs text-gray-500 font-medium">Total Forecasted Shortage</span>
             <Droplets className="w-4 h-4 text-primary" />
           </div>
-          <div className="text-3xl font-bold text-primary mb-1">{totalShortage.toLocaleString()}</div>
+          <div className="text-2xl sm:text-3xl font-bold text-primary mb-1">{totalShortage.toLocaleString()}</div>
           <div className="text-xs text-gray-400">units across {alerts.length} blood types</div>
-        </div>
+        </motion.div>
 
-        <div
+        <motion.div
+          variants={listItem}
           onClick={() => navigate('/src/donation-drives')}
           className="card p-4 cursor-pointer hover:shadow-md transition-shadow"
         >
@@ -150,14 +161,15 @@ export default function SRCHome() {
             <span className="text-xs text-gray-500 font-medium">Upcoming Drives</span>
             <CalendarDays className="w-4 h-4 text-gray-400" />
           </div>
-          <div className="text-3xl font-bold text-gray-900 mb-1">{upcomingDrives.length}</div>
+          <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{upcomingDrives.length}</div>
           <div className="text-xs text-gray-400">
             {upcomingDrives.filter(d => d.status === 'Confirmed').length} confirmed ·{' '}
             {upcomingDrives.filter(d => d.status === 'Planned').length} planned
           </div>
-        </div>
+        </motion.div>
 
-        <div
+        <motion.div
+          variants={listItem}
           onClick={() => navigate('/src/donor-information')}
           className="card p-4 cursor-pointer hover:shadow-md transition-shadow"
         >
@@ -165,16 +177,16 @@ export default function SRCHome() {
             <span className="text-xs text-gray-500 font-medium">Donor Response Rate</span>
             <Users className="w-4 h-4 text-gray-400" />
           </div>
-          <div className="text-3xl font-bold text-gray-900 mb-1">{summary.responseRate ?? '—'}%</div>
+          <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{summary.responseRate ?? '—'}%</div>
           <div className="text-xs text-gray-400">{(summary.activeDonors ?? 0).toLocaleString()} active donors</div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* ── Main row: forecasting + alert list ────────────────────── */}
-      <div className="grid grid-cols-5 gap-4 mb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
 
         {/* Demand forecasting summary */}
-        <div className="col-span-3 card p-4">
+        <div className="lg:col-span-3 card p-4">
           <div className="flex items-center justify-between mb-1">
             <div>
               <h3 className="font-semibold text-sm text-gray-800">Demand Forecasting Summary</h3>
@@ -234,18 +246,23 @@ export default function SRCHome() {
         </div>
 
         {/* Active alerts */}
-        <div className="col-span-2 card p-4 flex flex-col">
+        <div className="lg:col-span-2 card p-4 flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm text-gray-800">Active HSA Alerts</h3>
             <button onClick={() => navigate('/src/alerts')} className="text-xs text-primary font-medium hover:underline">
               View all
             </button>
           </div>
-          <div className="space-y-2 flex-1">
+          <motion.div
+            className="space-y-2 flex-1"
+            initial="hidden"
+            animate="visible"
+            variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06, delayChildren: 0.15 } } }}
+          >
             {alerts.map(a => {
               const cfg = SEVERITY_CONFIG[a.severity] ?? SEVERITY_CONFIG.Medium
               return (
-                <div key={a.id} className={`rounded-lg border px-3 py-2.5 ${cfg.bg} ${cfg.border}`}>
+                <motion.div key={a.id} variants={listItemX} className={`rounded-lg border px-3 py-2.5 ${cfg.bg} ${cfg.border}`}>
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-1.5">
                       <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
@@ -262,10 +279,10 @@ export default function SRCHome() {
                     <span className="font-semibold text-gray-700">{a.forecastedShortage} units</span>
                   </div>
                   <div className="text-[10px] text-gray-400 mt-0.5">{a.shortageWindow}</div>
-                </div>
+                </motion.div>
               )
             })}
-          </div>
+          </motion.div>
           <button
             onClick={() => navigate('/src/alerts')}
             className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
@@ -276,10 +293,10 @@ export default function SRCHome() {
       </div>
 
       {/* ── Bottom row: upcoming drives + donor pool + quick actions ─ */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
         {/* Upcoming drives */}
-        <div className="col-span-3 card p-4">
+        <div className="lg:col-span-3 card p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h3 className="font-semibold text-sm text-gray-800">Upcoming Drives</h3>
@@ -328,7 +345,7 @@ export default function SRCHome() {
         </div>
 
         {/* Right column */}
-        <div className="col-span-2 flex flex-col gap-4">
+        <div className="lg:col-span-2 flex flex-col gap-4">
 
           {/* Donor pool */}
           <div className="card p-4">
