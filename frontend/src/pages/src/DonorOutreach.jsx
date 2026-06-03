@@ -5,8 +5,8 @@ import api from '../../api/axios'
 import {
   CalendarDays, Clock, Droplets, MapPin, ExternalLink,
   Users, Send, ChevronDown, Check, Sparkles, X,
-  MessageSquare, Building2, GraduationCap, Heart, Zap,
-  ChevronRight, Star,
+  MessageSquare, Building2, GraduationCap, Heart, Zap, Search, Eye,
+  ChevronRight, Star, Download, RefreshCw,
 } from 'lucide-react'
 
 // ─── Static data ──────────────────────────────────────────────────────────────
@@ -51,29 +51,66 @@ const STRATEGY_COMPARISON = [
 
 const PARTNERS = {
   Companies: [
-    { name: 'DBS',                distance: '1.2km', reach: '4,500 employees', score: 88 },
-    { name: 'Singapore Airlines', distance: '2.1km', reach: '3,200 employees', score: 75 },
-    { name: 'CapitaLand',         distance: '0.9km', reach: '2,800 employees', score: 82 },
-    { name: 'ST Engineering',     distance: '1.8km', reach: '2,100 employees', score: 70 },
+    { name: 'DBS Bank',           address: 'Tampines Central 1',      distance: '0.8km', reach: '4,500 employees', score: 82, tags: ['Large Company', 'Health Partner'] },
+    { name: 'Singapore Airlines', address: 'Airline House, 25 Airline Rd', distance: '1.8km', reach: '3,200 employees', score: 76, tags: ['Large Company', 'Health Partner'] },
+    { name: 'CapitaLand',         address: '168 Robinson Rd',          distance: '1.5km', reach: '2,800 employees', score: 61, tags: ['Large Company', 'Community Partner'] },
+    { name: 'ST Engineering',     address: '1 Ang Mo Kio Electronics Park', distance: '1.8km', reach: '2,100 employees', score: 70, tags: ['Large Company'] },
   ],
   Schools: [
-    { name: 'Temasek Polytechnic', distance: '0.8km', reach: '2,000 students', score: 92 },
-    { name: 'SUTD',                distance: '1.4km', reach: '1,800 students', score: 85 },
-    { name: 'ITE College East',    distance: '1.1km', reach: '1,500 students', score: 78 },
-    { name: 'Temasek JC',          distance: '0.6km', reach: '1,200 students', score: 81 },
+    { name: 'Temasek Polytechnic', address: '21 Tampines Ave 1',  distance: '0.8km', reach: '2,000 students', score: 92, tags: ['Polytechnic', 'Youth Partner'] },
+    { name: 'SUTD',                address: '8 Somapah Rd',       distance: '1.4km', reach: '1,800 students', score: 85, tags: ['University', 'Research Partner'] },
+    { name: 'ITE College East',    address: '10 Simei Ave',        distance: '1.1km', reach: '1,500 students', score: 78, tags: ['ITE', 'Youth Partner'] },
+    { name: 'Temasek JC',          address: '22 Bedok South Rd',  distance: '0.6km', reach: '1,200 students', score: 81, tags: ['Junior College', 'Youth Partner'] },
   ],
   'Community Groups': [
-    { name: 'Community Clubs',           distance: '0.3km', reach: '3,000 members', score: 90 },
-    { name: 'Religious Organisations',   distance: '0.5km', reach: '1,500 members', score: 86 },
-    { name: 'Grassroots Organisations',  distance: '0.4km', reach: '2,200 members', score: 88 },
+    { name: 'Community Clubs',          address: 'Tampines Town Council', distance: '0.3km', reach: '3,000 members', score: 90, tags: ['Community', 'Grassroots'] },
+    { name: 'Religious Organisations',  address: 'Various Locations',     distance: '0.5km', reach: '1,500 members', score: 86, tags: ['Faith-based', 'Community'] },
+    { name: 'Grassroots Organisations', address: 'Tampines GRC',           distance: '0.4km', reach: '2,200 members', score: 88, tags: ['Grassroots', 'Community'] },
   ],
 }
+
+const OUTREACH_TONES = [
+  {
+    id: 'formal',
+    name: 'Formal',
+    badge: 'Professional',
+    badgeColor: 'bg-blue-100 text-blue-700',
+    getBody: (partner, ctx) =>
+      `Dear ${partner.name} ${ctx.team},\n\nSingapore Red Cross is organising a blood donation drive at Tampines Community Plaza this Saturday and would like to invite your organisation to participate.\n\nWith ${partner.reach} within ${partner.distance}, your ${ctx.noun} can make a meaningful contribution through our ${ctx.type}.\n\nWe would be grateful for your partnership in this life-saving initiative.\n\nWarm regards,\nSingapore Red Cross`,
+    getSubject: (partner) => `Blood Drive Partnership Invitation - ${partner.name}`,
+  },
+  {
+    id: 'community',
+    name: 'Community',
+    badge: 'Warm and engaging',
+    badgeColor: 'bg-green-100 text-green-700',
+    getBody: (partner, ctx) =>
+      `Hi ${partner.name} team,\n\nWe're excited to reach out! Singapore Red Cross is hosting a blood drive at Tampines Community Plaza this Saturday and we'd love to have your community involved.\n\nWith ${partner.reach} within ${partner.distance}, together we can make a real difference through our ${ctx.type}!\n\nLooking forward to hearing from you.\n\nThe SRC Team`,
+    getSubject: (_partner) => `Join Us - Blood Drive at Tampines This Saturday`,
+  },
+  {
+    id: 'urgent',
+    name: 'Urgent',
+    badge: 'High response',
+    badgeColor: 'bg-orange-100 text-orange-700',
+    getBody: (partner, ctx) =>
+      `Dear ${partner.name} ${ctx.team},\n\nUrgent: Singapore Red Cross needs your help. We are facing a critical O- blood shortage and have organised an emergency drive at Tampines Community Plaza this Saturday.\n\nWith ${partner.reach} nearby, your ${ctx.noun} can help avert a shortage that puts lives at risk. Please partner with us for this ${ctx.type}.\n\nTime is critical. Please respond by Thursday.\n\nSingapore Red Cross`,
+    getSubject: (partner) => `Urgent: Blood Drive Partnership Needed - ${partner.name}`,
+  },
+]
 
 const TABS = [
   { id: 'ai',     label: 'AI Recommended',     icon: <Sparkles className="w-4 h-4" /> },
   { id: 'push',   label: 'Push Notifications', icon: <MessageSquare className="w-4 h-4" /> },
   { id: 'youth',  label: 'Youth Campaigns',    icon: <Zap className="w-4 h-4" /> },
   { id: 'collab', label: 'Collaborations',     icon: <Building2 className="w-4 h-4" /> },
+]
+
+const AI_STEPS = [
+  'Analysing campaign theme...',
+  'Generating visual elements...',
+  'Applying brand guidelines...',
+  'Finalising campaign assets...',
 ]
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
@@ -242,7 +279,7 @@ function TabAIRecommended({ onViewCombined }) {
               </div>
             ))}
           </div>
-          {/* Confidence score — kept compact, one card is fine here */}
+          {/* Confidence score */}
           <div className="bg-green-50 border border-green-100 rounded-xl p-3 text-center flex flex-col justify-center gap-1">
             <div className="text-xs text-gray-400">Confidence</div>
             <div className="text-3xl font-bold text-green-600">89%</div>
@@ -470,7 +507,7 @@ function TabPushNotifications({ drive }) {
               </div>
             </div>
 
-            {/* Right panel — three clear groups with varied spacing */}
+            {/* Right panel */}
             <div className="flex-1 min-w-0 flex flex-col gap-5">
 
               {/* Group 1: variant selection + name + response rate */}
@@ -551,145 +588,270 @@ function TabPushNotifications({ drive }) {
   )
 }
 
+// ─── AI Campaign Generator ────────────────────────────────────────────────────
+
+function AICampaignGenerator({ theme, drive }) {
+  const [genState, setGenState] = useState('idle')
+  const [stepIdx, setStepIdx] = useState(0)
+  const [dots, setDots] = useState('')
+
+  const driveName = drive?.location ?? 'Tampines Community Plaza'
+  const driveShort = drive?.location?.split(' ')[0] ?? 'Tampines'
+  const hashtag = '#' + theme.name.replace(/\s+/g, '')
+
+  useEffect(() => {
+    setGenState('idle')
+  }, [theme.id])
+
+  useEffect(() => {
+    if (genState !== 'generating') return
+    const dotsId = setInterval(() => {
+      setDots(d => d.length >= 5 ? '' : d + '.')
+    }, 300)
+    return () => clearInterval(dotsId)
+  }, [genState])
+
+  useEffect(() => {
+    if (genState !== 'generating') return
+    setStepIdx(0)
+    let s = 0
+    const stepId = setInterval(() => {
+      s += 1
+      if (s < AI_STEPS.length) {
+        setStepIdx(s)
+      } else {
+        clearInterval(stepId)
+        setTimeout(() => setGenState('done'), 500)
+      }
+    }, 650)
+    return () => clearInterval(stepId)
+  }, [genState])
+
+  const handleGenerate = () => {
+    setDots('')
+    setStepIdx(0)
+    setGenState('generating')
+  }
+
+  return (
+    <div className="card p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Sparkles className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-bold text-sm text-gray-900">AI Campaign Generator</h3>
+            <p className="text-xs text-gray-400">Generate personalised campaign visuals with AI</p>
+          </div>
+        </div>
+        <div className="flex gap-2 items-center">
+          {genState === 'done' && (
+            <button
+              onClick={handleGenerate}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Regenerate
+            </button>
+          )}
+          {genState === 'idle' && (
+            <button
+              onClick={handleGenerate}
+              className="flex items-center gap-1.5 btn-primary px-4 py-2 text-xs rounded-lg"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Generate Campaign
+            </button>
+          )}
+        </div>
+      </div>
+
+      {genState === 'idle' && (
+        <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-200 rounded-xl">
+          <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mb-3">
+            <Sparkles className="w-5 h-5 text-gray-300" />
+          </div>
+          <p className="text-sm font-semibold text-gray-600 mb-1">No campaign generated yet</p>
+          <p className="text-xs text-gray-400 text-center max-w-[240px] leading-relaxed">
+            Generate a personalised social media poster for the {theme.name}
+          </p>
+        </div>
+      )}
+
+      {genState === 'generating' && (
+        <div className="flex flex-col items-center justify-center py-14 bg-gray-50 rounded-xl relative overflow-hidden">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-48 h-48 rounded-full border border-primary/8 animate-ping opacity-20" style={{ animationDuration: '2s' }} />
+          </div>
+          <div className="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center mb-4 relative z-10">
+            <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+          </div>
+          <div className="relative z-10 text-base font-bold text-gray-900 mb-1.5 tabular-nums" style={{ minWidth: '12ch', textAlign: 'center' }}>
+            Generating{dots}
+          </div>
+          <p className="relative z-10 text-xs text-gray-400 mb-5">{AI_STEPS[stepIdx]}</p>
+          <div className="relative z-10 w-48 h-1 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${((stepIdx + 1) / AI_STEPS.length) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {genState === 'done' && (
+        <div className="rounded-xl overflow-hidden border border-gray-200">
+          <img src="/aigeneratedasset.png" alt="Generated campaign assets" className="w-full h-auto block" />
+          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-100">
+            <span className="text-xs text-gray-500">AI-generated assets ready</span>
+            <div className="flex gap-1.5">
+              <button className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-medium border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
+                <Download className="w-3 h-3" />
+                Download
+              </button>
+              <button className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold btn-primary rounded-lg">
+                <Send className="w-3 h-3" />
+                Share
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Tab 3: Youth Campaigns ───────────────────────────────────────────────────
 
 function TabYouthCampaigns({ drive }) {
   const [selected, setSelected] = useState(CAMPAIGN_THEMES[0])
-  const [launched, setLaunched] = useState(false)
-  const [launching, setLaunching] = useState(false)
+  const [generated, setGenerated] = useState(false)
+  const [generating, setGenerating] = useState(false)
 
-  const handleLaunch = () => {
-    setLaunching(true)
-    setTimeout(() => { setLaunching(false); setLaunched(true) }, 1500)
+  const handleGenerate = () => {
+    setGenerating(true)
+    setTimeout(() => { setGenerating(false); setGenerated(true) }, 1500)
   }
 
   const driveName = drive?.location?.split(' ')[0] ?? 'Tampines'
 
   return (
     <div className="space-y-4">
-      {/* Campaign theme cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Campaign theme pill tabs */}
+      <div className="flex gap-2 flex-wrap overflow-x-auto no-scrollbar">
         {CAMPAIGN_THEMES.map(theme => {
           const active = selected.id === theme.id
           return (
             <button
               key={theme.id}
-              onClick={() => { setSelected(theme); setLaunched(false) }}
-              className={`card p-4 text-left transition-[box-shadow,border-color] duration-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
-                active ? 'border-2 border-primary ring-2 ring-primary/10' : 'hover:border-gray-200'
+              onClick={() => { setSelected(theme); setGenerated(false) }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium whitespace-nowrap transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
+                active
+                  ? 'border-primary text-primary'
+                  : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'
               }`}
             >
-              {active && (
-                <span className="inline-block mb-2 px-2 py-0.5 bg-primary/10 text-primary text-[9px] font-bold rounded-full">
-                  Selected
-                </span>
-              )}
-              <div className="font-bold text-sm text-gray-900 mb-1">{theme.name}</div>
-              <p className="text-[11px] text-gray-500 leading-relaxed mb-3">{theme.description}</p>
-              <div className="flex justify-between text-xs">
-                <div>
-                  <div className="text-[10px] text-gray-400">Registrations</div>
-                  <div className="font-bold text-gray-900">{theme.registrations}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-[10px] text-gray-400">Response Rate</div>
-                  <div className="font-bold text-green-700">{theme.responseRate}%</div>
-                </div>
-              </div>
+              {theme.name}
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+                active ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-400'
+              }`}>{theme.responseRate}%</span>
             </button>
           )
         })}
       </div>
 
-      {/* Preview + details */}
-      <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-4">
-        {/* Phone preview */}
-        <div className="card p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Zap className="w-4 h-4 text-primary" />
-            <h3 className="font-semibold text-sm text-gray-800">Campaign Preview</h3>
-          </div>
-          <div className="flex justify-center">
-            <div className="relative flex-shrink-0" style={{ width: 152 }}>
-              <img
-                src="/phone.png"
-                alt=""
-                className="w-full h-auto block"
-                style={{ zIndex: 10, pointerEvents: 'none' }}
-              />
-              <div
-                className="absolute overflow-hidden flex flex-col"
-                style={{ top: '13%', left: '7%', right: '7%', bottom: '4%', zIndex: 20, pointerEvents: 'none' }}
-              >
-                {/* SRC header */}
-                <div className="bg-primary px-1.5 py-1 flex items-center gap-1 flex-shrink-0">
-                  <div className="w-3 h-3 bg-white rounded-full flex items-center justify-center flex-shrink-0">
-                    <Droplets className="w-1.5 h-1.5 text-primary" />
-                  </div>
-                  <span className="text-white font-semibold" style={{ fontSize: '5.5px' }}>Singapore Red Cross</span>
-                </div>
-                {/* Campaign hero */}
-                <div className="bg-primary/90 flex flex-col items-center justify-center py-4 px-2 flex-shrink-0">
-                  <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center mb-1">
-                    <Zap className="w-3.5 h-3.5 text-white" />
-                  </div>
-                  <div className="text-white font-bold text-center uppercase" style={{ fontSize: '6px', letterSpacing: '0.04em', lineHeight: '1.4' }}>
-                    {driveName}<br />{selected.name}
-                  </div>
-                </div>
-                {/* Post body */}
-                <div className="bg-white px-1.5 py-1.5 flex flex-col gap-1">
-                  <p className="text-gray-700 leading-relaxed" style={{ fontSize: '5.5px' }}>
-                    Join {selected.registrations} donors this Saturday. Help prevent an O- shortage.
-                  </p>
-                  <div className="w-full bg-primary rounded py-0.5 text-center text-white font-semibold" style={{ fontSize: '5.5px' }}>
-                    Reserve Your Slot
-                  </div>
-                  <div className="text-gray-400" style={{ fontSize: '5px' }}>Today, 10:00 AM</div>
+      {/* Main card */}
+      <div className="card">
+        <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr]">
+          {/* Phone preview */}
+          <div className="p-5 border-b border-gray-100 lg:border-b-0 lg:border-r lg:border-gray-100 flex flex-col">
+            <div className="text-sm font-semibold text-gray-900 mb-4">Campaign Preview</div>
+            <div className="flex justify-center flex-1 items-center">
+              <div className="relative flex-shrink-0" style={{ width: 160 }}>
+                <img src="/phone.png" alt="" className="w-full h-auto block" style={{ zIndex: 10, pointerEvents: 'none' }} />
+                <div
+                  className="absolute overflow-hidden bg-white flex items-center justify-center"
+                  style={{ top: '7%', left: '7%', right: '7%', bottom: '4%', zIndex: 20, pointerEvents: 'none' }}
+                >
+                  <img src="/aigeneratedpost.png" alt="Campaign preview" className="w-full object-contain" style={{ maxHeight: '100%' }} />
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Campaign details + launch */}
-        <div className="card p-5 flex flex-col gap-4">
-          <div>
-            <div className="font-bold text-gray-900 text-base mb-1.5">{driveName} {selected.name}</div>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              Join other young donors this Saturday and help prevent an O- shortage.
-              Be part of the {selected.name.toLowerCase()} and make an impact in your community.
-            </p>
-          </div>
+          {/* Campaign details */}
+          <div className="p-6 flex flex-col gap-5">
+            {/* Title + description */}
+            <div>
+              <h2 className="font-bold text-gray-900 text-xl mb-2">{driveName} {selected.name}</h2>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {selected.description} Be part of the campaign and make an impact in your community this Saturday.
+              </p>
+            </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gray-50 rounded-xl p-3">
-              <div className="text-xs text-gray-400 mb-1">Expected Registrations</div>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold text-gray-900">{selected.registrations}</span>
-                <span className="text-xs text-gray-400">donors</span>
+            {/* Stat cards */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="text-xs text-gray-400 mb-1.5">Expected Registrations</div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-3xl font-bold text-gray-900">{selected.registrations}</span>
+                  <span className="text-sm text-gray-400">donors</span>
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="text-xs text-gray-400 mb-1.5">Response Rate</div>
+                <div className="text-3xl font-bold text-green-600">{selected.responseRate}%</div>
               </div>
             </div>
-            <div className="bg-green-50 rounded-xl p-3">
-              <div className="text-xs text-gray-400 mb-1">Response Rate</div>
-              <div className="text-2xl font-bold text-green-700">{selected.responseRate}%</div>
+
+            {/* Meta items + buttons */}
+            <div className="flex flex-col gap-4">
+              {/* Meta cards */}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { icon: <Users className="w-4 h-4 text-primary" />, label: 'Target Audience', value: '16 – 30 years old' },
+                  { icon: <MapPin className="w-4 h-4 text-primary" />, label: 'Reach', value: 'Within 3km of venue' },
+                  { icon: <CalendarDays className="w-4 h-4 text-primary" />, label: 'Campaign Date', value: drive?.date ?? 'This Saturday' },
+                ].map(item => (
+                  <div key={item.label} className="bg-gray-50 rounded-xl p-3 flex items-center gap-3">
+                    <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                      {item.icon}
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-400">{item.label}</div>
+                      <div className="text-sm font-semibold text-gray-800">{item.value}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Buttons right-aligned */}
+              <div className="flex gap-3 justify-end">
+                <button className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
+                  <Eye className="w-4 h-4" />
+                  Preview Assets
+                </button>
+                <button
+                  onClick={handleGenerate}
+                  disabled={generating || generated}
+                  className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 whitespace-nowrap ${
+                    generated
+                      ? 'bg-success text-white cursor-default focus-visible:ring-success'
+                      : 'btn-primary disabled:opacity-60 focus-visible:ring-primary'
+                  }`}
+                >
+                  {generated ? <Check className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
+                  {generated ? 'Campaign Launched' : generating ? 'Launching…' : 'Launch Campaign'}
+                </button>
+              </div>
             </div>
           </div>
-
-          <button
-            onClick={handleLaunch}
-            disabled={launching || launched}
-            className={`flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
-              launched
-                ? 'bg-success text-white cursor-default focus-visible:ring-success'
-                : 'btn-primary disabled:opacity-60 focus-visible:ring-primary'
-            }`}
-          >
-            {launched ? <Check className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
-            {launched ? 'Campaign Launched' : launching ? 'Launching…' : 'Launch Campaign'}
-          </button>
         </div>
       </div>
+
+      {/* AI Campaign Generator */}
+      <AICampaignGenerator theme={selected} drive={drive} />
     </div>
   )
 }
@@ -697,7 +859,34 @@ function TabYouthCampaigns({ drive }) {
 // ─── Tab 4: Collaborations ────────────────────────────────────────────────────
 
 function OutreachPreview({ partner, subTab, invited, onInvite }) {
+  const [toneIdx, setToneIdx] = useState(0)
   const isInvited = invited.has(partner.name)
+
+  const tone = OUTREACH_TONES[toneIdx]
+
+  const [editedBodies, setEditedBodies] = useState(() =>
+    Object.fromEntries(OUTREACH_TONES.map(t => {
+      const c = subTab === 'Companies'
+        ? { noun: 'employees', type: 'workplace giving programme', team: 'HR / CSR Team' }
+        : subTab === 'Schools'
+        ? { noun: 'students', type: 'campus blood drive', team: 'Student Affairs Office' }
+        : { noun: 'members', type: 'community outreach event', team: 'Community Leaders' }
+      return [t.id, t.getBody(partner, c)]
+    }))
+  )
+  const [editedSubjects, setEditedSubjects] = useState(() =>
+    Object.fromEntries(OUTREACH_TONES.map(t => [t.id, t.getSubject(partner)]))
+  )
+
+  useEffect(() => {
+    const ctx = subTab === 'Companies'
+      ? { noun: 'employees', type: 'workplace giving programme', team: 'HR / CSR Team' }
+      : subTab === 'Schools'
+      ? { noun: 'students', type: 'campus blood drive', team: 'Student Affairs Office' }
+      : { noun: 'members', type: 'community outreach event', team: 'Community Leaders' }
+    setEditedBodies(Object.fromEntries(OUTREACH_TONES.map(t => [t.id, t.getBody(partner, ctx)])))
+    setEditedSubjects(Object.fromEntries(OUTREACH_TONES.map(t => [t.id, t.getSubject(partner)])))
+  }, [partner.name, subTab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const ctx = subTab === 'Companies'
     ? { noun: 'employees', type: 'workplace giving programme', team: 'HR / CSR Team' }
@@ -705,178 +894,305 @@ function OutreachPreview({ partner, subTab, invited, onInvite }) {
     ? { noun: 'students', type: 'campus blood drive', team: 'Student Affairs Office' }
     : { noun: 'members', type: 'community outreach event', team: 'Community Leaders' }
 
+  const body = editedBodies[tone.id]
+  const subject = editedSubjects[tone.id]
+  const isDirty = body !== tone.getBody(partner, ctx) || subject !== tone.getSubject(partner)
+
+  const scoreCls = partner.score >= 85
+    ? 'bg-green-50 text-green-700 border-green-100'
+    : 'bg-amber-50 text-amber-700 border-amber-100'
+
+  const handleReset = () => {
+    setEditedBodies(prev => ({ ...prev, [tone.id]: tone.getBody(partner, ctx) }))
+    setEditedSubjects(prev => ({ ...prev, [tone.id]: tone.getSubject(partner) }))
+  }
+
   return (
-    <div className="card p-5 sticky top-4">
-      <div className="flex items-center gap-2 mb-4">
-        <Send className="w-4 h-4 text-primary" />
-        <h3 className="font-semibold text-sm text-gray-800">Outreach Preview</h3>
+    <div className="card sticky top-4 overflow-hidden">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="font-semibold text-sm text-gray-900">Outreach Preview</h3>
+          <p className="text-xs text-gray-500 mt-0.5 truncate">{partner.name}</p>
+        </div>
+        <span className={`font-bold px-2 py-0.5 rounded-full border text-[10px] flex-shrink-0 mt-0.5 ${scoreCls}`}>
+          {partner.score}%
+        </span>
       </div>
 
-      {/* Email mockup */}
-      <div className="border border-gray-200 rounded-xl overflow-hidden mb-4">
-        <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 space-y-1.5">
-          <div className="flex gap-2.5 text-xs">
-            <span className="text-gray-400 w-10 flex-shrink-0">To</span>
-            <span className="font-semibold text-gray-900">{partner.name}</span>
-          </div>
-          <div className="flex gap-2.5 text-xs">
-            <span className="text-gray-400 w-10 flex-shrink-0">From</span>
-            <span className="text-gray-700">Singapore Red Cross</span>
-          </div>
-          <div className="flex gap-2.5 text-xs">
-            <span className="text-gray-400 w-10 flex-shrink-0">Subject</span>
-            <span className="text-gray-700 font-medium">Blood Drive Partnership — Tampines</span>
-          </div>
+      {/* Tone selector */}
+      <div className="px-5 pt-4 pb-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-gray-500 font-medium flex-shrink-0">Tone:</span>
+          {OUTREACH_TONES.map((t, i) => (
+            <button
+              key={t.id}
+              onClick={() => setToneIdx(i)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
+                i === toneIdx
+                  ? 'bg-gray-900 text-white focus-visible:ring-gray-900'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200 focus-visible:ring-gray-400'
+              }`}
+            >
+              {t.name}
+            </button>
+          ))}
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold flex-shrink-0 ${tone.badgeColor}`}>
+            {tone.badge}
+          </span>
         </div>
-        <div className="p-4 space-y-2 text-xs text-gray-700 leading-relaxed">
-          <p>Dear {partner.name} {ctx.team},</p>
-          <p>
-            Singapore Red Cross is organising a blood donation drive at Tampines Community
-            Plaza this Saturday and would love to partner with your organisation.
-          </p>
-          <p>
-            With {partner.reach} within {partner.distance}, your {ctx.noun} can
-            make a real difference through our {ctx.type}.
-          </p>
-          <div className="mt-3 pt-3 border-t border-gray-100">
-            <div className="bg-primary/5 border border-primary/10 rounded-lg px-3 py-2 text-center">
-              <span className="text-primary text-xs font-semibold">Confirm Your Participation</span>
+      </div>
+
+      {/* Editable email compose area */}
+      <div className="p-4">
+        <div className="border border-gray-200 rounded-xl overflow-hidden">
+          {/* Email header */}
+          <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 space-y-1.5">
+            <div className="flex gap-2.5 text-xs">
+              <span className="text-gray-400 w-10 flex-shrink-0">To</span>
+              <span className="font-semibold text-gray-900 truncate">{partner.name}</span>
+            </div>
+            <div className="flex gap-2.5 text-xs">
+              <span className="text-gray-400 w-10 flex-shrink-0">From</span>
+              <span className="text-gray-700">Singapore Red Cross</span>
+            </div>
+            <div className="flex gap-2.5 text-xs items-center">
+              <span className="text-gray-400 w-10 flex-shrink-0 flex-shrink-0">Subject</span>
+              <input
+                type="text"
+                value={subject}
+                onChange={e => setEditedSubjects(prev => ({ ...prev, [tone.id]: e.target.value }))}
+                className="flex-1 min-w-0 text-gray-700 font-medium bg-transparent outline-none focus:text-gray-900 border-b border-transparent focus:border-primary/40 pb-px transition-colors"
+              />
             </div>
           </div>
-          <p className="text-gray-400 text-[10px]">Singapore Red Cross · Donor Outreach</p>
+          {/* Email body */}
+          <div className="p-3">
+            <textarea
+              value={body}
+              onChange={e => setEditedBodies(prev => ({ ...prev, [tone.id]: e.target.value }))}
+              rows={8}
+              className="w-full text-xs text-gray-700 bg-transparent outline-none resize-none leading-relaxed"
+            />
+            <div className="mt-1 pt-2 border-t border-gray-100 flex items-center justify-between">
+              <span className="text-[10px] text-gray-400">{body.length} chars</span>
+              {isDirty && (
+                <button
+                  onClick={handleReset}
+                  className="text-[10px] text-gray-400 hover:text-gray-600 transition-colors focus-visible:outline-none focus-visible:text-gray-600"
+                >
+                  Reset to template
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Score row */}
-      <div className="flex items-center justify-between text-xs mb-4 px-0.5">
-        <span className="text-gray-500">Partnership Score</span>
-        <span className={`font-bold px-2 py-0.5 rounded-full border text-[10px] ${
-          partner.score >= 85
-            ? 'bg-green-50 text-green-700 border-green-100'
-            : 'bg-amber-50 text-amber-700 border-amber-100'
-        }`}>{partner.score}%</span>
+      {/* Send action */}
+      <div className="px-4 pb-4">
+        <button
+          onClick={() => onInvite(partner.name)}
+          disabled={isInvited}
+          className={`w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
+            isInvited
+              ? 'bg-success text-white cursor-default focus-visible:ring-success'
+              : 'btn-primary focus-visible:ring-primary'
+          }`}
+        >
+          {isInvited ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+          {isInvited ? 'Invitation Sent' : 'Send Invitation'}
+        </button>
       </div>
-
-      <button
-        onClick={() => onInvite(partner.name)}
-        disabled={isInvited}
-        className={`w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
-          isInvited
-            ? 'bg-success text-white cursor-default focus-visible:ring-success'
-            : 'btn-primary focus-visible:ring-primary'
-        }`}
-      >
-        {isInvited ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-        {isInvited ? 'Invitation Sent' : `Send Invitation`}
-      </button>
     </div>
   )
 }
 
 function TabCollaborations() {
-  const [subTab, setSubTab] = useState('Schools')
-  const [invited, setInvited] = useState(new Set())
-  const [selectedPartner, setSelectedPartner] = useState(PARTNERS['Schools'][0])
+  const SUB_TABS = [
+    { label: 'Nearby Companies',         category: 'Companies' },
+    { label: 'Educational Institutions', category: 'Schools' },
+    { label: 'Community Groups',         category: 'Community Groups' },
+  ]
 
-  const handleSubTabChange = (tab) => {
-    setSubTab(tab)
-    setSelectedPartner(PARTNERS[tab][0])
+  const [subTab, setSubTab] = useState('Nearby Companies')
+  const [invited, setInvited] = useState(new Set())
+  const [selectedPartner, setSelectedPartner] = useState(PARTNERS['Companies'][0])
+  const [search, setSearch] = useState('')
+
+  const activeTab = SUB_TABS.find(t => t.label === subTab)
+  const category = activeTab?.category
+  const allPartners = category ? (PARTNERS[category] ?? []) : []
+  const filteredPartners = search
+    ? allPartners.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+    : allPartners
+
+  const handleSubTabChange = (label) => {
+    setSubTab(label)
+    setSearch('')
+    const tab = SUB_TABS.find(t => t.label === label)
+    if (tab?.category) setSelectedPartner(PARTNERS[tab.category][0])
   }
 
   const handleInvite = name => setInvited(s => { const n = new Set(s); n.add(name); return n })
 
-  const partners = PARTNERS[subTab] ?? []
-  const subTabs = ['Companies', 'Schools', 'Community Groups']
+  const parseReach = (str) => parseInt(str.replace(/[^0-9]/g, ''), 10) || 0
+  const currentReach = allPartners.reduce((sum, p) => sum + parseReach(p.reach), 0)
+  const recommendedCount = allPartners.filter(p => p.score >= 80).length
+  const sentCount = allPartners.filter(p => invited.has(p.name)).length
 
-  const tabIcon = t =>
-    t === 'Companies'       ? <Building2 className="w-4 h-4" /> :
-    t === 'Schools'         ? <GraduationCap className="w-4 h-4" /> :
-                              <Heart className="w-4 h-4" />
+  const getMatch = (score) =>
+    score >= 80 ? { label: 'High Match',   cls: 'text-green-700 bg-green-50' }
+    : score >= 65 ? { label: 'Medium Match', cls: 'text-amber-700 bg-amber-50' }
+    :               { label: 'Low Match',    cls: 'text-gray-500 bg-gray-100' }
 
-  const cardIcon = t =>
-    t === 'Companies'       ? { el: <Building2 className="w-5 h-5 text-blue-600" />, bg: 'bg-blue-50' } :
-    t === 'Schools'         ? { el: <GraduationCap className="w-5 h-5 text-amber-600" />, bg: 'bg-amber-50' } :
-                              { el: <Heart className="w-5 h-5 text-green-600" />, bg: 'bg-green-50' }
+  const getIconColor = (name) => {
+    const palette = [
+      'bg-red-100 text-red-700', 'bg-blue-100 text-blue-700',
+      'bg-amber-100 text-amber-700', 'bg-emerald-100 text-emerald-700',
+      'bg-purple-100 text-purple-700', 'bg-sky-100 text-sky-700',
+    ]
+    return palette[name.charCodeAt(0) % palette.length]
+  }
+
+  const viewMoreLabel =
+    subTab === 'Nearby Companies' ? 'View More Companies' :
+    subTab === 'Educational Institutions' ? 'View More Institutions' :
+    'View More Groups'
 
   return (
     <div className="space-y-4">
-      {/* Sub-tabs */}
-      <div className="card p-1 flex gap-1 w-fit">
-        {subTabs.map(tab => (
-          <button
-            key={tab}
-            onClick={() => handleSubTabChange(tab)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
-              subTab === tab ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            <span className={subTab === tab ? 'text-white' : 'text-gray-400'}>{tabIcon(tab)}</span>
-            {tab}
-          </button>
+      {/* KPI row */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: 'Potential Reach',  value: currentReach.toLocaleString(), color: 'text-gray-900' },
+          { label: 'Recommended',      value: recommendedCount,              color: 'text-green-600' },
+          { label: 'Invitations Sent', value: sentCount,                     color: 'text-primary' },
+        ].map(stat => (
+          <div key={stat.label} className="card p-4 text-center">
+            <div className={`text-3xl font-bold ${stat.color}`}>{stat.value}</div>
+            <div className="text-xs text-gray-400 mt-1">{stat.label}</div>
+          </div>
         ))}
       </div>
 
-      {/* Partner list + outreach preview */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 items-start">
-        {/* Partner cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-          {partners.map(partner => {
-            const isInvited = invited.has(partner.name)
-            const isSelected = selectedPartner?.name === partner.name
-            const { el: icon, bg } = cardIcon(subTab)
-            const scoreCls = partner.score >= 85
-              ? 'bg-green-50 text-green-700 border-green-100'
-              : 'bg-amber-50 text-amber-700 border-amber-100'
+      {/* Main layout: list + preview */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4 items-start">
 
-            return (
+        {/* Left: partner list card */}
+        <div className="card overflow-hidden">
+          {/* Card heading */}
+          <div className="px-5 py-4 border-b border-gray-100">
+            <h3 className="font-semibold text-sm text-gray-900">Target Collaborations</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Partner with organisations and schools near the drive location.</p>
+          </div>
+
+          {/* Sub-tabs */}
+          <div className="flex gap-0 border-b border-gray-200 overflow-x-auto no-scrollbar px-5">
+            {SUB_TABS.map(t => (
               <button
-                key={partner.name}
-                onClick={() => setSelectedPartner(partner)}
-                className={`card p-4 text-left w-full transition-[box-shadow,border-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
-                  isSelected
-                    ? 'border-2 border-primary ring-2 ring-primary/10'
-                    : 'hover:shadow-md'
+                key={t.label}
+                onClick={() => handleSubTabChange(t.label)}
+                className={`px-3 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-all duration-150 -mb-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
+                  subTab === t.label
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <div className="flex items-center gap-2.5 mb-3">
-                  <div className={`w-9 h-9 ${bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
-                    {icon}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-bold text-sm text-gray-900 leading-tight truncate">{partner.name}</div>
-                    <div className="flex items-center gap-1 text-[11px] text-gray-400 mt-0.5">
-                      <MapPin className="w-3 h-3 flex-shrink-0" />{partner.distance}
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-500">Potential Reach</span>
-                    <span className="font-semibold text-gray-800">{partner.reach}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-gray-500">Partnership Score</span>
-                    <span className={`font-bold px-1.5 py-0.5 rounded-full border text-[10px] ${scoreCls}`}>
-                      {partner.score}%
-                    </span>
-                  </div>
-                </div>
-                {isInvited && (
-                  <div className="mt-2.5 flex items-center gap-1 text-[11px] text-green-700 font-medium">
-                    <Check className="w-3 h-3" />
-                    Invitation sent
-                  </div>
-                )}
+                {t.label}
               </button>
-            )
-          })}
+            ))}
+          </div>
+
+          {/* Filter bar */}
+          {category && (
+            <div className="px-5 py-3 flex items-center gap-2 border-b border-gray-100">
+              <div className="w-[130px] flex-shrink-0">
+                <SelectDropdown value="Within 3 km" options={['Within 1 km', 'Within 3 km', 'Within 5 km', 'Within 10 km']} />
+              </div>
+              <div className="w-[110px] flex-shrink-0">
+                <SelectDropdown value="All Types" options={['All Types', 'Large Company', 'SME', 'Health Partner', 'Community Partner']} />
+              </div>
+              <div className="flex-1 relative min-w-0">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search organisation"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="w-full pl-7 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-white placeholder-gray-400 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Partner rows */}
+          {category && (
+            <>
+              <div className="divide-y divide-gray-50">
+                {filteredPartners.map(partner => {
+                  const isSelected = selectedPartner?.name === partner.name
+                  const match = getMatch(partner.score)
+                  const initials = partner.name.split(' ').slice(0, 2).map(w => w[0]).join('')
+                  const iconColor = getIconColor(partner.name)
+
+                  return (
+                    <div
+                      key={partner.name}
+                      onClick={() => setSelectedPartner(partner)}
+                      className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors duration-150 ${
+                        isSelected ? 'bg-primary/5' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      {/* Logo / initials */}
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-sm ${iconColor}`}>
+                        {initials}
+                      </div>
+
+                      {/* Name, address, distance, tags */}
+                      <div className="flex-1 min-w-0">
+                        <div className={`font-semibold text-sm leading-tight ${isSelected ? 'text-primary' : 'text-gray-900'}`}>
+                          {partner.name}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-0.5">{partner.address}</div>
+                        <div className="text-xs text-gray-400">– {partner.distance}</div>
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {partner.tags.map(tag => (
+                            <span key={tag} className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-medium rounded-full">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Match quality */}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${match.cls}`}>
+                          {match.label}
+                        </span>
+                        <span className="font-bold text-gray-900 text-sm">{partner.score}%</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* View More */}
+              <div className="px-5 py-3.5 border-t border-gray-100 flex justify-center">
+                <button className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
+                  {viewMoreLabel}
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Outreach preview panel */}
-        {selectedPartner && (
+        {selectedPartner && category && (
           <OutreachPreview
             partner={selectedPartner}
-            subTab={subTab}
+            subTab={category}
             invited={invited}
             onInvite={handleInvite}
           />
