@@ -316,7 +316,7 @@ function TabAIRecommended({ onViewCombined }) {
           </button>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-3">
           {STRATEGY_COMPARISON.map(s => (
             <div
               key={s.id}
@@ -326,7 +326,7 @@ function TabAIRecommended({ onViewCombined }) {
             >
               {s.best && (
                 <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
-                  <span className="px-2 py-0.5 bg-green-500 text-white text-[9px] font-bold rounded-full whitespace-nowrap">
+                  <span className="flex items-center gap-0.5 px-2 py-0.5 bg-green-500 text-white text-[9px] font-bold rounded-full whitespace-nowrap">
                     Best
                   </span>
                 </div>
