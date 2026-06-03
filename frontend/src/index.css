@@ -130,3 +130,16 @@ input[type=number] { -moz-appearance: textfield; }
   80%  { stroke-dashoffset: 0; }
   100% { stroke-dashoffset: 200; }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter-animate,
+  .toast-enter,
+  .modal-content-enter,
+  .modal-backdrop-enter {
+    animation: none;
+  }
+  .btn-primary:active,
+  .btn-outline:active {
+    transform: none;
+  }
+}
