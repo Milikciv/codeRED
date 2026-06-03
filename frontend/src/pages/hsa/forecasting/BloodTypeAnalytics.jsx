@@ -68,102 +68,83 @@ export default function BloodTypeAnalytics() {
   const [dateEnd, setDateEnd]           = useState(new Date(2026, 4, 17))
 
   const chartData = CHART_DATA[selectedType] ?? DEFAULT_DATA
+  const analyticsActions = (
+    <div className="flex items-center gap-2">
+      <div className="relative">
+        <button
+          onClick={() => setOpenDropdown(openDropdown === 'bloodType' ? null : 'bloodType')}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
+        >
+          <IonIcon icon={waterOutline} style={{ fontSize: '0.875rem', color: '#C20000' }} />
+          <span className="font-medium">{selectedType}</span>
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${openDropdown === 'bloodType' ? 'rotate-180' : ''}`} />
+        </button>
+        {openDropdown === 'bloodType' && (
+          <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-32">
+            {BLOOD_TYPES.map(t => (
+              <button
+                key={t}
+                onClick={() => { setSelectedType(t); setOpenDropdown(null) }}
+                className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${selectedType === t ? 'text-primary font-medium' : 'text-gray-700'}`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="relative">
+        <button
+          onClick={() => setOpenDropdown(openDropdown === 'hospital' ? null : 'hospital')}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
+        >
+          {hospital}
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${openDropdown === 'hospital' ? 'rotate-180' : ''}`} />
+        </button>
+        {openDropdown === 'hospital' && (
+          <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-36">
+            {HOSPITAL_OPTIONS.map(h => (
+              <button
+                key={h}
+                onClick={() => { setHospital(h); setOpenDropdown(null) }}
+                className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${hospital === h ? 'text-primary font-medium' : 'text-gray-700'}`}
+              >
+                {h}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="relative">
+        <button
+          onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
+        >
+          <Calendar className="w-3.5 h-3.5 text-gray-500" />
+          {formatDateRange(dateStart, dateEnd)}
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${openDropdown === 'date' ? 'rotate-180' : ''}`} />
+        </button>
+        {openDropdown === 'date' && (
+          <div className="absolute right-0 top-full mt-1 z-20">
+            <DateRangePicker
+              start={dateStart}
+              end={dateEnd}
+              onChange={(s, e) => { setDateStart(s); setDateEnd(e) }}
+              onClose={() => setOpenDropdown(null)}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  )
 
   return (
     <PageLayout
       title="Blood Type Analytics"
       subtitle="Detailed insights by blood group"
       breadcrumb={['Forecasting', 'Blood Type Analytics']}
+      actions={analyticsActions}
     >
-      {/* Filters */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="relative">
-          <label className="block text-xs text-gray-500 mb-1">Select Blood Type</label>
-          <button
-            onClick={() => setOpenDropdown(openDropdown === 'bloodType' ? null : 'bloodType')}
-            className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:bg-gray-50 min-w-32"
-          >
-            <IonIcon icon={waterOutline} style={{ fontSize: '1rem', color: '#C20000' }} />
-            <span className="font-medium">{selectedType}</span>
-            <ChevronDown className="w-4 h-4 text-gray-400 ml-auto" />
-          </button>
-          {openDropdown === 'bloodType' && (
-            <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-32">
-              {BLOOD_TYPES.map(t => (
-                <button
-                  key={t}
-                  onClick={() => { setSelectedType(t); setOpenDropdown(null) }}
-                  className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${selectedType === t ? 'text-primary font-medium' : 'text-gray-700'}`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="relative">
-          <label className="block text-xs text-gray-500 mb-1">Hospital</label>
-          <button
-            onClick={() => setOpenDropdown(openDropdown === 'hospital' ? null : 'hospital')}
-            className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:bg-gray-50 min-w-36"
-          >
-            <span>{hospital}</span>
-            <ChevronDown className="w-4 h-4 text-gray-400 ml-auto" />
-          </button>
-          {openDropdown === 'hospital' && (
-            <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-36">
-              {HOSPITAL_OPTIONS.map(h => (
-                <button
-                  key={h}
-                  onClick={() => { setHospital(h); setOpenDropdown(null) }}
-                  className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${hospital === h ? 'text-primary font-medium' : 'text-gray-700'}`}
-                >
-                  {h}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="relative">
-          <label className="block text-xs text-gray-500 mb-1">Time Range</label>
-          <button
-            onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
-            className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:bg-gray-50"
-          >
-            <Calendar className="w-4 h-4 text-gray-500" />
-            <span>{formatDateRange(dateStart, dateEnd)}</span>
-            <ChevronDown className="w-4 h-4 text-gray-400 ml-auto" />
-          </button>
-          {openDropdown === 'date' && (
-            <div className="absolute left-0 top-full mt-1 z-20">
-              <DateRangePicker
-                start={dateStart}
-                end={dateEnd}
-                onChange={(s, e) => { setDateStart(s); setDateEnd(e) }}
-                onClose={() => setOpenDropdown(null)}
-              />
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Blood type pill selector */}
-      <div className="flex flex-wrap gap-2 mb-5">
-        {BLOOD_TYPES.map(t => (
-          <button
-            key={t}
-            onClick={() => setSelectedType(t)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium border transition-all ${
-              selectedType === t
-                ? 'bg-primary text-white border-primary'
-                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
         {/* Forecast chart */}
         <div className="card p-4 lg:col-span-2">
