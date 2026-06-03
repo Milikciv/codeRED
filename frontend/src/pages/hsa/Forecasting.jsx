@@ -80,13 +80,15 @@ export default function Forecasting() {
   const fetchData = () => {
     setError(false)
     setLoading(true)
-    api.get('/forecast')
+    api.get('/forecast', {
+      params: bloodType === 'All Blood Types' ? {} : { bloodType },
+    })
       .then(r => setData(r.data))
       .catch(() => setError(true))
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData() }, [bloodType])
 
   const forecastingActions = (
     <div className="flex items-center gap-2">
@@ -190,7 +192,9 @@ export default function Forecasting() {
         {/* Main forecast chart */}
         <div className="card p-4 lg:col-span-2">
           <div className="flex items-center gap-2 mb-3">
-            <h3 className="font-semibold text-sm text-gray-800">Overall Blood Demand Forecast</h3>
+            <h3 className="font-semibold text-sm text-gray-800">
+              {bloodType === 'All Blood Types' ? 'Overall Blood Demand Forecast' : `${bloodType} Blood Demand Forecast`}
+            </h3>
             <IonIcon icon={informationCircleOutline} style={{ fontSize: '0.875rem', color: '#9ca3af' }} />
           </div>
           <div className="flex items-center gap-4 mb-3 text-xs text-gray-500">

@@ -40,17 +40,19 @@ public class ForecastService {
     private static final DateTimeFormatter FULL_DATE =
             DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH);
 
-    public Map<String, Object> buildForecast() {
+    public Map<String, Object> buildForecast(String bloodTypeFilter) {
         LocalDate today = LocalDate.now();
+        String selectedBloodType = normalizeBloodType(bloodTypeFilter);
 
         // 1. Current supply per blood type (summed across all hospitals)
         Map<String, int[]> stockByType = getStockByType();           // type -> [current, ideal]
         List<Map<String, Object>> byBloodType = buildByBloodType(stockByType);
-        int totalCurrentSupply = stockByType.values().stream().mapToInt(a -> a[0]).sum();
-        int totalIdeal = stockByType.values().stream().mapToInt(a -> a[1]).sum();
+        int[] selectedStock = stockFor(stockByType, selectedBloodType);
+        int totalCurrentSupply = selectedStock[0];
+        int totalIdeal = selectedStock[1];
 
         // 2. Historical daily demand from real requests
-        Map<LocalDate, Integer> demandHistory = getDailyDemand(today);
+        Map<LocalDate, Integer> demandHistory = getDailyDemand(today, selectedBloodType);
 
         // 3. Fit a simple trend model + build the chart series
         double[] fit = linearFit(today, demandHistory);              // [slope, intercept, residualStd]
@@ -60,7 +62,6 @@ public class ForecastService {
         int safetyBuffer = (int) Math.round(totalIdeal * 0.25);      // treat <25% of ideal as risk
         int predictedPeakDemand = 0;
         LocalDate peakDate = today.plusDays(1);
-        int cumulativeDemand = 0;
         int runningBalance = totalCurrentSupply;
         List<LocalDate> riskDays = new ArrayList<>();
         for (int i = 1; i <= FORECAST_DAYS; i++) {
@@ -70,11 +71,10 @@ public class ForecastService {
                 predictedPeakDemand = forecast;
                 peakDate = d;
             }
-            cumulativeDemand += forecast;
             runningBalance -= forecast;
             if (runningBalance < safetyBuffer) riskDays.add(d);
         }
-        int expectedShortfall = Math.max(0, cumulativeDemand - totalCurrentSupply);
+        int expectedShortfall = Math.max(0, safetyBuffer - runningBalance);
         int forecastAccuracy = computeAccuracy(today, demandHistory, fit);
 
         String highRiskPeriod;
@@ -90,9 +90,17 @@ public class ForecastService {
 
         // 5. Demand drivers (date-based heuristics) and 6. early warning
         List<Map<String, Object>> demandDrivers = buildDemandDrivers(today);
-        Map<String, Object> earlyWarning = buildEarlyWarning(byBloodType, forecastAccuracy);
+        Map<String, Object> earlyWarning = buildEarlyWarning(
+                byBloodType,
+                selectedBloodType,
+                expectedShortfall,
+                highRiskPeriod,
+                highRiskDays,
+                forecastAccuracy
+        );
 
         Map<String, Object> result = new LinkedHashMap<>();
+        result.put("selectedBloodType", selectedBloodType == null ? "All Blood Types" : selectedBloodType);
         result.put("predictedPeakDemand", predictedPeakDemand);
         result.put("peakDate", peakDate.format(FULL_DATE));
         result.put("highRiskPeriod", highRiskPeriod);
@@ -120,7 +128,17 @@ public class ForecastService {
         return map;
     }
 
-    private Map<LocalDate, Integer> getDailyDemand(LocalDate today) {
+    private int[] stockFor(Map<String, int[]> stockByType, String selectedBloodType) {
+        if (selectedBloodType != null) {
+            int[] stock = stockByType.getOrDefault(selectedBloodType, new int[2]);
+            return new int[]{stock[0], stock[1]};
+        }
+        int current = stockByType.values().stream().mapToInt(a -> a[0]).sum();
+        int ideal = stockByType.values().stream().mapToInt(a -> a[1]).sum();
+        return new int[]{current, ideal};
+    }
+
+    private Map<LocalDate, Integer> getDailyDemand(LocalDate today, String selectedBloodType) {
         Map<LocalDate, Integer> demand = new HashMap<>();
         LocalDate cutoff = today.minusDays(HISTORY_DAYS - 1);
         for (BloodRequest req : bloodRequestRepository.findAll()) {
@@ -128,20 +146,23 @@ public class ForecastService {
             if (ts == null) continue;
             LocalDate day = ts.toLocalDate();
             if (day.isBefore(cutoff) || day.isAfter(today)) continue;
-            demand.merge(day, unitsOf(req), Integer::sum);
+            int units = unitsOf(req, selectedBloodType);
+            if (units > 0) demand.merge(day, units, Integer::sum);
         }
         return demand;
     }
 
-    private int unitsOf(BloodRequest req) {
+    private int unitsOf(BloodRequest req, String selectedBloodType) {
         List<RequestBloodItem> items = req.getBloodItems();
         if (items != null && !items.isEmpty()) {
             int sum = 0;
             for (RequestBloodItem item : items) {
+                if (!matchesBloodType(item.getBloodType(), selectedBloodType)) continue;
                 sum += item.getUnits() == null ? 0 : item.getUnits();
             }
             return sum;
         }
+        if (!matchesBloodType(req.getBloodType(), selectedBloodType)) return 0;
         return req.getUnitsRequested() == null ? 0 : req.getUnitsRequested();
     }
 
@@ -300,32 +321,59 @@ public class ForecastService {
 
     // ---------- early warning ----------
 
-    private Map<String, Object> buildEarlyWarning(List<Map<String, Object>> byBloodType, int confidence) {
-        Map<String, Object> worst = null;
-        int worstPct = Integer.MAX_VALUE;
-        for (Map<String, Object> row : byBloodType) {
-            Integer pct = (Integer) row.get("supplyPct");
-            if ("High Risk".equals(row.get("status")) && pct < worstPct) {
-                worstPct = pct;
-                worst = row;
-            }
-        }
+    private Map<String, Object> buildEarlyWarning(List<Map<String, Object>> byBloodType,
+                                                  String selectedBloodType,
+                                                  int expectedShortfall,
+                                                  String highRiskPeriod,
+                                                  int highRiskDays,
+                                                  int confidence) {
         Map<String, Object> warning = new LinkedHashMap<>();
-        if (worst == null) {
-            warning.put("message", "Supply levels are stable across all blood types");
+        if (expectedShortfall <= 0 || highRiskDays == 0) {
+            warning.put("message", selectedBloodType == null
+                    ? "Projected national supply remains above the safety buffer"
+                    : "Projected " + selectedBloodType + " supply remains above the safety buffer");
             warning.put("confidence", confidence);
             warning.put("recommendation", "Continue routine monitoring and scheduled donor outreach");
         } else {
-            String type = (String) worst.get("bloodType");
-            warning.put("message", "Possible shortage of " + type + " blood within 3 days");
+            String scope = selectedBloodType == null ? "overall blood supply" : selectedBloodType + " blood";
+            String focusType = selectedBloodType == null ? lowestSupplyType(byBloodType) : selectedBloodType;
+            warning.put("message", "Projected shortage of " + scope + " during " + highRiskPeriod);
             warning.put("confidence", confidence);
-            warning.put("recommendation", "Allocate 20-30 units of " + type
-                    + " to high-need hospitals and notify eligible donors");
+            warning.put("recommendation", "Close a projected shortfall of " + expectedShortfall
+                    + " units; prioritise " + focusType + " stock review and eligible donor outreach");
         }
         return warning;
     }
 
     // ---------- helpers ----------
+
+    public Map<String, Object> buildForecast() {
+        return buildForecast(null);
+    }
+
+    private String normalizeBloodType(String bloodType) {
+        if (bloodType == null) return null;
+        String value = bloodType.trim().toUpperCase(Locale.ROOT);
+        if (value.isEmpty() || "ALL".equals(value) || "ALL BLOOD TYPES".equals(value)) return null;
+        return CANONICAL_ORDER.contains(value) ? value : null;
+    }
+
+    private boolean matchesBloodType(BloodType actual, String selectedBloodType) {
+        return selectedBloodType == null || (actual != null && selectedBloodType.equals(displayName(actual)));
+    }
+
+    private String lowestSupplyType(List<Map<String, Object>> byBloodType) {
+        String type = "the lowest-stock blood type";
+        int lowestPct = Integer.MAX_VALUE;
+        for (Map<String, Object> row : byBloodType) {
+            Integer pct = (Integer) row.get("supplyPct");
+            if (pct != null && pct < lowestPct) {
+                lowestPct = pct;
+                type = (String) row.get("bloodType");
+            }
+        }
+        return type;
+    }
 
     private String displayName(BloodType bt) {
         String n = bt.name().toUpperCase(Locale.ROOT);

@@ -17,7 +17,7 @@ public class ForecastController {
     }
 
     @GetMapping
-    public ResponseEntity<Map<String, Object>> getForecast() {
-        return ResponseEntity.ok(forecastService.buildForecast());
+    public ResponseEntity<Map<String, Object>> getForecast(@RequestParam(required = false) String bloodType) {
+        return ResponseEntity.ok(forecastService.buildForecast(bloodType));
     }
 }
