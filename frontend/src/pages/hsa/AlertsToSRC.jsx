@@ -112,13 +112,8 @@ function getStatusBadge(status) {
   return 'text-gray-600 bg-gray-100'
 }
 
-function getTabActiveClass(t) {
-  if (t === 'All')      return 'bg-gray-600 text-white'
-  if (t === 'Draft')    return 'bg-red-500 text-white'
-  if (t === 'Ready')    return 'bg-blue-500 text-white'
-  if (t === 'Sent')     return 'bg-green-600 text-white'
-  if (t === 'Resolved') return 'bg-gray-500 text-white'
-  return 'bg-gray-600 text-white'
+function getTabActiveClass() {
+  return 'bg-primary text-white'
 }
 
 const TOTAL_INVENTORY = MOCK_INVENTORY.reduce((a, b) => a + b.units, 0)
@@ -151,15 +146,15 @@ export default function AlertsToSRC() {
       title="Alerts"
       subtitle="Review shortage alerts generated from demand forecasting and send them to Singapore Red Cross for action."
     >
-      <div className="flex gap-4 h-full">
+      <div className="flex flex-col lg:flex-row gap-4 h-full">
 
         {/* ── Left panel ── */}
-        <div className="w-72 flex-shrink-0">
+        <div className="w-full lg:w-72 lg:flex-shrink-0">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-semibold text-sm text-gray-800">Alerts</h3>
             <div className="flex gap-1">
-              <button className="p-1 text-gray-400 hover:text-gray-600"><Filter className="w-4 h-4" /></button>
-              <button className="p-1 text-gray-400 hover:text-gray-600"><List className="w-4 h-4" /></button>
+              <button aria-label="Filter alerts" className="p-1 text-gray-400 hover:text-gray-600 transition-colors"><Filter className="w-4 h-4" /></button>
+              <button aria-label="List view" className="p-1 text-gray-400 hover:text-gray-600 transition-colors"><List className="w-4 h-4" /></button>
             </div>
           </div>
 
@@ -170,7 +165,7 @@ export default function AlertsToSRC() {
                 key={t}
                 onClick={() => setTab(t)}
                 className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
-                  tab === t ? getTabActiveClass(t) : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                  tab === t ? getTabActiveClass() : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
                 }`}
               >
                 {t}
@@ -187,10 +182,10 @@ export default function AlertsToSRC() {
               </div>
             ) : (
               filteredAlerts.map(alert => (
-                <div
+                <button
                   key={alert.id}
                   onClick={() => setSelectedId(alert.id)}
-                  className={`card p-3 cursor-pointer transition-all hover:border-primary/30 ${
+                  className={`w-full text-left card p-3 cursor-pointer transition-all hover:border-primary/30 ${
                     selectedId === alert.id ? 'border-primary ring-1 ring-primary/20' : ''
                   }`}
                 >
@@ -209,8 +204,8 @@ export default function AlertsToSRC() {
                       <div className="text-xs text-gray-500 mt-0.5">{alert.shortage} units shortage</div>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">{alert.windowStart} – {alert.windowEnd}</p>
-                </div>
+                  <p className="text-xs text-gray-500 mt-1">{alert.windowStart} – {alert.windowEnd}</p>
+                </button>
               ))
             )}
           </div>
@@ -225,7 +220,7 @@ export default function AlertsToSRC() {
               <h4 className="text-xs font-semibold text-gray-700">HSA Blood Services — National Inventory</h4>
               <span className="text-xs text-gray-500">Total: {TOTAL_INVENTORY.toLocaleString()} units</span>
             </div>
-            <div className="grid grid-cols-8 gap-2">
+            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
               {MOCK_INVENTORY.map(({ type, units, pct }) => {
                 const highlighted = selectedAlert?.bloodType === type
                 return (
@@ -340,7 +335,7 @@ export default function AlertsToSRC() {
               {/* Alert summary card */}
               <div className="card p-4 bg-gray-50">
                 <h4 className="text-xs font-semibold text-gray-700 mb-3">Alert Summary</h4>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {[
                     ['Blood Type',          selectedAlert.bloodType],
                     ['Severity',            selectedAlert.severity],

@@ -83,7 +83,7 @@ export default function BloodTypeAnalytics() {
             onClick={() => setOpenDropdown(openDropdown === 'bloodType' ? null : 'bloodType')}
             className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:bg-gray-50 min-w-32"
           >
-            <IonIcon icon={waterOutline} style={{ fontSize: '1rem', color: '#C41230' }} />
+            <IonIcon icon={waterOutline} style={{ fontSize: '1rem', color: '#C20000' }} />
             <span className="font-medium">{selectedType}</span>
             <ChevronDown className="w-4 h-4 text-gray-400 ml-auto" />
           </button>
@@ -148,7 +148,7 @@ export default function BloodTypeAnalytics() {
       </div>
 
       {/* Blood type pill selector */}
-      <div className="flex gap-2 mb-5">
+      <div className="flex flex-wrap gap-2 mb-5">
         {BLOOD_TYPES.map(t => (
           <button
             key={t}
@@ -164,9 +164,9 @@ export default function BloodTypeAnalytics() {
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
         {/* Forecast chart */}
-        <div className="card p-4 col-span-2">
+        <div className="card p-4 lg:col-span-2">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm text-gray-800">Forecast Trend for {selectedType} Blood</h3>
             <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
@@ -218,7 +218,7 @@ export default function BloodTypeAnalytics() {
             {CRITICAL_TYPES.map((ct, i) => (
               <div key={i}>
                 <div className="flex items-center gap-2 mb-1.5">
-                  <IonIcon icon={waterOutline} style={{ fontSize: '1.25rem', color: '#C41230' }} />
+                  <IonIcon icon={waterOutline} style={{ fontSize: '1.25rem', color: '#C20000' }} />
                   <div>
                     <div className="text-base font-bold text-gray-900">{ct.type}</div>
                     <div className="text-xs font-semibold" style={{ color: ct.color }}>{ct.label}</div>
@@ -234,7 +234,7 @@ export default function BloodTypeAnalytics() {
       </div>
 
       {/* Bottom tables */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Inventory status */}
         <div className="card p-4">
           <h3 className="font-semibold text-sm text-gray-800 mb-3">Inventory Status By Blood Type</h3>

@@ -317,7 +317,7 @@ export default function UserManagement() {
         />
       )}
 
-      <div className="grid grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         {[
           ['Total Users', stats.total, 'text-gray-900'],
           ['Admins', stats.admins, 'text-gray-900'],
@@ -331,8 +331,8 @@ export default function UserManagement() {
         ))}
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex flex-wrap items-center gap-3 justify-between">
+      <div className="card overflow-hidden overflow-x-auto">
+        <div className="p-4 border-b border-gray-100 flex flex-wrap items-center gap-3 justify-between min-w-[320px]">
           <div className="flex items-center gap-2 flex-1 min-w-[260px]">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -361,7 +361,7 @@ export default function UserManagement() {
           </button>
         </div>
 
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[600px]">
           <thead>
             <tr className="bg-gray-50 text-gray-500 border-b border-gray-100">
               <th className="text-left px-4 py-3 font-medium text-xs">Name</th>

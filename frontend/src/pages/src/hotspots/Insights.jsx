@@ -138,7 +138,7 @@ export default function HotspotInsights() {
                 </p>
 
                 {/* Stats grid */}
-                <div className="grid grid-cols-3 gap-4 mb-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-3">
                   <div>
                     <div className="text-xs text-gray-500">Potential Donors</div>
                     <div className={`text-xl font-black ${ins.ageColor}`}>{ins.potentialDonors}</div>

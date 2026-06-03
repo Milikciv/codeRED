@@ -53,7 +53,7 @@ export default function AlertsFromHSA() {
       />
 
       {/* Slide-in drawer */}
-      <div className={`fixed top-0 right-0 h-full w-[420px] bg-white shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out ${selected ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`fixed top-0 right-0 h-full w-full sm:w-[420px] bg-white shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out ${selected ? 'translate-x-0' : 'translate-x-full'}`}>
         {selected && (() => {
           const cfg = SEVERITY_CONFIG[selected.severity] ?? SEVERITY_CONFIG.Medium
           return (
@@ -62,7 +62,7 @@ export default function AlertsFromHSA() {
                 <h3 className="font-semibold text-gray-800">Alert Details</h3>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-mono text-primary">{selected.id}</span>
-                  <button onClick={() => setSelected(null)}>
+                  <button onClick={() => setSelected(null)} aria-label="Close alert details">
                     <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
                   </button>
                 </div>
@@ -124,8 +124,8 @@ export default function AlertsFromHSA() {
       </div>
 
       {/* Alert table */}
-      <div className="card overflow-hidden">
-        <table className="w-full text-xs">
+      <div className="card overflow-hidden overflow-x-auto">
+        <table className="w-full text-xs min-w-[700px]">
           <thead>
             <tr className="bg-gray-50 text-gray-500 border-b border-gray-100">
               <th className="text-left px-4 py-3 font-medium">Alert ID</th>

@@ -93,7 +93,7 @@ function DriveDetailDrawer({ drive, onClose, navigate, initialEditing = false })
   return (
     <>
       <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
-      <div className="fixed right-0 top-0 h-full w-[440px] bg-white z-50 shadow-2xl flex flex-col overflow-hidden">
+      <div className="fixed right-0 top-0 h-full w-full sm:w-[440px] bg-white z-50 shadow-2xl flex flex-col overflow-hidden">
 
         {/* Header */}
         <div className="flex items-start justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
@@ -402,12 +402,12 @@ export default function DonationDrives() {
             {upcomingItems.map((drive) => (
               <div
                 key={drive.id}
-                className="card p-4 flex items-center gap-4 cursor-pointer hover:shadow-md transition-shadow"
+                className="card p-4 flex flex-col sm:flex-row sm:items-center gap-4 cursor-pointer hover:shadow-md transition-shadow"
                 onClick={() => openDriveDrawer(drive)}
               >
                 <DriveImage location={drive.location} />
 
-                <div className="min-w-0 w-44">
+                <div className="min-w-0 sm:w-44">
                   <div className="font-semibold text-sm text-gray-900 truncate">{drive.location}</div>
                   <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
                     <MapPin className="w-3 h-3 flex-shrink-0" />
@@ -415,9 +415,9 @@ export default function DonationDrives() {
                   </div>
                 </div>
 
-                <div className="h-10 w-px bg-gray-100 flex-shrink-0" />
+                <div className="hidden sm:block h-10 w-px bg-gray-100 flex-shrink-0" />
 
-                <div className="grid grid-cols-4 gap-3 flex-1 min-w-0">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-1 min-w-0">
                   <div className="min-w-0">
                     <div className="text-[10px] text-gray-400 font-medium mb-1 whitespace-nowrap">Blood Type</div>
                     <BloodTypePip type={drive.bloodType} />
@@ -446,7 +446,7 @@ export default function DonationDrives() {
                   </div>
                 </div>
 
-                <div className="h-10 w-px bg-gray-100 flex-shrink-0" />
+                <div className="hidden sm:block h-10 w-px bg-gray-100 flex-shrink-0" />
 
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <div>
@@ -498,8 +498,8 @@ export default function DonationDrives() {
 
       {tab === 'history' && (
         <div>
-          <div className="card overflow-hidden">
-            <table className="w-full text-xs">
+          <div className="card overflow-x-auto">
+            <table className="w-full text-xs min-w-[700px]">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
                   {['Location', 'Date', 'Target Blood Type', 'Actual Turnout', 'Units Collected', 'Conversion Rate', 'Linked Alert', 'Actions'].map(h => (

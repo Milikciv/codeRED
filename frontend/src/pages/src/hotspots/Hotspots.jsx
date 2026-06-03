@@ -58,7 +58,7 @@ export default function Hotspots() {
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         <div className="card p-4 flex items-center gap-3">
           <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center"><IonIcon icon={peopleOutline} style={{ fontSize: '1.5rem', color: '#f97316' }} /></div>
           <div>
@@ -84,7 +84,7 @@ export default function Hotspots() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         {/* Map */}
         <div className="card p-4">
           <div className="flex items-center justify-between mb-2">
