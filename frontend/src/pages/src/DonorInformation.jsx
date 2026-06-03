@@ -125,14 +125,14 @@ export default function DonorInformation() {
       </div>
 
       {/* Charts row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-5 items-stretch">
         {/* Donors by Blood Type — donut */}
-        <div className="card p-4">
+        <div className="card p-4 flex flex-col">
           <h3 className="font-semibold text-sm text-gray-800 mb-3">Donors by Blood Type</h3>
           <div className="flex items-center gap-2">
             <div className="relative flex-shrink-0">
-              <PieChart width={120} height={120}>
-                <Pie data={byBloodType} dataKey="count" cx={55} cy={55} innerRadius={32} outerRadius={55} startAngle={90} endAngle={-270}>
+              <PieChart width={140} height={140}>
+                <Pie data={byBloodType} dataKey="count" cx={65} cy={65} innerRadius={36} outerRadius={62} startAngle={90} endAngle={-270}>
                   {byBloodType.map((d, i) => <Cell key={i} fill={getBloodTypeColor(d.type)} />)}
                 </Pie>
               </PieChart>
@@ -141,7 +141,7 @@ export default function DonorInformation() {
                 <div className="text-xs font-bold text-gray-800">{(summary.activeDonors ?? 0).toLocaleString()}</div>
               </div>
             </div>
-            <div className="space-y-1 text-xs flex-1">
+            <div className="space-y-1.5 text-xs flex-1">
               {byBloodType.map(d => (
                 <div key={d.type} className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: getBloodTypeColor(d.type) }} />
@@ -152,24 +152,26 @@ export default function DonorInformation() {
               ))}
             </div>
           </div>
-          <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
+          <p className="text-[10px] text-gray-400 mt-3 flex items-center gap-1">
             <Info className="w-3 h-3" /> O+ donors form the largest group in the donor pool.
           </p>
         </div>
 
         {/* Donors by Age Group — bar */}
-        <div className="card p-4">
+        <div className="card p-4 flex flex-col">
           <h3 className="font-semibold text-sm text-gray-800 mb-3">Donors by Age Group</h3>
-          <ResponsiveContainer width="100%" height={150}>
-            <BarChart data={byAge} margin={{ top: 14, right: 4, left: -28, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-              <XAxis dataKey="group" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
-              <Tooltip contentStyle={{ fontSize: 11 }} formatter={(v) => [v.toLocaleString(), 'Donors']} />
-              <Bar dataKey="count" fill="#FECACA" radius={[3, 3, 0, 0]} label={<CustomBarLabel />} />
-            </BarChart>
-          </ResponsiveContainer>
-          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+          <div className="flex-1 min-h-0">
+            <ResponsiveContainer width="100%" height="100%" minHeight={180}>
+              <BarChart data={byAge} margin={{ top: 14, right: 4, left: -28, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                <XAxis dataKey="group" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={{ fontSize: 11 }} formatter={(v) => [v.toLocaleString(), 'Donors']} />
+                <Bar dataKey="count" fill="#FECACA" radius={[3, 3, 0, 0]} label={<CustomBarLabel />} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5">
             {byAge.map(d => (
               <span key={d.group} className="text-[9px] text-gray-400">{d.group}: {d.pct}%</span>
             ))}

@@ -68,7 +68,7 @@ export default function PageBanner({ title, subtitle, breadcrumb, isHome, action
 
       {/* Page-level actions — bottom right of banner */}
       {actions && (
-        <div className="absolute bottom-4 right-5 z-10">
+        <div className="absolute bottom-4 left-5 z-10">
           {actions}
         </div>
       )}

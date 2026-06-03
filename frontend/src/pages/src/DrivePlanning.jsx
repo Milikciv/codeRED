@@ -1,5 +1,6 @@
 import 'leaflet/dist/leaflet.css'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout'
 import LoadingScreen from '../../components/common/LoadingScreen'
@@ -190,6 +191,7 @@ export default function DrivePlanning() {
   const [recommendedDrive, setRecommendedDrive] = useState(null)
   const [selectedAlertId, setSelectedAlertId]   = useState(null)
   const [showAlertDropdown, setShowAlertDropdown] = useState(false)
+  const alertBtnRef = useRef(null)
   const [selectedHotspot, setSelectedHotspot]   = useState(null)
   const [modal, setModal] = useState(null) // 'why' | 'score' | 'alt'
   const [loading, setLoading] = useState(true)
@@ -233,30 +235,39 @@ export default function DrivePlanning() {
   const selectedAlert = alerts.find(a => a.id === selectedAlertId) ?? alerts[0]
   const drive = recommendedDrive
 
+  const alertBtnRect = alertBtnRef.current?.getBoundingClientRect()
   const changeAlertButton = (
-    <div className="relative">
+    <div>
       <button
+        ref={alertBtnRef}
         onClick={() => setShowAlertDropdown(!showAlertDropdown)}
         className="flex items-center gap-1.5 px-3 py-1.5 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
       >
         Change Alert <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAlertDropdown ? 'rotate-180' : ''}`} />
       </button>
-      {showAlertDropdown && (
-        <div className="absolute right-0 mt-1.5 w-64 bg-white border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden">
-          {alerts.map(a => (
-            <button
-              key={a.id}
-              onClick={() => { setSelectedAlertId(a.id); setShowAlertDropdown(false) }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-xs hover:bg-gray-50 ${a.id === selectedAlertId ? 'bg-primary/5' : ''}`}
-            >
-              <Droplets className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-              <div>
-                <div className="font-semibold text-gray-800">{a.id}</div>
-                <div className="text-gray-500">{a.bloodType} · {a.severity}</div>
-              </div>
-            </button>
-          ))}
-        </div>
+      {showAlertDropdown && alertBtnRect && createPortal(
+        <>
+          <div className="fixed inset-0 z-[90]" onClick={() => setShowAlertDropdown(false)} />
+          <div
+            className="fixed w-64 bg-white border border-gray-200 rounded-xl shadow-xl z-[100] overflow-hidden"
+            style={{ top: alertBtnRect.bottom + 6, left: alertBtnRect.right - 256 }}
+          >
+            {alerts.map(a => (
+              <button
+                key={a.id}
+                onClick={() => { setSelectedAlertId(a.id); setShowAlertDropdown(false) }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-xs hover:bg-gray-50 ${a.id === selectedAlertId ? 'bg-primary/5' : ''}`}
+              >
+                <Droplets className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                <div>
+                  <div className="font-semibold text-gray-800">{a.id}</div>
+                  <div className="text-gray-500">{a.bloodType} · {a.severity}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </>,
+        document.body
       )}
     </div>
   )
@@ -265,7 +276,6 @@ export default function DrivePlanning() {
     <PageLayout
       title="Drive Planning"
       subtitle="Find the best locations and plan your next blood donation drive."
-      actions={changeAlertButton}
     >
       {/* Alert context bar */}
       {selectedAlert && (
@@ -292,6 +302,9 @@ export default function DrivePlanning() {
           <div className="flex items-center gap-1.5 text-xs">
             <span className="text-gray-400">Shortage Window</span>
             <span className="font-bold text-gray-900">{selectedAlert.shortageWindow}</span>
+          </div>
+          <div className="ml-auto flex-shrink-0">
+            {changeAlertButton}
           </div>
         </div>
       )}

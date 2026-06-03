@@ -45,7 +45,7 @@ export default function Sidebar({ open = true, onToggle }) {
     <aside
       className={`
         fixed inset-y-0 left-0 z-40 h-full
-        lg:sticky lg:top-0 lg:z-auto lg:h-screen
+        lg:relative lg:inset-auto lg:z-auto lg:h-full
         bg-white border-r border-gray-100 flex flex-col flex-shrink-0 overflow-hidden transition-all duration-200
         ${open
           ? 'w-52 translate-x-0'
