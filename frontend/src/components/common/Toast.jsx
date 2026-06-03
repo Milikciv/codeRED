@@ -17,7 +17,7 @@ export default function Toast({ type = 'success', title, message, onClose, durat
   }, [onClose, duration])
 
   return (
-    <div className={`fixed top-5 right-5 z-50 border shadow-lg rounded-xl p-4 flex items-start gap-3 max-w-sm toast-enter ${s.bg}`}>
+    <div className={`fixed top-5 right-5 z-[80] border shadow-lg rounded-xl p-4 flex items-start gap-3 max-w-sm toast-enter ${s.bg}`}>
       <div className="flex-shrink-0 mt-0.5">{s.icon}</div>
       <div className="flex-1">
         <div className={`font-semibold text-sm ${s.title}`}>{title}</div>
