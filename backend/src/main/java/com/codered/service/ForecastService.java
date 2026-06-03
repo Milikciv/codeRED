@@ -1,13 +1,5 @@
 package com.codered.service;
 
-import com.codered.model.BloodRequest;
-import com.codered.model.BloodStock;
-import com.codered.model.RequestBloodItem;
-import com.codered.model.enums.BloodType;
-import com.codered.repository.BloodRequestRepository;
-import com.codered.repository.BloodStockRepository;
-import org.springframework.stereotype.Service;
-
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -18,48 +10,59 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TreeMap;
+
+import org.springframework.stereotype.Service;
+
+import com.codered.model.BloodRequest;
+import com.codered.model.BloodStock;
+import com.codered.model.BloodStockHistory;
+import com.codered.model.RequestBloodItem;
+import com.codered.model.enums.BloodType;
+import com.codered.repository.BloodRequestRepository;
+import com.codered.repository.BloodStockHistoryRepository;
+import com.codered.repository.BloodStockRepository;
 
 @Service
 public class ForecastService {
 
     private final BloodStockRepository bloodStockRepository;
     private final BloodRequestRepository bloodRequestRepository;
+    private final BloodStockHistoryRepository bloodStockHistoryRepository;
 
     public ForecastService(BloodStockRepository bloodStockRepository,
-                           BloodRequestRepository bloodRequestRepository) {
+            BloodRequestRepository bloodRequestRepository,
+            BloodStockHistoryRepository bloodStockHistoryRepository) {
         this.bloodStockRepository = bloodStockRepository;
         this.bloodRequestRepository = bloodRequestRepository;
+        this.bloodStockHistoryRepository = bloodStockHistoryRepository;
     }
 
     private static final int HISTORY_DAYS = 14;
-    private static final int FORECAST_DAYS = 7;
-    private static final List<String> CANONICAL_ORDER =
-            List.of("O+", "A+", "B+", "AB+", "O-", "A-", "B-", "AB-");
-    private static final DateTimeFormatter DAY_LABEL =
-            DateTimeFormatter.ofPattern("MMM d", Locale.ENGLISH);
-    private static final DateTimeFormatter FULL_DATE =
-            DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH);
+    private static final int FORECAST_DAYS = 14;
+    private static final List<String> CANONICAL_ORDER = List.of("O+", "A+", "B+", "AB+", "O-", "A-", "B-", "AB-");
+    private static final DateTimeFormatter DAY_LABEL = DateTimeFormatter.ofPattern("MMM d", Locale.ENGLISH);
+    private static final DateTimeFormatter FULL_DATE = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH);
 
     public Map<String, Object> buildForecast(String bloodTypeFilter) {
         LocalDate today = LocalDate.now();
         String selectedBloodType = normalizeBloodType(bloodTypeFilter);
 
         // 1. Current supply per blood type (summed across all hospitals)
-        Map<String, int[]> stockByType = getStockByType();           // type -> [current, ideal]
+        Map<String, int[]> stockByType = getStockByType(); // type -> [current, ideal]
         List<Map<String, Object>> byBloodType = buildByBloodType(stockByType);
         int[] selectedStock = stockFor(stockByType, selectedBloodType);
         int totalCurrentSupply = selectedStock[0];
         int totalIdeal = selectedStock[1];
 
         // 2. Historical daily demand from real requests
-        Map<LocalDate, Integer> demandHistory = getDailyDemand(today, selectedBloodType);
-
+        Map<LocalDate, Integer> stockHistory = getHistoricalStock(today, selectedBloodType);
         // 3. Fit a simple trend model + build the chart series
-        double[] fit = linearFit(today, demandHistory);              // [slope, intercept, residualStd]
-        List<Map<String, Object>> chartData = buildChart(today, demandHistory, fit);
+        double[] fit = linearFit(today, stockHistory); // [slope, intercept, residualStd]
+        List<Map<String, Object>> chartData = buildChart(today, stockHistory, fit);
 
         // 4. Summary metrics derived from the forecast + a depletion model
-        int safetyBuffer = (int) Math.round(totalIdeal * 0.25);      // treat <25% of ideal as risk
+        int safetyBuffer = (int) Math.round(totalIdeal * 0.25); // treat <25% of ideal as risk
         int predictedPeakDemand = 0;
         LocalDate peakDate = today.plusDays(1);
         int runningBalance = totalCurrentSupply;
@@ -72,10 +75,11 @@ public class ForecastService {
                 peakDate = d;
             }
             runningBalance -= forecast;
-            if (runningBalance < safetyBuffer) riskDays.add(d);
+            if (runningBalance < safetyBuffer)
+                riskDays.add(d);
         }
         int expectedShortfall = Math.max(0, safetyBuffer - runningBalance);
-        int forecastAccuracy = computeAccuracy(today, demandHistory, fit);
+        int forecastAccuracy = computeAccuracy(today, stockHistory, fit);
 
         String highRiskPeriod;
         int highRiskDays;
@@ -96,8 +100,7 @@ public class ForecastService {
                 expectedShortfall,
                 highRiskPeriod,
                 highRiskDays,
-                forecastAccuracy
-        );
+                forecastAccuracy);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("selectedBloodType", selectedBloodType == null ? "All Blood Types" : selectedBloodType);
@@ -119,7 +122,8 @@ public class ForecastService {
     private Map<String, int[]> getStockByType() {
         Map<String, int[]> map = new HashMap<>();
         for (BloodStock s : bloodStockRepository.findAll()) {
-            if (s.getBloodType() == null) continue;
+            if (s.getBloodType() == null)
+                continue;
             String type = displayName(s.getBloodType());
             int[] agg = map.computeIfAbsent(type, k -> new int[2]);
             agg[0] += s.getCurrentUnits() == null ? 0 : s.getCurrentUnits();
@@ -131,25 +135,32 @@ public class ForecastService {
     private int[] stockFor(Map<String, int[]> stockByType, String selectedBloodType) {
         if (selectedBloodType != null) {
             int[] stock = stockByType.getOrDefault(selectedBloodType, new int[2]);
-            return new int[]{stock[0], stock[1]};
+            return new int[] { stock[0], stock[1] };
         }
         int current = stockByType.values().stream().mapToInt(a -> a[0]).sum();
         int ideal = stockByType.values().stream().mapToInt(a -> a[1]).sum();
-        return new int[]{current, ideal};
+        return new int[] { current, ideal };
     }
 
-    private Map<LocalDate, Integer> getDailyDemand(LocalDate today, String selectedBloodType) {
-        Map<LocalDate, Integer> demand = new HashMap<>();
+    // Replace getHistoricalStock entirely
+    private Map<LocalDate, Integer> getHistoricalStock(LocalDate today, String selectedBloodType) {
         LocalDate cutoff = today.minusDays(HISTORY_DAYS - 1);
-        for (BloodRequest req : bloodRequestRepository.findAll()) {
-            LocalDateTime ts = req.getRequestedAt();
-            if (ts == null) continue;
-            LocalDate day = ts.toLocalDate();
-            if (day.isBefore(cutoff) || day.isAfter(today)) continue;
-            int units = unitsOf(req, selectedBloodType);
-            if (units > 0) demand.merge(day, units, Integer::sum);
+
+        List<BloodStockHistory> history = bloodStockHistoryRepository
+                .findBySnapshotDateBetweenOrderBySnapshotDateAsc(cutoff, today);
+
+        Map<LocalDate, Integer> stockByDay = new LinkedHashMap<>();
+
+        for (BloodStockHistory h : history) {
+            if (!matchesBloodType(h.getBloodType(), selectedBloodType))
+                continue;
+            Integer units = h.getCurrentUnits();
+            if (units == null)
+                continue;
+            stockByDay.merge(h.getSnapshotDate(), units, Integer::sum); // sum across hospitals per day
         }
-        return demand;
+
+        return stockByDay;
     }
 
     private int unitsOf(BloodRequest req, String selectedBloodType) {
@@ -157,12 +168,14 @@ public class ForecastService {
         if (items != null && !items.isEmpty()) {
             int sum = 0;
             for (RequestBloodItem item : items) {
-                if (!matchesBloodType(item.getBloodType(), selectedBloodType)) continue;
+                if (!matchesBloodType(item.getBloodType(), selectedBloodType))
+                    continue;
                 sum += item.getUnits() == null ? 0 : item.getUnits();
             }
             return sum;
         }
-        if (!matchesBloodType(req.getBloodType(), selectedBloodType)) return 0;
+        if (!matchesBloodType(req.getBloodType(), selectedBloodType))
+            return 0;
         return req.getUnitsRequested() == null ? 0 : req.getUnitsRequested();
     }
 
@@ -187,36 +200,47 @@ public class ForecastService {
     }
 
     private String statusFor(int pct) {
-        if (pct >= 70) return "Good";
-        if (pct >= 40) return "Medium";
+        if (pct >= 70)
+            return "Good";
+        if (pct >= 40)
+            return "Medium";
         return "High Risk";
     }
 
     // ---------- forecasting ----------
 
-    private double[] linearFit(LocalDate today, Map<LocalDate, Integer> demand) {
-        int n = HISTORY_DAYS;
+    private double[] linearFit(LocalDate today, Map<LocalDate, Integer> stockHistory) {
+        if (stockHistory.isEmpty())
+            return new double[] { 0, 0, 30 };
+
+        LocalDate cutoff = today.minusDays(HISTORY_DAYS - 1);
+        int n = stockHistory.size();
         double sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
         double[] ys = new double[n];
-        for (int i = 0; i < n; i++) {
-            LocalDate d = today.minusDays(HISTORY_DAYS - 1 - i);
-            double y = demand.getOrDefault(d, 0);
-            ys[i] = y;
-            sumX += i;
+        int[] xs = new int[n];
+        int idx = 0;
+
+        for (Map.Entry<LocalDate, Integer> entry : stockHistory.entrySet()) {
+            int x = (int) (entry.getKey().toEpochDay() - cutoff.toEpochDay());
+            double y = entry.getValue();
+            xs[idx] = x;
+            ys[idx] = y;
+            sumX += x;
             sumY += y;
-            sumXY += i * y;
-            sumXX += (double) i * i;
+            sumXY += x * y;
+            sumXX += (double) x * x;
+            idx++;
         }
+
         double denom = n * sumXX - sumX * sumX;
         double slope = denom == 0 ? 0 : (n * sumXY - sumX * sumY) / denom;
         double intercept = (sumY - slope * sumX) / n;
         double sse = 0;
         for (int i = 0; i < n; i++) {
-            double pred = slope * i + intercept;
+            double pred = slope * xs[i] + intercept;
             sse += Math.pow(ys[i] - pred, 2);
         }
-        double std = Math.sqrt(sse / n);
-        return new double[]{slope, intercept, std};
+        return new double[] { slope, intercept, Math.sqrt(sse / n) };
     }
 
     private int forecastValue(double[] fit, int x) {
@@ -224,16 +248,20 @@ public class ForecastService {
     }
 
     private List<Map<String, Object>> buildChart(LocalDate today,
-                                                 Map<LocalDate, Integer> demand,
-                                                 double[] fit) {
+            Map<LocalDate, Integer> stockHistory,
+            double[] fit) {
         List<Map<String, Object>> chart = new ArrayList<>();
-        double band = Math.max(fit[2] * 1.5, 30);   // confidence half-width, floor 30
-        for (int i = 0; i < HISTORY_DAYS; i++) {
-            LocalDate d = today.minusDays(HISTORY_DAYS - 1 - i);
-            int forecast = forecastValue(fit, i);
+        double band = Math.max(fit[2] * 1.5, 30);
+        LocalDate cutoff = today.minusDays(HISTORY_DAYS - 1);
+
+        // Historical portion — use date-derived x so fit alignment is correct
+        for (Map.Entry<LocalDate, Integer> entry : stockHistory.entrySet()) {
+            LocalDate d = entry.getKey();
+            int x = (int) (d.toEpochDay() - cutoff.toEpochDay()); // 0-based offset from window start
+            int forecast = forecastValue(fit, x);
             Map<String, Object> p = new LinkedHashMap<>();
             p.put("date", d.format(DAY_LABEL));
-            p.put("actual", demand.getOrDefault(d, 0));
+            p.put("actual", entry.getValue());
             p.put("forecast", forecast);
             p.put("upper", forecast + (int) Math.round(band));
             p.put("lower", Math.max(0, forecast - (int) Math.round(band)));
@@ -242,7 +270,7 @@ public class ForecastService {
         for (int j = 1; j <= FORECAST_DAYS; j++) {
             LocalDate d = today.plusDays(j);
             int forecast = forecastValue(fit, HISTORY_DAYS - 1 + j);
-            double futureBand = band * (1 + 0.1 * j);   // widen further out
+            double futureBand = band * (1 + 0.1 * j); // widen further out
             Map<String, Object> p = new LinkedHashMap<>();
             p.put("date", d.format(DAY_LABEL));
             p.put("forecast", forecast);
@@ -259,12 +287,14 @@ public class ForecastService {
         for (int i = 0; i < HISTORY_DAYS; i++) {
             LocalDate d = today.minusDays(HISTORY_DAYS - 1 - i);
             Integer actual = demand.get(d);
-            if (actual == null || actual == 0) continue;
+            if (actual == null || actual == 0)
+                continue;
             int pred = forecastValue(fit, i);
             totalPctErr += Math.abs(actual - pred) / (double) actual;
             count++;
         }
-        if (count == 0) return 85;   // not enough history yet
+        if (count == 0)
+            return 85; // not enough history yet
         int acc = (int) Math.round((1 - totalPctErr / count) * 100);
         return Math.max(50, Math.min(99, acc));
     }
@@ -288,7 +318,8 @@ public class ForecastService {
         int weekends = 0;
         for (int i = 1; i <= 7; i++) {
             DayOfWeek dow = today.plusDays(i).getDayOfWeek();
-            if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) weekends++;
+            if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY)
+                weekends++;
         }
         drivers.add(driver("Weekend Effect", weekends + " weekend day(s) ahead", weekends * 5));
 
@@ -304,17 +335,19 @@ public class ForecastService {
     }
 
     private int seasonalChange(int month) {
-        int[] idx = {15, 10, 8, 5, 12, 20, 22, 18, 8, 6, 12, 25}; // Jan..Dec
+        int[] idx = { 15, 10, 8, 5, 12, 20, 22, 18, 8, 6, 12, 25 }; // Jan..Dec
         return idx[month - 1];
     }
 
     private int upcomingHolidays(LocalDate today, int withinDays) {
-        int[][] fixed = {{1, 1}, {5, 1}, {8, 9}, {12, 25}}; // fixed-date SG public holidays
+        int[][] fixed = { { 1, 1 }, { 5, 1 }, { 8, 9 }, { 12, 25 } }; // fixed-date SG public holidays
         int count = 0;
         for (int[] md : fixed) {
             LocalDate h = LocalDate.of(today.getYear(), md[0], md[1]);
-            if (h.isBefore(today)) h = h.plusYears(1);
-            if (!h.isAfter(today.plusDays(withinDays))) count++;
+            if (h.isBefore(today))
+                h = h.plusYears(1);
+            if (!h.isAfter(today.plusDays(withinDays)))
+                count++;
         }
         return count;
     }
@@ -322,11 +355,11 @@ public class ForecastService {
     // ---------- early warning ----------
 
     private Map<String, Object> buildEarlyWarning(List<Map<String, Object>> byBloodType,
-                                                  String selectedBloodType,
-                                                  int expectedShortfall,
-                                                  String highRiskPeriod,
-                                                  int highRiskDays,
-                                                  int confidence) {
+            String selectedBloodType,
+            int expectedShortfall,
+            String highRiskPeriod,
+            int highRiskDays,
+            int confidence) {
         Map<String, Object> warning = new LinkedHashMap<>();
         if (expectedShortfall <= 0 || highRiskDays == 0) {
             warning.put("message", selectedBloodType == null
@@ -352,9 +385,11 @@ public class ForecastService {
     }
 
     private String normalizeBloodType(String bloodType) {
-        if (bloodType == null) return null;
+        if (bloodType == null)
+            return null;
         String value = bloodType.trim().toUpperCase(Locale.ROOT);
-        if (value.isEmpty() || "ALL".equals(value) || "ALL BLOOD TYPES".equals(value)) return null;
+        if (value.isEmpty() || "ALL".equals(value) || "ALL BLOOD TYPES".equals(value))
+            return null;
         return CANONICAL_ORDER.contains(value) ? value : null;
     }
 
