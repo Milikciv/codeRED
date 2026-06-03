@@ -1,54 +1,150 @@
 import { useState, useEffect } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import LoadingScreen from '../../components/common/LoadingScreen'
-import { PieChart, Pie, Cell } from 'recharts'
 import api from '../../api/axios'
 import {
   CalendarDays, Clock, Droplets, MapPin, ExternalLink,
-  Users, Send, ChevronDown, CheckSquare, Square,
-  RefreshCw, Sparkles, X, Check, MessageSquare, BarChart2,
-  Bookmark, Target, Star, Info,
+  Users, Send, ChevronDown, Check, Sparkles, X,
+  MessageSquare, Building2, GraduationCap, Heart, Zap, Search, Eye,
+  ChevronRight, Star, Download, RefreshCw,
 } from 'lucide-react'
 
-const STATUS_BADGE = {
-  Planned:   'bg-green-50 text-green-700 border border-green-200',
-  Confirmed: 'bg-blue-50 text-blue-700 border border-blue-200',
-  Completed: 'bg-gray-100 text-gray-500 border border-gray-200',
+// ─── Static data ──────────────────────────────────────────────────────────────
+
+const CAMPAIGN_THEMES = [
+  {
+    id: 'youth-challenge',
+    name: 'Youth Challenge',
+    description: 'Gamified donation challenge targeting first-time young donors via social media.',
+    registrations: 31,
+    responseRate: 36,
+  },
+  {
+    id: 'campus-challenge',
+    name: 'Campus Challenge',
+    description: 'University and polytechnic campus competition between student groups.',
+    registrations: 28,
+    responseRate: 32,
+  },
+  {
+    id: 'save-lives-together',
+    name: 'Save Lives Together',
+    description: 'Peer-to-peer social sharing campaign to recruit donors from friend groups.',
+    registrations: 24,
+    responseRate: 27,
+  },
+  {
+    id: 'community-challenge',
+    name: 'Community Challenge',
+    description: 'Neighbourhood-level challenge engaging residents via community apps.',
+    registrations: 20,
+    responseRate: 22,
+  },
+]
+
+const STRATEGY_COMPARISON = [
+  { id: 'push',     label: 'Push Notifications', donors: 18, color: 'text-gray-700',  bg: 'bg-gray-50',   border: 'border-gray-200' },
+  { id: 'youth',    label: 'Youth Campaigns',    donors: 31, color: 'text-amber-700', bg: 'bg-amber-50',  border: 'border-amber-200', recommended: true },
+  { id: 'collab',   label: 'Collaborations',     donors: 42, color: 'text-blue-700',  bg: 'bg-blue-50',   border: 'border-blue-200' },
+  { id: 'combined', label: 'Combined Approach',  donors: 68, color: 'text-green-700', bg: 'bg-green-50',  border: 'border-green-200', best: true },
+]
+
+const PARTNERS = {
+  Companies: [
+    { name: 'DBS Bank',           address: 'Tampines Central 1',      distance: '0.8km', reach: '4,500 employees', score: 82, tags: ['Large Company', 'Health Partner'] },
+    { name: 'Singapore Airlines', address: 'Airline House, 25 Airline Rd', distance: '1.8km', reach: '3,200 employees', score: 76, tags: ['Large Company', 'Health Partner'] },
+    { name: 'CapitaLand',         address: '168 Robinson Rd',          distance: '1.5km', reach: '2,800 employees', score: 61, tags: ['Large Company', 'Community Partner'] },
+    { name: 'ST Engineering',     address: '1 Ang Mo Kio Electronics Park', distance: '1.8km', reach: '2,100 employees', score: 70, tags: ['Large Company'] },
+  ],
+  Schools: [
+    { name: 'Temasek Polytechnic', address: '21 Tampines Ave 1',  distance: '0.8km', reach: '2,000 students', score: 92, tags: ['Polytechnic', 'Youth Partner'] },
+    { name: 'SUTD',                address: '8 Somapah Rd',       distance: '1.4km', reach: '1,800 students', score: 85, tags: ['University', 'Research Partner'] },
+    { name: 'ITE College East',    address: '10 Simei Ave',        distance: '1.1km', reach: '1,500 students', score: 78, tags: ['ITE', 'Youth Partner'] },
+    { name: 'Temasek JC',          address: '22 Bedok South Rd',  distance: '0.6km', reach: '1,200 students', score: 81, tags: ['Junior College', 'Youth Partner'] },
+  ],
+  'Community Groups': [
+    { name: 'Community Clubs',          address: 'Tampines Town Council', distance: '0.3km', reach: '3,000 members', score: 90, tags: ['Community', 'Grassroots'] },
+    { name: 'Religious Organisations',  address: 'Various Locations',     distance: '0.5km', reach: '1,500 members', score: 86, tags: ['Faith-based', 'Community'] },
+    { name: 'Grassroots Organisations', address: 'Tampines GRC',           distance: '0.4km', reach: '2,200 members', score: 88, tags: ['Grassroots', 'Community'] },
+  ],
 }
 
-function ProgressDonut({ pct }) {
-  const data = [{ value: pct }, { value: 100 - pct }]
-  return (
-    <div className="relative w-20 h-20">
-      <PieChart width={80} height={80}>
-        <Pie data={data} dataKey="value" cx={38} cy={38} innerRadius={26} outerRadius={38} startAngle={90} endAngle={-270} strokeWidth={0}>
-          <Cell fill="#EF4444" />
-          <Cell fill="#F3F4F6" />
-        </Pie>
-      </PieChart>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-base font-bold text-gray-900">{pct}%</span>
-      </div>
-    </div>
-  )
-}
+const OUTREACH_TONES = [
+  {
+    id: 'formal',
+    name: 'Formal',
+    badge: 'Professional',
+    badgeColor: 'bg-blue-100 text-blue-700',
+    getBody: (partner, ctx) =>
+      `Dear ${partner.name} ${ctx.team},\n\nSingapore Red Cross is organising a blood donation drive at Tampines Community Plaza this Saturday and would like to invite your organisation to participate.\n\nWith ${partner.reach} within ${partner.distance}, your ${ctx.noun} can make a meaningful contribution through our ${ctx.type}.\n\nWe would be grateful for your partnership in this life-saving initiative.\n\nWarm regards,\nSingapore Red Cross`,
+    getSubject: (partner) => `Blood Drive Partnership Invitation - ${partner.name}`,
+  },
+  {
+    id: 'community',
+    name: 'Community',
+    badge: 'Warm and engaging',
+    badgeColor: 'bg-green-100 text-green-700',
+    getBody: (partner, ctx) =>
+      `Hi ${partner.name} team,\n\nWe're excited to reach out! Singapore Red Cross is hosting a blood drive at Tampines Community Plaza this Saturday and we'd love to have your community involved.\n\nWith ${partner.reach} within ${partner.distance}, together we can make a real difference through our ${ctx.type}!\n\nLooking forward to hearing from you.\n\nThe SRC Team`,
+    getSubject: (_partner) => `Join Us - Blood Drive at Tampines This Saturday`,
+  },
+  {
+    id: 'urgent',
+    name: 'Urgent',
+    badge: 'High response',
+    badgeColor: 'bg-orange-100 text-orange-700',
+    getBody: (partner, ctx) =>
+      `Dear ${partner.name} ${ctx.team},\n\nUrgent: Singapore Red Cross needs your help. We are facing a critical O- blood shortage and have organised an emergency drive at Tampines Community Plaza this Saturday.\n\nWith ${partner.reach} nearby, your ${ctx.noun} can help avert a shortage that puts lives at risk. Please partner with us for this ${ctx.type}.\n\nTime is critical. Please respond by Thursday.\n\nSingapore Red Cross`,
+    getSubject: (partner) => `Urgent: Blood Drive Partnership Needed - ${partner.name}`,
+  },
+]
+
+const TABS = [
+  { id: 'ai',     label: 'AI Recommended',     icon: <Sparkles className="w-4 h-4" /> },
+  { id: 'push',   label: 'Push Notifications', icon: <MessageSquare className="w-4 h-4" /> },
+  { id: 'youth',  label: 'Youth Campaigns',    icon: <Zap className="w-4 h-4" /> },
+  { id: 'collab', label: 'Collaborations',     icon: <Building2 className="w-4 h-4" /> },
+]
+
+const AI_STEPS = [
+  'Analysing campaign theme...',
+  'Generating visual elements...',
+  'Applying brand guidelines...',
+  'Finalising campaign assets...',
+]
+
+// ─── Shared sub-components ────────────────────────────────────────────────────
 
 function SelectDropdown({ label, value, options, icon }) {
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState(value)
+  const labelId = label ? `label-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined
   return (
     <div className="relative">
-      {label && <div className="text-[10px] text-gray-400 font-medium mb-1.5">{label}</div>}
-      <button onClick={() => setOpen(!open)} className="flex items-center gap-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white hover:bg-gray-50">
+      {label && (
+        <div id={labelId} className="text-xs text-gray-500 font-medium mb-1">{label}</div>
+      )}
+      <button
+        aria-labelledby={labelId}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+      >
         {icon && <span className="text-primary flex-shrink-0">{icon}</span>}
         <span className="flex-1 text-left">{selected}</span>
-        <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+        <ChevronDown className={`w-3.5 h-3.5 text-gray-400 flex-shrink-0 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-full">
+        <div role="listbox" className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-full">
           {options.map(opt => (
-            <button key={opt} onClick={() => { setSelected(opt); setOpen(false) }}
-              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg">
+            <button
+              key={opt}
+              role="option"
+              aria-selected={opt === selected}
+              onClick={() => { setSelected(opt); setOpen(false) }}
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg transition-colors duration-100 focus-visible:outline-none focus-visible:bg-gray-50"
+            >
               {opt}
             </button>
           ))}
@@ -58,292 +154,1118 @@ function SelectDropdown({ label, value, options, icon }) {
   )
 }
 
-function CheckFilter({ label, defaultChecked }) {
-  const [checked, setChecked] = useState(defaultChecked)
-  return (
-    <button onClick={() => setChecked(!checked)} className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900">
-      {checked ? <CheckSquare className="w-4 h-4 text-primary flex-shrink-0" /> : <Square className="w-4 h-4 text-gray-300 flex-shrink-0" />}
-      {label}
-    </button>
-  )
-}
 
-function PhoneMockup({ message }) {
-  return (
-    <div className="bg-gray-900 rounded-[28px] flex-shrink-0" style={{ width: 138, padding: '20px 6px 14px' }}>
-      <div className="bg-gray-50 rounded-[20px] overflow-hidden">
-        <div className="bg-white px-2 py-2 flex items-center gap-1.5 border-b border-gray-100">
-          <div className="w-5 h-5 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-[7px] font-bold">+</span>
-          </div>
-          <span className="text-[8px] font-semibold text-gray-800 leading-tight">Singapore Red Cross</span>
-        </div>
-        <div className="p-2">
-          <div className="bg-gray-200 rounded-xl rounded-tl-sm p-2">
-            {message.split('\n').map((line, i) => (
-              <p key={i} className="text-[7.5px] text-gray-800 leading-relaxed">{line || ' '}</p>
-            ))}
-          </div>
-          <p className="text-[7px] text-gray-400 mt-1">Today, 10:00 AM</p>
-        </div>
-      </div>
-    </div>
-  )
-}
+// ─── Combined Plan Modal ──────────────────────────────────────────────────────
 
-function AIModal({ drive, onCancel, onUse }) {
-  const criteria = [
-    { label: `${drive.bloodType} Donors`,      sub: 'High need blood type for this alert' },
-    { label: 'Within 5 km',                      sub: 'Higher response from nearby donors' },
-    { label: 'Last donation > 12 weeks',         sub: 'Eligible and more likely to donate' },
-    { label: 'Previously attended drives',        sub: '2.1x more likely to respond' },
+function CombinedPlanModal({ onClose }) {
+  const [selected, setSelected] = useState({ push: true, youth: true, collab: false })
+  const strategies = [
+    { key: 'push',  label: 'Push Notifications',   donors: 18, icon: <MessageSquare className="w-4 h-4" /> },
+    { key: 'youth', label: 'Youth Campaign',        donors: 31, icon: <Zap className="w-4 h-4" /> },
+    { key: 'collab', label: 'School Collaboration', donors: 42, icon: <GraduationCap className="w-4 h-4" /> },
   ]
-  const whyRows = [
-    { icon: <Users className="w-4 h-4 text-gray-400" />,        label: 'Response rate',     value: '21%',   valueColor: 'text-gray-900', sub: '+8% vs. other audiences' },
-    { icon: <CalendarDays className="w-4 h-4 text-gray-400" />, label: 'Historical turnout', value: `${drive.expectedResponders ?? 18} donors`, valueColor: 'text-primary', sub: 'Avg. per similar drive' },
-    { icon: <MapPin className="w-4 h-4 text-gray-400" />,       label: 'Location match',    value: '5 km',  valueColor: 'text-primary', sub: `High concentration of ${drive.bloodType} donors` },
-    { icon: <Clock className="w-4 h-4 text-gray-400" />,        label: 'Availability',      value: '72%',   valueColor: 'text-gray-900', sub: 'Available this weekend' },
-  ]
-  const breakdown = [
-    { label: 'Champions', count: 12, pct: 14, color: '#EF4444' },
-    { label: 'Regular',   count: 38, pct: 44, color: '#3B82F6' },
-    { label: 'Dormant',   count: 36, pct: 42, color: '#F59E0B' },
-  ]
+  const allThree = selected.push && selected.youth && selected.collab
+  const expectedDonors = allThree ? 68 : (selected.push ? 18 : 0) + (selected.youth ? 31 : 0) + (selected.collab ? 42 : 0)
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-2xl w-[620px] mx-4 flex flex-col max-h-[90vh]">
-        <div className="flex items-start justify-between px-6 pt-6 pb-4">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            <h3 className="font-bold text-gray-900 text-lg">AI Recommendation</h3>
-          </div>
-          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 p-0.5"><X className="w-4 h-4" /></button>
-        </div>
-        <p className="text-xs text-gray-500 px-6 pb-4">
-          Our AI analysed historical data, donor behaviour and location insights to recommend the audience most likely to respond.
-        </p>
-        <div className="flex gap-4 px-6 pb-4 overflow-y-auto">
-          <div className="flex-1 flex flex-col gap-3">
-            <div className="bg-gray-50 rounded-xl p-4">
-              <div className="text-xs font-semibold text-gray-700 mb-3">Recommended Audience</div>
-              <div className="space-y-3">
-                {criteria.map(c => (
-                  <div key={c.label} className="flex items-start gap-2.5">
-                    <span className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Check className="w-3 h-3 text-white" />
-                    </span>
-                    <div>
-                      <div className="text-sm font-semibold text-gray-800">{c.label}</div>
-                      <div className="text-[11px] text-gray-400 mt-0.5">{c.sub}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-gray-50 rounded-xl p-3">
-                <div className="text-[10px] text-gray-400 mb-1">Expected turnout</div>
-                <div className="text-2xl font-bold text-gray-900">{drive.expectedResponders ?? 18}</div>
-                <div className="text-xs text-gray-400">donors</div>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-3">
-                <div className="text-[10px] text-gray-400 mb-1">Confidence</div>
-                <div className="flex items-end gap-2">
-                  <div className="text-2xl font-bold text-green-600">{drive.outreachConfidence ?? 87}%</div>
-                  <span className="mb-0.5 px-1.5 py-0.5 bg-green-50 text-green-700 text-[9px] font-semibold rounded-full border border-green-100">High</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="w-56 flex flex-col gap-3 flex-shrink-0">
-            <div>
-              <div className="text-xs font-semibold text-gray-700 mb-3">Why this audience?</div>
-              <div className="space-y-3">
-                {whyRows.map(r => (
-                  <div key={r.label} className="flex items-start gap-2.5">
-                    <span className="flex-shrink-0 mt-0.5">{r.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-xs text-gray-500">{r.label}</span>
-                        <span className={`text-xs font-bold ${r.valueColor}`}>{r.value}</span>
-                      </div>
-                      <div className="text-[10px] text-gray-400 mt-0.5">{r.sub}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs font-semibold text-gray-700 mb-3">Audience Breakdown</div>
-              <div className="flex items-center gap-3">
-                <PieChart width={80} height={80}>
-                  <Pie data={breakdown} dataKey="pct" cx={38} cy={38} innerRadius={22} outerRadius={38} startAngle={90} endAngle={-270} strokeWidth={2} stroke="#fff">
-                    {breakdown.map((d, i) => <Cell key={i} fill={d.color} />)}
-                  </Pie>
-                </PieChart>
-                <div className="space-y-1.5">
-                  {breakdown.map(d => (
-                    <div key={d.label} className="flex items-center gap-1.5 text-[10px]">
-                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: d.color }} />
-                      <span className="text-gray-600">{d.label} ({d.count})</span>
-                      <span className="font-semibold text-gray-800 ml-auto pl-2">{d.pct}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="mx-6 mb-4 flex items-start gap-2.5 bg-blue-50 rounded-xl px-4 py-3 text-[11px] text-blue-700">
-          <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-500" />
-          This recommendation is expected to collect up to {drive.expectedUnits ?? 180} units and close {drive.progressPct ?? 43}% of the forecasted shortage.
-        </div>
-        <div className="flex gap-3 px-6 py-4 border-t border-gray-100">
-          <button onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50">Cancel</button>
-          <button onClick={onUse} className="flex-1 py-2.5 text-sm font-semibold btn-primary rounded-xl">Use Recommendation</button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function MessageVariantsModal({ variants, selected, onSelect, onClose }) {
-  return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-2xl w-[680px] p-6 mx-4">
-        <div className="flex items-start justify-between mb-5">
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 modal-backdrop-enter">
+      <div className="bg-white rounded-2xl shadow-2xl w-[520px] mx-4 modal-content-enter">
+        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-gray-100">
           <div>
-            <h3 className="font-bold text-gray-900 text-base">AI Message Variants</h3>
-            <p className="text-xs text-gray-400 mt-0.5">Select message to send</p>
+            <h3 className="font-bold text-gray-900 text-base">Combined Strategy Plan</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Select strategies to combine for maximum reach</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-0.5"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 mt-0.5">
+            <X className="w-4 h-4" />
+          </button>
         </div>
-        <div className="grid grid-cols-3 gap-3 mb-5">
-          {variants.map(v => {
-            const isSelected = selected === v.id
+
+        <div className="p-6 space-y-2.5">
+          {strategies.map(s => {
+            const on = selected[s.key]
             return (
               <button
-                key={v.id}
-                onClick={() => onSelect(v)}
-                className={`text-left p-4 rounded-xl border-2 transition-colors hover:bg-red-50/30 ${
-                  isSelected ? 'border-primary bg-red-50/40' : v.recommended ? 'border-primary/40' : 'border-gray-200'
+                key={s.key}
+                onClick={() => setSelected(prev => ({ ...prev, [s.key]: !prev[s.key] }))}
+                className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200 text-left ${
+                  on ? 'border-primary bg-primary/5' : 'border-gray-100 bg-gray-50 hover:border-gray-200'
                 }`}
               >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-gray-400 font-medium">Variant {v.id}</span>
-                  {v.recommended && (
-                    <span className="flex items-center gap-0.5 text-[9px] font-semibold text-primary">
-                      <Star className="w-2.5 h-2.5 fill-primary" /> Recommended
-                    </span>
-                  )}
+                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  on ? 'bg-primary border-primary' : 'border-gray-300'
+                }`}>
+                  {on && <Check className="w-3 h-3 text-white" />}
                 </div>
-                <div className="font-bold text-sm text-gray-900 mb-2">{v.name}</div>
-                <p className="text-xs text-gray-500 leading-relaxed mb-4">{v.preview}</p>
-                <div className="text-[10px] text-gray-400 mb-0.5">Expected Response</div>
-                <div className={`text-2xl font-bold ${v.rateColor}`}>{v.responseRate}%</div>
+                <span className={`flex-shrink-0 ${on ? 'text-primary' : 'text-gray-400'}`}>{s.icon}</span>
+                <span className="flex-1 font-semibold text-sm text-gray-800">{s.label}</span>
+                <span className="text-sm text-gray-500 font-medium">{s.donors} donors</span>
               </button>
             )
           })}
+
+          <div className="mt-2 bg-gray-50 rounded-xl p-4 border border-gray-100">
+            <div className="text-xs font-semibold text-gray-500 mb-3">Combined Results</div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <div className="text-3xl font-bold text-gray-900">{expectedDonors}</div>
+                <div className="text-xs text-gray-400 mt-0.5">Expected Donors</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-gray-900">32%</div>
+                <div className="text-xs text-gray-400 mt-0.5">Response Rate</div>
+              </div>
+              <div className="flex flex-col justify-center">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 bg-success rounded-full" />
+                  <span className="text-sm font-semibold text-green-700">AI Endorsed</span>
+                </div>
+                <div className="text-xs text-gray-400 mt-0.5">Recommended by AI</div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="flex justify-end gap-3">
-          <button onClick={onClose} className="px-5 py-2.5 text-sm font-medium border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50">Cancel</button>
-          <button onClick={onClose} className="px-5 py-2.5 text-sm font-semibold btn-primary rounded-xl">Use Selected</button>
+
+        <div className="flex gap-3 px-6 py-4 border-t border-gray-100">
+          <button onClick={onClose} className="flex-1 py-2.5 text-sm font-medium border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50">
+            Cancel
+          </button>
+          <button onClick={onClose} className="flex-1 py-2.5 text-sm font-semibold btn-primary rounded-xl">
+            Launch Combined Plan
+          </button>
         </div>
       </div>
     </div>
   )
 }
 
+// ─── Tab 1: AI Recommended ────────────────────────────────────────────────────
+
+function TabAIRecommended({ onViewCombined }) {
+  const reasons = [
+    'High student population within 3km',
+    'Strong engagement in previous youth campaigns',
+    'Weekend timing aligns with youth availability',
+    'High social sharing potential',
+  ]
+
+  const stats = [
+    { label: 'Recommended Audience',  value: '18–30 years old', color: 'text-gray-900' },
+    { label: 'Recommended Strategy',  value: 'Youth Campaign',  color: 'text-amber-600' },
+    { label: 'Expected Response Rate', value: '36%',            color: 'text-green-600' },
+    { label: 'Expected Registrations', value: '31 donors',      color: 'text-gray-900' },
+  ]
+
+  return (
+    <div className="space-y-4">
+      {/* AI strategy card */}
+      <div className="card p-5">
+        <div className="flex items-center gap-2.5 mb-5">
+          <div className="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Sparkles className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-bold text-sm text-gray-900">AI Recommended Strategy</h3>
+            <p className="text-xs text-gray-400">Based on drive location, timing, and historical response data</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_108px] gap-4 mb-5">
+          {/* Stat list — key/value pairs instead of identical boxes */}
+          <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
+            {stats.map(stat => (
+              <div key={stat.label} className="flex items-center justify-between px-4 py-2.5 bg-white">
+                <span className="text-xs text-gray-500">{stat.label}</span>
+                <span className={`text-sm font-bold ${stat.color}`}>{stat.value}</span>
+              </div>
+            ))}
+          </div>
+          {/* Confidence score */}
+          <div className="bg-green-50 border border-green-100 rounded-xl p-3 text-center flex flex-col justify-center gap-1">
+            <div className="text-xs text-gray-400">Confidence</div>
+            <div className="text-3xl font-bold text-green-600">89%</div>
+            <span className="inline-block px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-semibold rounded-full">High</span>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-gray-100">
+          <div className="text-xs font-semibold text-gray-700 mb-3">Why this strategy?</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {reasons.map(r => (
+              <div key={r} className="flex items-start gap-2">
+                <span className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" aria-hidden="true">
+                  <Check className="w-2.5 h-2.5 text-green-700" />
+                </span>
+                <span className="text-xs text-gray-600">{r}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Strategy comparison */}
+      <div className="card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-sm text-gray-900">Strategy Comparison</h3>
+          <button
+            onClick={onViewCombined}
+            className="flex items-center gap-1.5 btn-primary px-4 py-2 text-xs rounded-lg"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            View Combined Plan
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {STRATEGY_COMPARISON.map(s => (
+            <div
+              key={s.id}
+              className={`relative rounded-xl border-2 p-4 ${s.border} ${s.bg} ${
+                s.best ? 'ring-2 ring-green-300/50' : ''
+              }`}
+            >
+              {s.best && (
+                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
+                  <span className="px-2 py-0.5 bg-green-500 text-white text-[9px] font-bold rounded-full whitespace-nowrap">
+                    Best
+                  </span>
+                </div>
+              )}
+              {s.recommended && !s.best && (
+                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
+                  <span className="flex items-center gap-0.5 px-2 py-0.5 bg-amber-400 text-white text-[9px] font-bold rounded-full whitespace-nowrap">
+                    <Star className="w-2.5 h-2.5 fill-white" /> AI Pick
+                  </span>
+                </div>
+              )}
+              <div className="text-xs font-semibold text-gray-700 mb-1">{s.label}</div>
+              <div className={`text-3xl font-bold leading-none ${s.color}`}>{s.donors}</div>
+              <div className="text-[10px] text-gray-400 mt-0.5">expected donors</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Tab 2: Push Notifications ────────────────────────────────────────────────
+
+const MESSAGE_VARIANTS = [
+  {
+    id: 'life-saving',
+    name: 'Life-Saving Focus',
+    badge: 'Best performing',
+    badgeColor: 'bg-green-100 text-green-700',
+    body: `Urgent O- donors needed near Tampines Community Plaza this Saturday.\n\nYour donation can help prevent an upcoming shortage.\n\nBook your slot today.\n\nTap to register: bit.ly/sav3lives`,
+    responseRate: 24,
+  },
+  {
+    id: 'urgency',
+    name: 'Urgency-Based',
+    badge: 'High open rate',
+    badgeColor: 'bg-amber-100 text-amber-700',
+    body: `Critical O- shortage in your area. Donors needed urgently this Saturday.\n\nEvery donation counts. Register now: bit.ly/sav3lives`,
+    responseRate: 21,
+  },
+  {
+    id: 'community',
+    name: 'Community Appeal',
+    badge: 'High trust',
+    badgeColor: 'bg-blue-100 text-blue-700',
+    body: `Join your neighbours this Saturday and help save lives together.\n\nO- donors needed at Tampines Community Plaza.\n\nBook: bit.ly/sav3lives`,
+    responseRate: 18,
+  },
+]
+
+function TabPushNotifications({ drive, aiVariants = [], aiLoading = false }) {
+  const variants = aiVariants.length > 0 ? aiVariants : MESSAGE_VARIANTS
+  const [variantIdx, setVariantIdx] = useState(0)
+  const [sent, setSent]     = useState(false)
+  const [sending, setSending] = useState(false)
+  const [prevRespondersOnly, setPrevRespondersOnly] = useState(true)
+  const [editedBodies, setEditedBodies] = useState(() =>
+    Object.fromEntries(variants.map(v => [v.id, v.body]))
+  )
+
+  useEffect(() => {
+    setVariantIdx(0)
+    setEditedBodies(Object.fromEntries(variants.map(v => [v.id, v.body])))
+    setSent(false)
+  }, [aiVariants.length]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const variant = variants[variantIdx] ?? variants[0]
+  const body = editedBodies[variant?.id] ?? ''
+  const isDirty = body !== variant?.body
+
+  const handleBodyChange = (e) => {
+    setEditedBodies(prev => ({ ...prev, [variant.id]: e.target.value }))
+    setSent(false)
+  }
+
+  const handleReset = () => {
+    setEditedBodies(prev => ({ ...prev, [variant.id]: variant.body }))
+    setSent(false)
+  }
+
+  const handleSend = () => {
+    setSending(true)
+    setTimeout(() => { setSending(false); setSent(true) }, 1500)
+  }
+
+  const handlePickVariant = (idx) => {
+    setVariantIdx(idx)
+    setSent(false)
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* KPI row */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: 'Eligible Donors',      value: 86,    color: 'text-gray-900' },
+          { label: 'Estimated Responders', value: 18,    color: 'text-primary' },
+          { label: 'Response Rate',        value: '21%', color: 'text-green-600' },
+        ].map(stat => (
+          <div key={stat.label} className="card p-4 text-center">
+            <div className={`text-3xl font-bold ${stat.color}`}>{stat.value}</div>
+            <div className="text-xs text-gray-400 mt-1">{stat.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
+        {/* Filters */}
+        <div className="card p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-4 h-4 text-primary" />
+            <h3 className="font-semibold text-sm text-gray-800">Audience Filters</h3>
+          </div>
+          <div className="space-y-3">
+            <SelectDropdown
+              label="Blood Type"
+              value={drive?.bloodType ?? 'O-'}
+              options={['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+']}
+              icon={<Droplets className="w-3.5 h-3.5" />}
+            />
+            <SelectDropdown
+              label="Radius"
+              value="5 km"
+              options={['2 km', '5 km', '10 km', '15 km', '20 km']}
+              icon={<MapPin className="w-3.5 h-3.5" />}
+            />
+            <SelectDropdown
+              label="Last Donation Date"
+              value="> 12 weeks"
+              options={['> 8 weeks', '> 12 weeks', '> 16 weeks', 'Any']}
+              icon={<CalendarDays className="w-3.5 h-3.5" />}
+            />
+          </div>
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={prevRespondersOnly}
+                onChange={e => setPrevRespondersOnly(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-1 ${
+                prevRespondersOnly ? 'bg-primary' : 'border-2 border-gray-300 bg-white'
+              }`}>
+                {prevRespondersOnly && <Check className="w-2.5 h-2.5 text-white" />}
+              </div>
+              <span className="text-sm text-gray-700">Previous Responders Only</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Message preview card */}
+        <div className="card p-5">
+          <div className="flex items-center gap-2 mb-5">
+            <MessageSquare className="w-4 h-4 text-primary" />
+            <h3 className="font-semibold text-sm text-gray-800">Message Preview</h3>
+          </div>
+
+          <div className="flex gap-6 items-start">
+            {/* Phone mockup */}
+            <div className="relative flex-shrink-0" style={{ width: 160 }}>
+              <img
+                src="/phone.png"
+                alt=""
+                className="w-full h-auto block relative"
+                style={{ zIndex: 10, pointerEvents: 'none' }}
+              />
+              <div
+                className="absolute overflow-hidden flex flex-col"
+                style={{ top: '13%', left: '7%', right: '7%', bottom: '4%', zIndex: 20, pointerEvents: 'none' }}
+              >
+                <div className="flex items-center gap-1 px-1.5 pt-1.5 pb-1">
+                  <div className="w-4 h-4 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-bold" style={{ fontSize: '5px' }}>SRC</span>
+                  </div>
+                  <span className="text-gray-800 font-semibold" style={{ fontSize: '6px' }}>Singapore Red Cross</span>
+                </div>
+                <div className="mx-1.5 bg-gray-100 rounded-lg rounded-tl-sm px-2 py-1.5" style={{ maxWidth: '90%' }}>
+                  <p className="text-gray-800 leading-relaxed" style={{ fontSize: '6.5px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                    {body}
+                  </p>
+                </div>
+                <div className="mx-1.5 mt-0.5 text-gray-400" style={{ fontSize: '5.5px' }}>Today, 10:00 AM</div>
+              </div>
+            </div>
+
+            {/* Right panel */}
+            <div className="flex-1 min-w-0 flex flex-col gap-5">
+
+              {/* Group 1: variant selection + name + response rate */}
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-1.5 flex-wrap">
+                  {aiLoading && (
+                    <span className="flex items-center gap-1.5 px-3 py-1 text-xs text-gray-400">
+                      <Sparkles className="w-3 h-3 animate-pulse text-primary" />Gemini AI drafting…
+                    </span>
+                  )}
+                  {!aiLoading && variants.map((v, i) => (
+                    <button
+                      key={v.id}
+                      onClick={() => handlePickVariant(i)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
+                        i === variantIdx
+                          ? 'bg-gray-900 text-white focus-visible:ring-gray-900'
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200 focus-visible:ring-gray-400'
+                      }`}
+                    >
+                      {v.name}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 flex-wrap min-w-0">
+                    <span className="font-bold text-gray-900 text-base leading-tight">{variant.name}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold flex-shrink-0 ${variant.badgeColor}`}>
+                      {variant.badge}
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1 flex-shrink-0">
+                    <span className="text-2xl font-bold text-green-600">{variant.responseRate}%</span>
+                    <span className="text-[10px] text-gray-400">response rate</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Group 2: message editor */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="message-body" className="text-xs font-medium text-gray-600 cursor-pointer">
+                    Message
+                  </label>
+                  {isDirty && (
+                    <button onClick={handleReset} className="text-xs text-gray-400 hover:text-gray-600 transition-colors focus-visible:outline-none focus-visible:text-gray-600">
+                      Reset
+                    </button>
+                  )}
+                </div>
+                <textarea
+                  id="message-body"
+                  value={body}
+                  onChange={handleBodyChange}
+                  rows={4}
+                  className="w-full px-3 py-2.5 text-xs text-gray-800 bg-gray-50 border border-gray-200 rounded-lg resize-none outline-none focus:border-primary focus:bg-white focus:ring-1 focus:ring-primary/20 transition-colors leading-relaxed"
+                />
+                <span className={`text-[10px] ${body.length > 160 ? 'text-amber-700 font-medium' : 'text-gray-400'}`}>
+                  {body.length} / 160 chars{body.length > 160 ? ' · 2 segments' : ''}
+                </span>
+              </div>
+
+              {/* Group 3: send action */}
+              <div>
+                <button
+                  onClick={handleSend}
+                  disabled={sending || sent}
+                  className={`w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
+                    sent
+                      ? 'bg-success text-white cursor-default focus-visible:ring-success'
+                      : 'btn-primary disabled:opacity-60 focus-visible:ring-primary'
+                  }`}
+                >
+                  {sent ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+                  {sent ? 'Sent to 86 donors' : sending ? 'Sending…' : 'Send Push Notification'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── AI Campaign Generator ────────────────────────────────────────────────────
+
+function AICampaignGenerator({ theme, drive }) {
+  const [genState, setGenState] = useState('idle')
+  const [stepIdx, setStepIdx] = useState(0)
+  const [dots, setDots] = useState('')
+
+  const driveName = drive?.location ?? 'Tampines Community Plaza'
+  const driveShort = drive?.location?.split(' ')[0] ?? 'Tampines'
+  const hashtag = '#' + theme.name.replace(/\s+/g, '')
+
+  useEffect(() => {
+    setGenState('idle')
+  }, [theme.id])
+
+  useEffect(() => {
+    if (genState !== 'generating') return
+    const dotsId = setInterval(() => {
+      setDots(d => d.length >= 5 ? '' : d + '.')
+    }, 300)
+    return () => clearInterval(dotsId)
+  }, [genState])
+
+  useEffect(() => {
+    if (genState !== 'generating') return
+    setStepIdx(0)
+    let s = 0
+    const stepId = setInterval(() => {
+      s += 1
+      if (s < AI_STEPS.length) {
+        setStepIdx(s)
+      } else {
+        clearInterval(stepId)
+        setTimeout(() => setGenState('done'), 500)
+      }
+    }, 650)
+    return () => clearInterval(stepId)
+  }, [genState])
+
+  const handleGenerate = () => {
+    setDots('')
+    setStepIdx(0)
+    setGenState('generating')
+  }
+
+  return (
+    <div className="card p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Sparkles className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-bold text-sm text-gray-900">AI Campaign Generator</h3>
+            <p className="text-xs text-gray-400">Generate personalised campaign visuals with AI</p>
+          </div>
+        </div>
+        <div className="flex gap-2 items-center">
+          {genState === 'done' && (
+            <button
+              onClick={handleGenerate}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Regenerate
+            </button>
+          )}
+          {genState === 'idle' && (
+            <button
+              onClick={handleGenerate}
+              className="flex items-center gap-1.5 btn-primary px-4 py-2 text-xs rounded-lg"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Generate Campaign
+            </button>
+          )}
+        </div>
+      </div>
+
+      {genState === 'idle' && (
+        <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-200 rounded-xl">
+          <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mb-3">
+            <Sparkles className="w-5 h-5 text-gray-300" />
+          </div>
+          <p className="text-sm font-semibold text-gray-600 mb-1">No campaign generated yet</p>
+          <p className="text-xs text-gray-400 text-center max-w-[240px] leading-relaxed">
+            Generate a personalised social media poster for the {theme.name}
+          </p>
+        </div>
+      )}
+
+      {genState === 'generating' && (
+        <div className="flex flex-col items-center justify-center py-14 bg-gray-50 rounded-xl relative overflow-hidden">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-48 h-48 rounded-full border border-primary/8 animate-ping opacity-20" style={{ animationDuration: '2s' }} />
+          </div>
+          <div className="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center mb-4 relative z-10">
+            <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+          </div>
+          <div className="relative z-10 text-base font-bold text-gray-900 mb-1.5 tabular-nums" style={{ minWidth: '12ch', textAlign: 'center' }}>
+            Generating{dots}
+          </div>
+          <p className="relative z-10 text-xs text-gray-400 mb-5">{AI_STEPS[stepIdx]}</p>
+          <div className="relative z-10 w-48 h-1 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${((stepIdx + 1) / AI_STEPS.length) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {genState === 'done' && (
+        <div className="rounded-xl overflow-hidden border border-gray-200">
+          <img src="/aigeneratedasset.png" alt="Generated campaign assets" className="w-full h-auto block" />
+          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-100">
+            <span className="text-xs text-gray-500">AI-generated assets ready</span>
+            <div className="flex gap-1.5">
+              <button className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-medium border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
+                <Download className="w-3 h-3" />
+                Download
+              </button>
+              <button className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold btn-primary rounded-lg">
+                <Send className="w-3 h-3" />
+                Share
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Tab 3: Youth Campaigns ───────────────────────────────────────────────────
+
+function TabYouthCampaigns({ drive }) {
+  const [selected, setSelected] = useState(CAMPAIGN_THEMES[0])
+  const [generated, setGenerated] = useState(false)
+  const [generating, setGenerating] = useState(false)
+
+  const handleGenerate = () => {
+    setGenerating(true)
+    setTimeout(() => { setGenerating(false); setGenerated(true) }, 1500)
+  }
+
+  const driveName = drive?.location?.split(' ')[0] ?? 'Tampines'
+
+  return (
+    <div className="space-y-4">
+      {/* Campaign theme pill tabs */}
+      <div className="flex gap-2 flex-wrap overflow-x-auto no-scrollbar">
+        {CAMPAIGN_THEMES.map(theme => {
+          const active = selected.id === theme.id
+          return (
+            <button
+              key={theme.id}
+              onClick={() => { setSelected(theme); setGenerated(false) }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium whitespace-nowrap transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
+                active
+                  ? 'border-primary text-primary'
+                  : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'
+              }`}
+            >
+              {theme.name}
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+                active ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-400'
+              }`}>{theme.responseRate}%</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Main card */}
+      <div className="card">
+        <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr]">
+          {/* Phone preview */}
+          <div className="p-5 border-b border-gray-100 lg:border-b-0 lg:border-r lg:border-gray-100 flex flex-col">
+            <div className="text-sm font-semibold text-gray-900 mb-4">Campaign Preview</div>
+            <div className="flex justify-center flex-1 items-center">
+              <div className="relative flex-shrink-0" style={{ width: 160 }}>
+                <img src="/phone.png" alt="" className="w-full h-auto block" style={{ zIndex: 10, pointerEvents: 'none' }} />
+                <div
+                  className="absolute overflow-hidden bg-white flex items-center justify-center"
+                  style={{ top: '7%', left: '7%', right: '7%', bottom: '4%', zIndex: 20, pointerEvents: 'none' }}
+                >
+                  <img src="/aigeneratedpost.png" alt="Campaign preview" className="w-full object-contain" style={{ maxHeight: '100%' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Campaign details */}
+          <div className="p-6 flex flex-col gap-5">
+            {/* Title + description */}
+            <div>
+              <h2 className="font-bold text-gray-900 text-xl mb-2">{driveName} {selected.name}</h2>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {selected.description} Be part of the campaign and make an impact in your community this Saturday.
+              </p>
+            </div>
+
+            {/* Stat cards */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="text-xs text-gray-400 mb-1.5">Expected Registrations</div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-3xl font-bold text-gray-900">{selected.registrations}</span>
+                  <span className="text-sm text-gray-400">donors</span>
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="text-xs text-gray-400 mb-1.5">Response Rate</div>
+                <div className="text-3xl font-bold text-green-600">{selected.responseRate}%</div>
+              </div>
+            </div>
+
+            {/* Meta items + buttons */}
+            <div className="flex flex-col gap-4">
+              {/* Meta cards */}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { icon: <Users className="w-4 h-4 text-primary" />, label: 'Target Audience', value: '16 – 30 years old' },
+                  { icon: <MapPin className="w-4 h-4 text-primary" />, label: 'Reach', value: 'Within 3km of venue' },
+                  { icon: <CalendarDays className="w-4 h-4 text-primary" />, label: 'Campaign Date', value: drive?.date ?? 'This Saturday' },
+                ].map(item => (
+                  <div key={item.label} className="bg-gray-50 rounded-xl p-3 flex items-center gap-3">
+                    <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                      {item.icon}
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-400">{item.label}</div>
+                      <div className="text-sm font-semibold text-gray-800">{item.value}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Buttons right-aligned */}
+              <div className="flex gap-3 justify-end">
+                <button className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
+                  <Eye className="w-4 h-4" />
+                  Preview Assets
+                </button>
+                <button
+                  onClick={handleGenerate}
+                  disabled={generating || generated}
+                  className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 whitespace-nowrap ${
+                    generated
+                      ? 'bg-success text-white cursor-default focus-visible:ring-success'
+                      : 'btn-primary disabled:opacity-60 focus-visible:ring-primary'
+                  }`}
+                >
+                  {generated ? <Check className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
+                  {generated ? 'Campaign Launched' : generating ? 'Launching…' : 'Launch Campaign'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* AI Campaign Generator */}
+      <AICampaignGenerator theme={selected} drive={drive} />
+    </div>
+  )
+}
+
+// ─── Tab 4: Collaborations ────────────────────────────────────────────────────
+
+function OutreachPreview({ partner, subTab, invited, onInvite }) {
+  const [toneIdx, setToneIdx] = useState(0)
+  const isInvited = invited.has(partner.name)
+
+  const tone = OUTREACH_TONES[toneIdx]
+
+  const [editedBodies, setEditedBodies] = useState(() =>
+    Object.fromEntries(OUTREACH_TONES.map(t => {
+      const c = subTab === 'Companies'
+        ? { noun: 'employees', type: 'workplace giving programme', team: 'HR / CSR Team' }
+        : subTab === 'Schools'
+        ? { noun: 'students', type: 'campus blood drive', team: 'Student Affairs Office' }
+        : { noun: 'members', type: 'community outreach event', team: 'Community Leaders' }
+      return [t.id, t.getBody(partner, c)]
+    }))
+  )
+  const [editedSubjects, setEditedSubjects] = useState(() =>
+    Object.fromEntries(OUTREACH_TONES.map(t => [t.id, t.getSubject(partner)]))
+  )
+
+  useEffect(() => {
+    const ctx = subTab === 'Companies'
+      ? { noun: 'employees', type: 'workplace giving programme', team: 'HR / CSR Team' }
+      : subTab === 'Schools'
+      ? { noun: 'students', type: 'campus blood drive', team: 'Student Affairs Office' }
+      : { noun: 'members', type: 'community outreach event', team: 'Community Leaders' }
+    setEditedBodies(Object.fromEntries(OUTREACH_TONES.map(t => [t.id, t.getBody(partner, ctx)])))
+    setEditedSubjects(Object.fromEntries(OUTREACH_TONES.map(t => [t.id, t.getSubject(partner)])))
+  }, [partner.name, subTab]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const ctx = subTab === 'Companies'
+    ? { noun: 'employees', type: 'workplace giving programme', team: 'HR / CSR Team' }
+    : subTab === 'Schools'
+    ? { noun: 'students', type: 'campus blood drive', team: 'Student Affairs Office' }
+    : { noun: 'members', type: 'community outreach event', team: 'Community Leaders' }
+
+  const body = editedBodies[tone.id]
+  const subject = editedSubjects[tone.id]
+  const isDirty = body !== tone.getBody(partner, ctx) || subject !== tone.getSubject(partner)
+
+  const scoreCls = partner.score >= 85
+    ? 'bg-green-50 text-green-700 border-green-100'
+    : 'bg-amber-50 text-amber-700 border-amber-100'
+
+  const handleReset = () => {
+    setEditedBodies(prev => ({ ...prev, [tone.id]: tone.getBody(partner, ctx) }))
+    setEditedSubjects(prev => ({ ...prev, [tone.id]: tone.getSubject(partner) }))
+  }
+
+  return (
+    <div className="card sticky top-4 overflow-hidden">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="font-semibold text-sm text-gray-900">Outreach Preview</h3>
+          <p className="text-xs text-gray-500 mt-0.5 truncate">{partner.name}</p>
+        </div>
+        <span className={`font-bold px-2 py-0.5 rounded-full border text-[10px] flex-shrink-0 mt-0.5 ${scoreCls}`}>
+          {partner.score}%
+        </span>
+      </div>
+
+      {/* Tone selector */}
+      <div className="px-5 pt-4 pb-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-gray-500 font-medium flex-shrink-0">Tone:</span>
+          {OUTREACH_TONES.map((t, i) => (
+            <button
+              key={t.id}
+              onClick={() => setToneIdx(i)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
+                i === toneIdx
+                  ? 'bg-gray-900 text-white focus-visible:ring-gray-900'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200 focus-visible:ring-gray-400'
+              }`}
+            >
+              {t.name}
+            </button>
+          ))}
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold flex-shrink-0 ${tone.badgeColor}`}>
+            {tone.badge}
+          </span>
+        </div>
+      </div>
+
+      {/* Editable email compose area */}
+      <div className="p-4">
+        <div className="border border-gray-200 rounded-xl overflow-hidden">
+          {/* Email header */}
+          <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 space-y-1.5">
+            <div className="flex gap-2.5 text-xs">
+              <span className="text-gray-400 w-10 flex-shrink-0">To</span>
+              <span className="font-semibold text-gray-900 truncate">{partner.name}</span>
+            </div>
+            <div className="flex gap-2.5 text-xs">
+              <span className="text-gray-400 w-10 flex-shrink-0">From</span>
+              <span className="text-gray-700">Singapore Red Cross</span>
+            </div>
+            <div className="flex gap-2.5 text-xs items-center">
+              <span className="text-gray-400 w-10 flex-shrink-0 flex-shrink-0">Subject</span>
+              <input
+                type="text"
+                value={subject}
+                onChange={e => setEditedSubjects(prev => ({ ...prev, [tone.id]: e.target.value }))}
+                className="flex-1 min-w-0 text-gray-700 font-medium bg-transparent outline-none focus:text-gray-900 border-b border-transparent focus:border-primary/40 pb-px transition-colors"
+              />
+            </div>
+          </div>
+          {/* Email body */}
+          <div className="p-3">
+            <textarea
+              value={body}
+              onChange={e => setEditedBodies(prev => ({ ...prev, [tone.id]: e.target.value }))}
+              rows={8}
+              className="w-full text-xs text-gray-700 bg-transparent outline-none resize-none leading-relaxed"
+            />
+            <div className="mt-1 pt-2 border-t border-gray-100 flex items-center justify-between">
+              <span className="text-[10px] text-gray-400">{body.length} chars</span>
+              {isDirty && (
+                <button
+                  onClick={handleReset}
+                  className="text-[10px] text-gray-400 hover:text-gray-600 transition-colors focus-visible:outline-none focus-visible:text-gray-600"
+                >
+                  Reset to template
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Send action */}
+      <div className="px-4 pb-4">
+        <button
+          onClick={() => onInvite(partner.name)}
+          disabled={isInvited}
+          className={`w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
+            isInvited
+              ? 'bg-success text-white cursor-default focus-visible:ring-success'
+              : 'btn-primary focus-visible:ring-primary'
+          }`}
+        >
+          {isInvited ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+          {isInvited ? 'Invitation Sent' : 'Send Invitation'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function TabCollaborations() {
+  const SUB_TABS = [
+    { label: 'Nearby Companies',         category: 'Companies' },
+    { label: 'Educational Institutions', category: 'Schools' },
+    { label: 'Community Groups',         category: 'Community Groups' },
+  ]
+
+  const [subTab, setSubTab] = useState('Nearby Companies')
+  const [invited, setInvited] = useState(new Set())
+  const [selectedPartner, setSelectedPartner] = useState(PARTNERS['Companies'][0])
+  const [search, setSearch] = useState('')
+
+  const activeTab = SUB_TABS.find(t => t.label === subTab)
+  const category = activeTab?.category
+  const allPartners = category ? (PARTNERS[category] ?? []) : []
+  const filteredPartners = search
+    ? allPartners.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+    : allPartners
+
+  const handleSubTabChange = (label) => {
+    setSubTab(label)
+    setSearch('')
+    const tab = SUB_TABS.find(t => t.label === label)
+    if (tab?.category) setSelectedPartner(PARTNERS[tab.category][0])
+  }
+
+  const handleInvite = name => setInvited(s => { const n = new Set(s); n.add(name); return n })
+
+  const parseReach = (str) => parseInt(str.replace(/[^0-9]/g, ''), 10) || 0
+  const currentReach = allPartners.reduce((sum, p) => sum + parseReach(p.reach), 0)
+  const recommendedCount = allPartners.filter(p => p.score >= 80).length
+  const sentCount = allPartners.filter(p => invited.has(p.name)).length
+
+  const getMatch = (score) =>
+    score >= 80 ? { label: 'High Match',   cls: 'text-green-700 bg-green-50' }
+    : score >= 65 ? { label: 'Medium Match', cls: 'text-amber-700 bg-amber-50' }
+    :               { label: 'Low Match',    cls: 'text-gray-500 bg-gray-100' }
+
+  const getIconColor = (name) => {
+    const palette = [
+      'bg-red-100 text-red-700', 'bg-blue-100 text-blue-700',
+      'bg-amber-100 text-amber-700', 'bg-emerald-100 text-emerald-700',
+      'bg-purple-100 text-purple-700', 'bg-sky-100 text-sky-700',
+    ]
+    return palette[name.charCodeAt(0) % palette.length]
+  }
+
+  const viewMoreLabel =
+    subTab === 'Nearby Companies' ? 'View More Companies' :
+    subTab === 'Educational Institutions' ? 'View More Institutions' :
+    'View More Groups'
+
+  return (
+    <div className="space-y-4">
+      {/* KPI row */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: 'Potential Reach',  value: currentReach.toLocaleString(), color: 'text-gray-900' },
+          { label: 'Recommended',      value: recommendedCount,              color: 'text-green-600' },
+          { label: 'Invitations Sent', value: sentCount,                     color: 'text-primary' },
+        ].map(stat => (
+          <div key={stat.label} className="card p-4 text-center">
+            <div className={`text-3xl font-bold ${stat.color}`}>{stat.value}</div>
+            <div className="text-xs text-gray-400 mt-1">{stat.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Main layout: list + preview */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4 items-start">
+
+        {/* Left: partner list card */}
+        <div className="card overflow-hidden">
+          {/* Card heading */}
+          <div className="px-5 py-4 border-b border-gray-100">
+            <h3 className="font-semibold text-sm text-gray-900">Target Collaborations</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Partner with organisations and schools near the drive location.</p>
+          </div>
+
+          {/* Sub-tabs */}
+          <div className="flex gap-0 border-b border-gray-200 overflow-x-auto no-scrollbar px-5">
+            {SUB_TABS.map(t => (
+              <button
+                key={t.label}
+                onClick={() => handleSubTabChange(t.label)}
+                className={`px-3 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-all duration-150 -mb-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
+                  subTab === t.label
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Filter bar */}
+          {category && (
+            <div className="px-5 py-3 flex items-center gap-2 border-b border-gray-100">
+              <div className="w-[130px] flex-shrink-0">
+                <SelectDropdown value="Within 3 km" options={['Within 1 km', 'Within 3 km', 'Within 5 km', 'Within 10 km']} />
+              </div>
+              <div className="w-[110px] flex-shrink-0">
+                <SelectDropdown value="All Types" options={['All Types', 'Large Company', 'SME', 'Health Partner', 'Community Partner']} />
+              </div>
+              <div className="flex-1 relative min-w-0">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search organisation"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="w-full pl-7 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-white placeholder-gray-400 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Partner rows */}
+          {category && (
+            <>
+              <div className="divide-y divide-gray-50">
+                {filteredPartners.map(partner => {
+                  const isSelected = selectedPartner?.name === partner.name
+                  const match = getMatch(partner.score)
+                  const initials = partner.name.split(' ').slice(0, 2).map(w => w[0]).join('')
+                  const iconColor = getIconColor(partner.name)
+
+                  return (
+                    <div
+                      key={partner.name}
+                      onClick={() => setSelectedPartner(partner)}
+                      className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors duration-150 ${
+                        isSelected ? 'bg-primary/5' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      {/* Logo / initials */}
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-sm ${iconColor}`}>
+                        {initials}
+                      </div>
+
+                      {/* Name, address, distance, tags */}
+                      <div className="flex-1 min-w-0">
+                        <div className={`font-semibold text-sm leading-tight ${isSelected ? 'text-primary' : 'text-gray-900'}`}>
+                          {partner.name}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-0.5">{partner.address}</div>
+                        <div className="text-xs text-gray-400">– {partner.distance}</div>
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {partner.tags.map(tag => (
+                            <span key={tag} className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-medium rounded-full">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Match quality */}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${match.cls}`}>
+                          {match.label}
+                        </span>
+                        <span className="font-bold text-gray-900 text-sm">{partner.score}%</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* View More */}
+              <div className="px-5 py-3.5 border-t border-gray-100 flex justify-center">
+                <button className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
+                  {viewMoreLabel}
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Outreach preview panel */}
+        {selectedPartner && category && (
+          <OutreachPreview
+            partner={selectedPartner}
+            subTab={category}
+            invited={invited}
+            onInvite={handleInvite}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
 export default function DonorOutreach() {
-  const [drives, setDrives]               = useState([])
+  const [drives, setDrives]             = useState([])
   const [selectedDriveId, setSelectedDriveId] = useState(null)
   const [showDriveDropdown, setShowDriveDropdown] = useState(false)
-  const [showAIModal, setShowAIModal]     = useState(false)
-  const [showVariants, setShowVariants]   = useState(false)
-  const [aiApplied, setAiApplied]         = useState(false)
-  const [sending, setSending]             = useState(false)
-  const [sent, setSent]                   = useState(false)
-  const [loading, setLoading]             = useState(true)
-
-  // NEW STATES FOR AI MESSAGES
+  const [activeTab, setActiveTab]       = useState('ai')
+  const [showCombined, setShowCombined] = useState(false)
+  const [loading, setLoading]           = useState(true)
   const [messageVariants, setMessageVariants] = useState([])
-  const [selectedVariant, setSelectedVariant] = useState(null)
-  const [aiLoading, setAiLoading]         = useState(false)
+  const [aiLoading, setAiLoading]       = useState(false)
 
-  // Fetch initial drives
   useEffect(() => {
-    api.get('/drives').then(r => {
-      const upcoming = r.data.filter(d => d.status !== 'Completed')
-      setDrives(upcoming)
-      if (upcoming.length > 0) setSelectedDriveId(upcoming[0].id)
-    }).catch(() => {}).finally(() => setLoading(false))
+    api.get('/drives')
+      .then(r => {
+        const upcoming = r.data.filter(d => d.status !== 'Completed')
+        setDrives(upcoming)
+        if (upcoming.length > 0) setSelectedDriveId(upcoming[0].id)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }, [])
 
-  // Fetch Gemini AI Messages whenever the selected drive changes
   useEffect(() => {
-    const drive = drives.find(d => d.id === selectedDriveId) ?? drives[0];
-    if (!drive) return;
-
-    const fetchAiMessages = async () => {
-      setAiLoading(true);
-      try {
-        const type = encodeURIComponent(drive.bloodType || 'O+');
-        const context = encodeURIComponent(`Expected shortfall of ${drive.shortfall || 'several'} units`);
-        
-        // Call your new Spring Boot endpoint!
-        const response = await api.get(`/forecast/outreach-messages?bloodType=${type}&context=${context}`);
-        
-        // Map the strings from Gemini into the object format the UI expects
-        const formattedVariants = response.data.map((msg, idx) => ({
-          id: String.fromCharCode(65 + idx), // A, B, C
-          name: `Gemini AI Variant ${idx + 1}`,
-          preview: msg.substring(0, 45) + '...',
-          responseRate: [24, 21, 18][idx] || 20, // Mock UI response rates
-          rateColor: ['text-green-600', 'text-green-600', 'text-amber-500'][idx] || 'text-green-600',
-          recommended: idx === 0, // Recommend the first AI variant
-          full: msg
-        }));
-
-        setMessageVariants(formattedVariants);
-        setSelectedVariant(formattedVariants[0]); // Select the first one by default
-      } catch (error) {
-        console.error("Failed to fetch AI variants", error);
-      } finally {
-        setAiLoading(false);
-      }
-    };
-
-    fetchAiMessages();
-  }, [selectedDriveId, drives]);
+    const drive = drives.find(d => d.id === selectedDriveId) ?? drives[0]
+    if (!drive) return
+    setAiLoading(true)
+    const type = encodeURIComponent(drive.bloodType || 'O+')
+    const context = encodeURIComponent(`Expected shortfall of ${drive.shortfall || 'several'} units`)
+    api.get(`/forecast/outreach-messages?bloodType=${type}&context=${context}`)
+      .then(r => {
+        const formatted = r.data.map((msg, idx) => ({
+          id: String.fromCharCode(65 + idx),
+          name: `AI Variant ${idx + 1}`,
+          badge: idx === 0 ? 'AI Recommended' : 'AI Generated',
+          badgeColor: idx === 0 ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700',
+          body: msg,
+          responseRate: [24, 21, 18][idx] ?? 20,
+        }))
+        setMessageVariants(formatted)
+      })
+      .catch(() => setMessageVariants([]))
+      .finally(() => setAiLoading(false))
+  }, [selectedDriveId, drives])
 
   const drive = drives.find(d => d.id === selectedDriveId) ?? drives[0]
 
   if (loading) return (
-    <PageLayout title="Donor Outreach" subtitle="Reach the right donors for your upcoming drive.">
+    <PageLayout title="Donor Outreach" subtitle="How should SRC maximise donor turnout for this drive?">
       <LoadingScreen variant="general" />
     </PageLayout>
   )
-
-  const stats = drive ? {
-    hsaShortage:        drive.hsaShortage        ?? 0,
-    expectedCollection: drive.expectedCollection ?? 0,
-    shortfall:          drive.shortfall          ?? 0,
-    progressPct:        drive.progressPct        ?? 0,
-    confidence:         drive.outreachConfidence ?? 0,
-    lastUpdated:        drive.outreachLastUpdated ?? '',
-  } : {}
-
-  const outreach = drive ? {
-    recipients:        drive.outreachRecipients  ?? 0,
-    expectedResponders: drive.expectedResponders ?? 0,
-    expectedUnits:     drive.expectedUnits       ?? 0,
-    responseRate:      drive.outreachResponseRate ?? 0,
-    confidence:        drive.outreachConfidence  ?? 0,
-  } : {}
-
-  const handleUseRecommendation = () => { setShowAIModal(false); setAiApplied(true) }
-  const handleSend = () => { setSending(true); setTimeout(() => { setSending(false); setSent(true) }, 1500) }
 
   const changeDriveButton = (
     <div className="relative">
@@ -351,14 +1273,15 @@ export default function DonorOutreach() {
         onClick={() => setShowDriveDropdown(!showDriveDropdown)}
         className="flex items-center gap-1.5 px-3 py-1.5 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
       >
-        Change Drive <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showDriveDropdown ? 'rotate-180' : ''}`} />
+        Change Drive
+        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showDriveDropdown ? 'rotate-180' : ''}`} />
       </button>
       {showDriveDropdown && (
         <div className="absolute right-0 mt-1.5 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden">
           {drives.map(d => (
             <button
               key={d.id}
-              onClick={() => { setSelectedDriveId(d.id); setShowDriveDropdown(false); setAiApplied(false); setSent(false) }}
+              onClick={() => { setSelectedDriveId(d.id); setShowDriveDropdown(false); setActiveTab('ai') }}
               className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-xs hover:bg-gray-50 ${d.id === selectedDriveId ? 'bg-primary/5' : ''}`}
             >
               <Droplets className="w-3.5 h-3.5 text-primary flex-shrink-0" />
@@ -377,259 +1300,76 @@ export default function DonorOutreach() {
   return (
     <PageLayout
       title="Donor Outreach"
-      subtitle="Reach the right donors for your upcoming drive."
+      subtitle="How should SRC maximise donor turnout for this drive?"
       actions={changeDriveButton}
-      footer={
-        <div className="bg-white border-t border-gray-200 z-30 flex-shrink-0">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-5 px-4 sm:px-8 py-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center">
-                <Users className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <div className="text-sm font-bold text-gray-900">{outreach.recipients} recipients selected</div>
-                <div className="text-xs text-gray-400">Review audience and message before sending outreach.</div>
-              </div>
-            </div>
-            <div className="sm:ml-auto flex flex-col items-start sm:items-end gap-1 w-full sm:w-auto">
-              <div className="flex flex-wrap items-center gap-3">
-                <button className="flex items-center gap-2 px-5 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
-                  <Bookmark className="w-4 h-4" /> Save as Draft
-                </button>
-                <button
-                  onClick={handleSend}
-                  disabled={sending || sent}
-                  className="flex items-center gap-2 btn-primary px-6 py-2.5 text-sm font-semibold disabled:opacity-60"
-                >
-                  <Send className="w-4 h-4" />
-                  {sent ? 'Sent!' : sending ? 'Sending…' : `Send Alert to ${outreach.recipients} Donors`}
-                </button>
-              </div>
-              <div className="text-[10px] text-gray-400">Donors will receive SMS immediately</div>
-            </div>
-          </div>
-        </div>
-      }
     >
-      {/* Drive info + stats card */}
-      <div className="card mb-4 flex flex-col lg:flex-row lg:divide-x divide-gray-100">
-        <div className="p-5 lg:w-72 lg:flex-shrink-0 border-b lg:border-b-0 border-gray-100">
-          <div className="text-xs font-semibold text-gray-500 mb-2">Selected drive</div>
-          <div className="flex items-start gap-2 mb-2.5">
-            <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
-            <h3 className="font-bold text-gray-900 text-base leading-tight">{drive.location}</h3>
-          </div>
-          <div className="space-y-1.5 text-xs text-gray-500 mb-3.5">
-            <div className="flex items-center gap-2"><CalendarDays className="w-3.5 h-3.5" />{drive.date}</div>
-            <div className="flex items-center gap-2"><Clock className="w-3.5 h-3.5" />{drive.time}</div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 mb-3.5">
-            <div>
-              <div className="text-[10px] text-gray-400 mb-1">Target Blood Type</div>
-              <div className="flex items-center gap-1.5">
-                <Droplets className="w-3.5 h-3.5 text-primary" />
-                <span className="font-bold text-primary text-sm">{drive.bloodType}</span>
+      {/* Drive summary card */}
+      {drive && (
+        <div className="card p-4 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
+            <div className="flex items-start gap-2.5 flex-1 min-w-0">
+              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                <MapPin className="w-4 h-4 text-primary" />
               </div>
-            </div>
-            <div>
-              <div className="text-[10px] text-gray-400 mb-1">Linked Alert</div>
-              <div className="flex items-center gap-1 text-primary text-sm font-semibold">
-                {drive.linkedAlert}<ExternalLink className="w-3 h-3" />
-              </div>
-            </div>
-          </div>
-          <div>
-            <div className="text-[10px] text-gray-400 mb-1.5">Status</div>
-            <span className={`inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold ${STATUS_BADGE[drive.status] ?? STATUS_BADGE.Planned}`}>
-              {drive.status}
-            </span>
-          </div>
-        </div>
-
-        <div className="p-5 flex-1 flex flex-col">
-          <div className="flex items-center justify-end gap-1.5 text-xs text-gray-400 mb-4">
-            <RefreshCw className="w-3 h-3" /> Last updated: {stats.lastUpdated}
-          </div>
-          <div className="flex flex-wrap sm:flex-nowrap items-stretch divide-y sm:divide-y-0 sm:divide-x divide-gray-100 flex-1">
-            {[
-              { label: 'HSA Forecasted Shortage', value: stats.hsaShortage,        unit: 'units', color: 'text-primary'   },
-              { label: 'Expected Collection',     value: stats.expectedCollection,   unit: 'units', color: 'text-green-600' },
-              { label: 'Shortfall Remaining',     value: stats.shortfall,            unit: 'units', color: 'text-amber-500' },
-            ].map(col => (
-              <div key={col.label} className="flex-1 px-5 first:pl-0 flex flex-col">
-                <div className="text-xs text-gray-400 h-8 leading-tight text-center">{col.label}</div>
-                <div className="flex-1 flex flex-col items-center justify-center text-center">
-                  <div className={`text-4xl font-bold leading-none ${col.color}`}>{col.value}</div>
-                  <div className="text-xs text-gray-400 mt-1">{col.unit}</div>
+              <div className="min-w-0">
+                <div className="font-bold text-gray-900 text-sm truncate">{drive.location}</div>
+                <div className="flex flex-wrap items-center gap-3 mt-0.5 text-xs text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <CalendarDays className="w-3.5 h-3.5 flex-shrink-0" />{drive.date}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 flex-shrink-0" />{drive.time}
+                  </span>
                 </div>
               </div>
-            ))}
-            <div className="flex-1 px-5 flex flex-col">
-              <div className="text-xs text-gray-400 h-8 leading-tight text-center">Progress to Target</div>
-              <div className="flex-1 flex items-center justify-center">
-                <ProgressDonut pct={stats.progressPct} />
-              </div>
             </div>
-            <div className="flex-1 pl-5 flex flex-col">
-              <div className="text-xs text-gray-400 h-8 leading-tight text-center">Confidence</div>
-              <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <div className="text-4xl font-bold text-green-600 leading-none">{stats.confidence}%</div>
-                <span className="inline-block mt-2 px-2 py-0.5 bg-green-50 text-green-700 text-[10px] font-semibold rounded-full border border-green-100">High</span>
-              </div>
-            </div>
-          </div>
-          <div className="text-[10px] text-gray-400 mt-4 pt-3 border-t border-gray-50">
-            Forecast based on selected audience, drive plan and historical response rates.
-          </div>
-        </div>
-      </div>
-
-      {/* Main 3-col section */}
-      <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] gap-4 mb-24">
-
-        {/* Audience */}
-        <div className="card p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Users className="w-4 h-4 text-primary" />
-            <h3 className="font-semibold text-sm text-gray-800">Audience</h3>
-          </div>
-          <div className="space-y-3">
-            <SelectDropdown label="Blood Type" value={drive.bloodType} options={['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+']} icon={<Droplets className="w-3.5 h-3.5" />} />
-            <SelectDropdown label="Radius" value="5 km" options={['2 km', '5 km', '10 km', '15 km', '20 km']} icon={<MapPin className="w-3.5 h-3.5" />} />
-            <SelectDropdown label="Last Donated" value="> 12 weeks" options={['> 8 weeks', '> 12 weeks', '> 16 weeks', 'Any']} icon={<CalendarDays className="w-3.5 h-3.5" />} />
-            <div className="pt-1 space-y-3">
-              <CheckFilter label="Previous Responders" defaultChecked={true} />
-              <CheckFilter label="Weekend Availability" defaultChecked={true} />
-            </div>
-          </div>
-          <button className="mt-5 w-full py-2 border border-primary text-primary text-sm font-semibold rounded-lg hover:bg-red-50 transition-colors">
-            Edit Audience
-          </button>
-        </div>
-
-        {/* AI recommendation zone */}
-        <div className="card p-4 flex flex-col items-center justify-center">
-          {aiApplied ? (
-            <div className="text-center w-full max-w-xs">
-              <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Check className="w-6 h-6 text-green-600" />
-              </div>
-              <h3 className="font-semibold text-gray-800 mb-1">AI Recommendation Applied</h3>
-              <p className="text-xs text-gray-400 mb-4">Audience has been updated based on AI suggestions.</p>
-              <div className="bg-gray-50 rounded-xl p-3 text-left space-y-2 mb-4">
-                {[`${drive.bloodType} Donors`, 'Within 5 km', 'Last donation > 12 weeks', 'Previously attended community drives'].map(r => (
-                  <div key={r} className="flex items-center gap-2 text-xs text-gray-700">
-                    <span className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Check className="w-2.5 h-2.5 text-white" />
-                    </span>
-                    {r}
-                  </div>
-                ))}
-              </div>
-              <button onClick={() => setAiApplied(false)} className="text-xs text-gray-400 hover:text-gray-600 underline">
-                Reset to manual filters
-              </button>
-            </div>
-          ) : (
-            <div className="text-center">
-              <div className="flex justify-center mb-4">
-                <div className="relative">
-                  <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
-                    <Users className="w-7 h-7 text-gray-300" />
-                  </div>
-                  <div className="absolute -right-2 -bottom-1 w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center">
-                    <Sparkles className="w-3.5 h-3.5 text-primary" />
-                  </div>
+            <div className="flex flex-wrap items-center gap-4 sm:gap-5">
+              <div>
+                <div className="text-xs text-gray-400 mb-0.5">Target Blood Type</div>
+                <div className="flex items-center gap-1.5">
+                  <Droplets className="w-3.5 h-3.5 text-primary" />
+                  <span className="font-bold text-primary text-sm">{drive.bloodType}</span>
                 </div>
               </div>
-              <h3 className="font-semibold text-gray-800 mb-1.5">Select or use AI recommendation</h3>
-              <p className="text-xs text-gray-400 mb-6 max-w-48 mx-auto">
-                Refine your audience or get AI recommendations to reach the right donors.
-              </p>
-              <button
-                onClick={() => setShowAIModal(true)}
-                className="flex items-center gap-2 px-5 py-2.5 border border-primary text-primary text-sm font-semibold rounded-lg hover:bg-red-50 transition-colors mx-auto"
-              >
-                <Sparkles className="w-4 h-4" /> Get AI Recommendation
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Message Preview + Outreach Summary */}
-        <div className="space-y-4">
-          <div className="card p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <MessageSquare className="w-4 h-4 text-primary" />
-              <h3 className="font-semibold text-sm text-gray-800">Message Preview</h3>
-            </div>
-            
-            {aiLoading || !selectedVariant ? (
-              <div className="flex flex-col items-center justify-center py-8 text-sm text-gray-500 gap-3">
-                <Sparkles className="w-5 h-5 animate-pulse text-primary" />
-                <span>Gemini AI is drafting messages...</span>
-              </div>
-            ) : (
-              <div className="flex gap-3 items-start">
-                <PhoneMockup message={selectedVariant.full} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-[10px] text-gray-400 font-medium mb-1">Selected Message</div>
-                  <div className="flex items-start gap-1.5 flex-wrap mb-2">
-                    <span className="text-sm font-bold text-gray-900">{selectedVariant.name}</span>
-                    {selectedVariant.recommended && (
-                      <span className="px-1.5 py-0.5 bg-green-50 text-green-700 text-[9px] font-semibold rounded-full border border-green-100">Best performing</span>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-gray-500 leading-relaxed mb-3">{selectedVariant.preview}</p>
-                  <div className="text-[10px] text-gray-400 mb-0.5">Expected Response Rate</div>
-                  <div className={`text-xl font-bold ${selectedVariant.rateColor}`}>{selectedVariant.responseRate}%</div>
-                  <button
-                    onClick={() => setShowVariants(true)}
-                    className="mt-3 w-full py-1.5 border border-gray-200 text-xs font-medium text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    View Other Variants
-                  </button>
+              <div className="w-px h-7 bg-gray-100 hidden sm:block" />
+              <div>
+                <div className="text-xs text-gray-400 mb-0.5">Linked Alert</div>
+                <div className="flex items-center gap-1 text-primary text-sm font-semibold">
+                  {drive.linkedAlert}<ExternalLink className="w-3 h-3" />
                 </div>
               </div>
-            )}
-          </div>
-
-          <div className="card p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <BarChart2 className="w-4 h-4 text-primary" />
-              <h3 className="font-semibold text-sm text-gray-800">Outreach Summary</h3>
-            </div>
-            <div className="space-y-2.5">
-              {[
-                { icon: <Users className="w-3.5 h-3.5" />,       label: 'Recipients Selected',  value: `${outreach.recipients} donors` },
-                { icon: <MapPin className="w-3.5 h-3.5" />,      label: 'Expected Responders',  value: `${outreach.expectedResponders} donors` },
-                { icon: <Droplets className="w-3.5 h-3.5" />,    label: 'Expected Units',       value: `${outreach.expectedUnits} units` },
-                { icon: <Target className="w-3.5 h-3.5" />,      label: 'Response Rate (Est.)', value: `${outreach.responseRate}%` },
-                { icon: <CheckSquare className="w-3.5 h-3.5" />, label: 'Confidence',           value: `${outreach.confidence}%`, badge: 'High' },
-              ].map(row => (
-                <div key={row.label} className="flex items-center gap-2 text-xs">
-                  <span className="text-gray-400 flex-shrink-0">{row.icon}</span>
-                  <span className="text-gray-500 flex-1">{row.label}</span>
-                  <span className="font-semibold text-gray-900">{row.value}</span>
-                  {row.badge && (
-                    <span className="px-1.5 py-0.5 bg-green-50 text-green-700 text-[9px] font-semibold rounded-full border border-green-100">{row.badge}</span>
-                  )}
-                </div>
-              ))}
             </div>
           </div>
         </div>
-      </div>
-
-      {showAIModal && <AIModal drive={drive} onCancel={() => setShowAIModal(false)} onUse={handleUseRecommendation} />}
-      {showVariants && (
-        <MessageVariantsModal
-          variants={messageVariants}
-          selected={selectedVariant?.id}
-          onSelect={(v) => setSelectedVariant(v)}
-          onClose={() => setShowVariants(false)}
-        />
       )}
+
+      {/* Tab navigation */}
+      <div className="flex gap-0 mb-4 border-b border-gray-200 overflow-x-auto no-scrollbar">
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-all duration-150 -mb-px ${
+              activeTab === tab.id
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <span className={activeTab === tab.id ? 'text-primary' : 'text-gray-400'}>{tab.icon}</span>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      <div key={activeTab} className="page-enter-animate">
+        {activeTab === 'ai'     && <TabAIRecommended onViewCombined={() => setShowCombined(true)} />}
+        {activeTab === 'push'   && <TabPushNotifications drive={drive} aiVariants={messageVariants} aiLoading={aiLoading} />}
+        {activeTab === 'youth'  && <TabYouthCampaigns drive={drive} />}
+        {activeTab === 'collab' && <TabCollaborations />}
+      </div>
+
+      {showCombined && <CombinedPlanModal onClose={() => setShowCombined(false)} />}
     </PageLayout>
   )
 }

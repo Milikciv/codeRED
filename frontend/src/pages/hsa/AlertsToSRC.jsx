@@ -5,6 +5,8 @@ import { Bell, Filter, List, ChevronDown, Send } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { alertCircleOutline } from 'ionicons/icons'
 import { staggerContainer, listItem, ease } from '../../lib/motion'
+import ConfirmModal from '../../components/common/ConfirmModal'
+import Toast from '../../components/common/Toast'
 
 const MOCK_INVENTORY = [
   { type: 'B+',  units: 700,  pct: 12 },
@@ -122,6 +124,8 @@ export default function AlertsToSRC() {
   const [selectedId, setSelectedId] = useState(null)
   const [notes, setNotes]   = useState({})
   const [priority, setPriority] = useState({})
+  const [confirmSendOpen, setConfirmSendOpen] = useState(false)
+  const [toast, setToast] = useState(null)
 
   const filteredAlerts = alerts.filter(a => tab === 'All' || a.status === tab)
   const selectedAlert  = alerts.find(a => a.id === selectedId) ?? null
@@ -131,7 +135,21 @@ export default function AlertsToSRC() {
 
   const handleSend = () => {
     if (!selectedAlert || selectedAlert.status === 'Sent') return
+    setConfirmSendOpen(true)
+  }
+
+  const confirmSend = () => {
+    if (!selectedAlert || selectedAlert.status === 'Sent') {
+      setConfirmSendOpen(false)
+      return
+    }
     setAlerts(prev => prev.map(a => a.id === selectedId ? { ...a, status: 'Sent' } : a))
+    setConfirmSendOpen(false)
+    setToast({
+      type: 'success',
+      title: 'Alert sent to SRC',
+      message: `${selectedAlert.id} has been sent for action.`,
+    })
   }
 
   const handleSaveDraft = () => {
@@ -140,10 +158,24 @@ export default function AlertsToSRC() {
   }
 
   return (
-    <PageLayout
-      title="Alerts"
-      subtitle="Review shortage alerts generated from demand forecasting and send them to Singapore Red Cross for action."
-    >
+    <>
+      {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+      {confirmSendOpen && selectedAlert && (
+        <ConfirmModal
+          icon="info"
+          title="Send alert to SRC?"
+          message={`This will send ${selectedAlert.id} for ${selectedAlert.bloodType} blood to Singapore Red Cross for action.`}
+          cancelLabel="Cancel"
+          confirmLabel="Send alert"
+          confirmClass="bg-primary hover:bg-primary-600 text-white"
+          onCancel={() => setConfirmSendOpen(false)}
+          onConfirm={confirmSend}
+        />
+      )}
+      <PageLayout
+        title="Alerts"
+        subtitle="Review shortage alerts generated from demand forecasting and send them to Singapore Red Cross for action."
+      >
       <div className="flex flex-col lg:flex-row gap-4 h-full">
 
         {/* ── Left panel ── */}
@@ -413,6 +445,7 @@ export default function AlertsToSRC() {
           </AnimatePresence>
         </div>
       </div>
-    </PageLayout>
+      </PageLayout>
+    </>
   )
 }
