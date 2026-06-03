@@ -1,0 +1,99 @@
+package com.codered.service;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Service
+public class AiService {
+
+    @Value("${gemini.api.key}")
+    private String apiKey;
+
+    @Value("${gemini.api.url}")
+    private String apiUrl;
+
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper(); // Parses JSON to Java objects
+
+    // 1. Generate the Early Warning Forecast Block
+    public Map<String, Object> generateEarlyWarning(String stockSummary, String demandTrends) {
+        String prompt = "You are an AI for a blood bank system. Analyze the following data and output ONLY raw JSON (no markdown, no backticks).\n"
+                + "Data: Stock: " + stockSummary + " | Demand: " + demandTrends + "\n"
+                + "Generate a risk assessment JSON with these exact keys: 'message' (string), 'confidence' (integer 0-100), and 'recommendation' (string).";
+
+        String aiResponse = callGeminiApi(prompt);
+
+        try {
+            // Strip any markdown blocks Gemini might accidentally include
+            String cleanJson = aiResponse.replaceAll("```json", "").replaceAll("```", "").trim();
+            return objectMapper.readValue(cleanJson, Map.class);
+        } catch (Exception e) {
+            System.err.println("Failed to parse Gemini JSON: " + e.getMessage());
+            // Safe fallback if the AI hallucinates bad JSON
+            Map<String, Object> fallback = new HashMap<>();
+            fallback.put("message", "System analyzing data...");
+            fallback.put("confidence", 50);
+            fallback.put("recommendation", "Monitor stock levels closely.");
+            return fallback;
+        }
+    }
+
+    // 2. Generate Donor Outreach Variants
+    public List<String> generateDonorMessages(String bloodType, String shortfallContext) {
+        String prompt = "You are an urgent communication AI for a blood bank. Output ONLY a raw JSON array of strings (no markdown).\n"
+                + "Task: We have a critical shortfall of " + bloodType + " blood. Context: " + shortfallContext + ".\n"
+                + "Generate 3 distinct, empathetic, and urgent SMS message variants to send to past donors.";
+
+        String aiResponse = callGeminiApi(prompt);
+
+        try {
+            String cleanJson = aiResponse.replaceAll("```json", "").replaceAll("```", "").trim();
+            return objectMapper.readValue(cleanJson, List.class);
+        } catch (Exception e) {
+            System.err.println("Failed to parse Gemini Messages: " + e.getMessage());
+            return List.of(
+                "Urgent: We need " + bloodType + " donors today. Please help!",
+                "Your " + bloodType + " blood can save a life today. Book an appointment.",
+                "Blood bank is running low on " + bloodType + ". Please consider donating."
+            );
+        }
+    }
+
+    // The core HTTP engine to talk to Gemini
+    private String callGeminiApi(String fullPrompt) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        
+        // Gemini requires the API key in the URL query string
+        String urlWithKey = apiUrl + "?key=" + apiKey;
+
+        // Build Gemini's required JSON request body
+        Map<String, Object> textPart = Map.of("text", fullPrompt);
+        Map<String, Object> parts = Map.of("parts", List.of(textPart));
+        Map<String, Object> requestBody = Map.of("contents", List.of(parts));
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.postForEntity(urlWithKey, entity, String.class);
+            
+            // Dig deep into Gemini's JSON response to extract the actual text
+            JsonNode rootNode = objectMapper.readTree(response.getBody());
+            return rootNode.path("candidates").get(0)
+                           .path("content")
+                           .path("parts").get(0)
+                           .path("text").asText();
+        } catch (Exception e) {
+            System.err.println("Gemini API Call failed: " + e.getMessage());
+            return "{}"; 
+        }
+    }
+}

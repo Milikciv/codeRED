@@ -2,10 +2,13 @@ package com.codered.service;
 
 import com.codered.model.BloodRequest;
 import com.codered.model.BloodStock;
+import com.codered.model.DonationDrive;
 import com.codered.model.RequestBloodItem;
 import com.codered.model.enums.BloodType;
 import com.codered.repository.BloodRequestRepository;
 import com.codered.repository.BloodStockRepository;
+import com.codered.repository.DonationDriveRepository;
+
 import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
@@ -22,13 +25,20 @@ import java.util.Map;
 @Service
 public class ForecastService {
 
-    private final BloodStockRepository bloodStockRepository;
+   private final BloodStockRepository bloodStockRepository;
     private final BloodRequestRepository bloodRequestRepository;
+    private final AiService aiService;
+    private final DonationDriveRepository donationDriveRepository; // <-- ADD THIS
 
+    // Update the constructor!
     public ForecastService(BloodStockRepository bloodStockRepository,
-                           BloodRequestRepository bloodRequestRepository) {
+                           BloodRequestRepository bloodRequestRepository,
+                           AiService aiService,
+                           DonationDriveRepository donationDriveRepository) { // <-- ADD THIS
         this.bloodStockRepository = bloodStockRepository;
         this.bloodRequestRepository = bloodRequestRepository;
+        this.aiService = aiService;
+        this.donationDriveRepository = donationDriveRepository; // <-- ADD THIS
     }
 
     private static final int HISTORY_DAYS = 14;
@@ -88,16 +98,33 @@ public class ForecastService {
             highRiskDays = riskDays.size();
         }
 
-        // 5. Demand drivers (date-based heuristics) and 6. early warning
+        // 5. Demand drivers (date-based heuristics)
         List<Map<String, Object>> demandDrivers = buildDemandDrivers(today);
-        Map<String, Object> earlyWarning = buildEarlyWarning(
-                byBloodType,
-                selectedBloodType,
-                expectedShortfall,
-                highRiskPeriod,
-                highRiskDays,
-                forecastAccuracy
-        );
+        
+        // 6. Dynamic Early Warning powered by Gemini API
+        String stockSummary = "Total current supply: " + totalCurrentSupply + " units, Ideal: " + totalIdeal + " units.";
+        String demandSummary = "Expected shortfall of " + expectedShortfall + " units over the next " + highRiskDays + " high-risk days.";
+        
+        Map<String, Object> earlyWarning = aiService.generateEarlyWarning(stockSummary, demandSummary);
+
+        // --- NEW CODE: SAVE TO DATABASE TO CLEAR THE IDE WARNING ---
+        if (earlyWarning.containsKey("recommendation")) {
+            String recommendationText = earlyWarning.get("recommendation").toString();
+
+            // Fetch the drives from the database
+            List<DonationDrive> allDrives = donationDriveRepository.findAll();
+            
+            if (!allDrives.isEmpty()) {
+                // For this example, we will attach the national forecast recommendation 
+                // to the most recent upcoming drive in your database.
+                DonationDrive upcomingDrive = allDrives.get(0); 
+                upcomingDrive.setAiRecommendation(recommendationText);
+                
+                // Save it back! This line officially "uses" the repository.
+                donationDriveRepository.save(upcomingDrive); 
+            }
+        }
+        // ------------------------------------------------------------
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("selectedBloodType", selectedBloodType == null ? "All Blood Types" : selectedBloodType);
@@ -139,18 +166,25 @@ public class ForecastService {
     }
 
     private Map<LocalDate, Integer> getDailyDemand(LocalDate today, String selectedBloodType) {
-        Map<LocalDate, Integer> demand = new HashMap<>();
-        LocalDate cutoff = today.minusDays(HISTORY_DAYS - 1);
-        for (BloodRequest req : bloodRequestRepository.findAll()) {
-            LocalDateTime ts = req.getRequestedAt();
-            if (ts == null) continue;
-            LocalDate day = ts.toLocalDate();
-            if (day.isBefore(cutoff) || day.isAfter(today)) continue;
-            int units = unitsOf(req, selectedBloodType);
-            if (units > 0) demand.merge(day, units, Integer::sum);
+    Map<LocalDate, Integer> demand = new HashMap<>();
+    LocalDate cutoffDate = today.minusDays(HISTORY_DAYS - 1);
+    
+    // Set up the start and end of the 14-day history window
+    LocalDateTime startDateTime = cutoffDate.atStartOfDay();
+    LocalDateTime endDateTime = today.plusDays(1).atStartOfDay().minusNanos(1); 
+
+    // Fetch ONLY the requests within the 14-day window from the database
+    List<BloodRequest> recentRequests = bloodRequestRepository.findByRequestedAtBetween(startDateTime, endDateTime);
+
+    for (BloodRequest req : recentRequests) {
+        LocalDate day = req.getRequestedAt().toLocalDate();
+        int units = unitsOf(req, selectedBloodType);
+        if (units > 0) {
+            demand.merge(day, units, Integer::sum); 
         }
-        return demand;
     }
+    return demand;
+}
 
     private int unitsOf(BloodRequest req, String selectedBloodType) {
         List<RequestBloodItem> items = req.getBloodItems();
