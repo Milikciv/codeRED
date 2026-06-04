@@ -91,7 +91,7 @@ function AllocationIllustration() {
 function ForecastingIllustration() {
   return (
     <svg
-      width="130" height="145" viewBox="0 0 130 145"
+      width="155" height="145" viewBox="0 0 155 145"
       xmlns="http://www.w3.org/2000/svg"
       style={{ animation: 'cr-bob 2.4s ease-in-out infinite' }}
     >

@@ -279,32 +279,39 @@ export default function DrivePlanning() {
     >
       {/* Alert context bar */}
       {selectedAlert && (
-        <div className="bg-white border border-gray-200 rounded-xl px-5 py-3 mb-4 flex items-center gap-4 sm:gap-6 overflow-x-auto shadow-sm no-scrollbar">
-          <div className="flex items-center gap-2">
-            <Droplets className="w-4 h-4 text-primary flex-shrink-0" />
-            <span className="text-xs text-gray-400 font-medium">Active HSA Alert</span>
-            <span className="font-mono font-bold text-sm">{selectedAlert.id}</span>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${SEVERITY_BADGE[selectedAlert.severity] ?? ''}`}>
-              {selectedAlert.severity?.toUpperCase()}
-            </span>
-          </div>
-          <div className="h-4 w-px bg-gray-200" />
-          <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-gray-400">Blood Type</span>
-            <span className="font-bold text-gray-900">{selectedAlert.bloodType}</span>
-          </div>
-          <div className="h-4 w-px bg-gray-200" />
-          <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-gray-400">Forecasted Shortage</span>
-            <span className="font-bold text-primary">{selectedAlert.forecastedShortage} units</span>
-          </div>
-          <div className="h-4 w-px bg-gray-200" />
-          <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-gray-400">Shortage Window</span>
-            <span className="font-bold text-gray-900">{selectedAlert.shortageWindow}</span>
-          </div>
-          <div className="ml-auto flex-shrink-0">
-            {changeAlertButton}
+        <div className="card p-4 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
+            <div className="flex items-start gap-2.5 flex-1 min-w-0">
+              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Droplets className="w-4 h-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-gray-400 font-medium">Active HSA Alert</span>
+                  <span className="font-mono font-bold text-sm text-gray-900">{selectedAlert.id}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${SEVERITY_BADGE[selectedAlert.severity] ?? ''}`}>
+                    {selectedAlert.severity?.toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-3 mt-0.5 text-xs text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <span className="text-gray-400">Blood Type</span>
+                    <span className="font-bold text-gray-900 ml-1">{selectedAlert.bloodType}</span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="text-gray-400">Forecasted Shortage</span>
+                    <span className="font-bold text-primary ml-1">{selectedAlert.forecastedShortage} units</span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="text-gray-400">Shortage Window</span>
+                    <span className="font-bold text-gray-900 ml-1">{selectedAlert.shortageWindow}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-end sm:justify-start flex-shrink-0">
+              {changeAlertButton}
+            </div>
           </div>
         </div>
       )}

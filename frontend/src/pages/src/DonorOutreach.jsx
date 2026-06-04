@@ -486,9 +486,9 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false }) {
             <h3 className="font-semibold text-sm text-gray-800">Message Preview</h3>
           </div>
 
-          <div className="flex gap-6 items-start">
-            {/* Phone mockup */}
-            <div className="relative flex-shrink-0" style={{ width: 160 }}>
+          <div className="flex flex-col sm:flex-row gap-6 items-start">
+            {/* Phone mockup — hidden on mobile, not enough room */}
+            <div className="hidden sm:block relative flex-shrink-0" style={{ width: 160 }}>
               <img
                 src="/phone.png"
                 alt=""
@@ -515,7 +515,7 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false }) {
             </div>
 
             {/* Right panel */}
-            <div className="flex-1 min-w-0 flex flex-col gap-5">
+            <div className="flex-1 min-w-0 flex flex-col gap-5 w-full sm:w-auto">
 
               {/* Group 1: variant selection + name + response rate */}
               <div className="flex flex-col gap-2">
@@ -820,7 +820,7 @@ function TabYouthCampaigns({ drive }) {
             {/* Meta items + buttons */}
             <div className="flex flex-col gap-4">
               {/* Meta cards */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                   { icon: <Users className="w-4 h-4 text-primary" />, label: 'Target Audience', value: '16 – 30 years old' },
                   { icon: <MapPin className="w-4 h-4 text-primary" />, label: 'Reach', value: 'Within 3km of venue' },
@@ -838,16 +838,16 @@ function TabYouthCampaigns({ drive }) {
                 ))}
               </div>
 
-              {/* Buttons right-aligned */}
-              <div className="flex gap-3 justify-end">
-                <button className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors">
                   <Eye className="w-4 h-4" />
                   Preview Assets
                 </button>
                 <button
                   onClick={handleGenerate}
                   disabled={generating || generated}
-                  className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 whitespace-nowrap ${
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
                     generated
                       ? 'bg-success text-white cursor-default focus-visible:ring-success'
                       : 'btn-primary disabled:opacity-60 focus-visible:ring-primary'
@@ -1118,12 +1118,14 @@ function TabCollaborations() {
 
           {/* Filter bar */}
           {category && (
-            <div className="px-5 py-3 flex items-center gap-2 border-b border-gray-100">
-              <div className="w-[130px] flex-shrink-0">
-                <SelectDropdown value="Within 3 km" options={['Within 1 km', 'Within 3 km', 'Within 5 km', 'Within 10 km']} />
-              </div>
-              <div className="w-[110px] flex-shrink-0">
-                <SelectDropdown value="All Types" options={['All Types', 'Large Company', 'SME', 'Health Partner', 'Community Partner']} />
+            <div className="px-5 py-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 border-b border-gray-100">
+              <div className="flex gap-2">
+                <div className="flex-1 sm:flex-none sm:w-[130px]">
+                  <SelectDropdown value="Within 3 km" options={['Within 1 km', 'Within 3 km', 'Within 5 km', 'Within 10 km']} />
+                </div>
+                <div className="flex-1 sm:flex-none sm:w-[110px]">
+                  <SelectDropdown value="All Types" options={['All Types', 'Large Company', 'SME', 'Health Partner', 'Community Partner']} />
+                </div>
               </div>
               <div className="flex-1 relative min-w-0">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
@@ -1277,7 +1279,7 @@ export default function DonorOutreach() {
         <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showDriveDropdown ? 'rotate-180' : ''}`} />
       </button>
       {showDriveDropdown && (
-        <div className="absolute right-0 mt-1.5 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden">
+        <div className="absolute right-0 mt-1.5 w-72 max-w-[calc(100vw-2rem)] bg-white border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden">
           {drives.map(d => (
             <button
               key={d.id}
@@ -1322,19 +1324,21 @@ export default function DonorOutreach() {
                 </div>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-4 sm:gap-5">
-              <div>
-                <div className="text-xs text-gray-400 mb-0.5">Target Blood Type</div>
-                <div className="flex items-center gap-1.5">
-                  <Droplets className="w-3.5 h-3.5 text-primary" />
-                  <span className="font-bold text-primary text-sm">{drive.bloodType}</span>
+            <div className="flex items-center justify-between sm:justify-start gap-4 sm:gap-5">
+              <div className="flex items-center gap-4 sm:gap-5">
+                <div>
+                  <div className="text-xs text-gray-400 mb-0.5">Target Blood Type</div>
+                  <div className="flex items-center gap-1.5">
+                    <Droplets className="w-3.5 h-3.5 text-primary" />
+                    <span className="font-bold text-primary text-sm">{drive.bloodType}</span>
+                  </div>
                 </div>
-              </div>
-              <div className="w-px h-7 bg-gray-100 hidden sm:block" />
-              <div>
-                <div className="text-xs text-gray-400 mb-0.5">Linked Alert</div>
-                <div className="flex items-center gap-1 text-primary text-sm font-semibold">
-                  {drive.linkedAlert}<ExternalLink className="w-3 h-3" />
+                <div className="w-px h-7 bg-gray-100 hidden sm:block" />
+                <div>
+                  <div className="text-xs text-gray-400 mb-0.5">Linked Alert</div>
+                  <div className="flex items-center gap-1 text-primary text-sm font-semibold">
+                    {drive.linkedAlert}<ExternalLink className="w-3 h-3" />
+                  </div>
                 </div>
               </div>
               <div className="w-px h-7 bg-gray-100 hidden sm:block" />
@@ -1345,19 +1349,19 @@ export default function DonorOutreach() {
       )}
 
       {/* Tab navigation */}
-      <div className="flex gap-0 mb-4 border-b border-gray-200 overflow-x-auto no-scrollbar">
+      <div className="flex gap-0 mb-4 border-b border-gray-200">
         {TABS.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-all duration-150 -mb-px ${
+            className={`flex-1 sm:flex-none flex items-center justify-center sm:justify-start gap-1.5 px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-all duration-150 -mb-px ${
               activeTab === tab.id
                 ? 'border-primary text-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
             <span className={activeTab === tab.id ? 'text-primary' : 'text-gray-400'}>{tab.icon}</span>
-            {tab.label}
+            <span className="hidden sm:inline">{tab.label}</span>
           </button>
         ))}
       </div>

@@ -386,15 +386,15 @@ export default function DonationDrives() {
             <Icon className="w-4 h-4" /> {label}
           </button>
         ))}
-        <button onClick={() => navigate('/src/drive-planning')} className="ml-auto self-center flex items-center gap-1.5 btn-primary px-4 py-1.5 text-sm">
-          <Plus className="w-4 h-4" /> Create New Drive
+        <button onClick={() => navigate('/src/drive-planning')} className="ml-auto self-center flex items-center gap-1.5 btn-primary px-3 py-1.5 text-sm">
+          <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Create New Drive</span>
         </button>
       </div>
 
       {tab === 'upcoming' && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <div className="flex gap-1.5 flex-wrap">
+            <div className="flex gap-1.5">
               {UPCOMING_FILTERS.map(f => {
                 const count = f === 'All' ? upcomingDrives.length : upcomingDrives.filter(d => d.status === f).length
                 return (
@@ -429,13 +429,51 @@ export default function DonationDrives() {
                 className="card p-4 flex flex-col sm:flex-row sm:items-center gap-4 cursor-pointer hover:shadow-md transition-shadow"
                 onClick={() => openDriveDrawer(drive)}
               >
-                <DriveImage location={drive.location} />
+                <div className="hidden sm:block flex-shrink-0">
+                  <DriveImage location={drive.location} />
+                </div>
 
-                <div className="min-w-0 sm:w-44">
-                  <div className="font-semibold text-sm text-gray-900 truncate">{drive.location}</div>
-                  <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
-                    <MapPin className="w-3 h-3 flex-shrink-0" />
-                    <span className="truncate">{drive.address}</span>
+                <div className="min-w-0 sm:w-44 flex-1 sm:flex-none">
+                  <div className="flex items-start justify-between gap-2 sm:block">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-sm text-gray-900 truncate">{drive.location}</div>
+                      <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
+                        <MapPin className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">{drive.address}</span>
+                      </div>
+                    </div>
+                    {/* Status badge + three-dot menu, mobile only */}
+                    <div className="sm:hidden flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_BADGE[drive.status]}`}>
+                        {drive.status}
+                      </span>
+                      <div className="relative">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDriveMenu(driveMenu === drive.id ? null : drive.id) }}
+                          className="p-1 rounded-lg hover:bg-gray-100 text-gray-400"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                        {driveMenu === drive.id && (
+                          <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-xl shadow-lg z-10 overflow-hidden">
+                            {['Edit Drive', 'Send Outreach', 'Cancel Drive'].map(opt => (
+                              <button
+                                key={opt}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (opt === 'Edit Drive') openDriveDrawer(drive, true)
+                                  if (opt === 'Send Outreach') navigate('/src/donor-outreach')
+                                  setDriveMenu(null)
+                                }}
+                                className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 ${opt === 'Cancel Drive' ? 'text-red-600' : 'text-gray-700'}`}
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -472,7 +510,7 @@ export default function DonationDrives() {
 
                 <div className="hidden sm:block h-10 w-px bg-gray-100 flex-shrink-0" />
 
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
                   <div>
                     <div className="text-[10px] text-gray-400 font-medium mb-1">Status</div>
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_BADGE[drive.status]}`}>
@@ -523,7 +561,52 @@ export default function DonationDrives() {
 
       {tab === 'history' && (
         <div>
-          <div className="card overflow-x-auto">
+          {/* Mobile cards */}
+          <div className="sm:hidden space-y-3">
+            {historyItems.map((d, i) => (
+              <div key={i} className="card p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm text-gray-800 truncate">{d.location}</div>
+                    <div className="text-xs text-gray-400 truncate">{d.address}</div>
+                  </div>
+                  <BloodTypePip type={d.bloodType} />
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                  <div>
+                    <div className="text-[10px] text-gray-400 font-medium mb-0.5">Date</div>
+                    <div className="font-medium text-gray-700">{d.date}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-gray-400 font-medium mb-0.5">Conversion</div>
+                    <ConversionCell rate={d.conversionRate} />
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-gray-400 font-medium mb-0.5">Turnout</div>
+                    <div className="text-primary font-semibold">{d.actualTurnout} donors</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-gray-400 font-medium mb-0.5">Units Collected</div>
+                    <div className="text-primary font-semibold">{d.unitsCollected} units</div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                  <button
+                    onClick={() => navigate(`/src/drive-planning?alertId=${d.linkedAlert}`)}
+                    className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
+                  >
+                    <Droplets className="w-3 h-3" /> {d.linkedAlert}
+                  </button>
+                  <button className="p-1.5 rounded hover:bg-gray-100 text-gray-400">
+                    <BarChart2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden sm:block card overflow-x-auto">
             <table className="w-full text-xs min-w-[700px]">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
