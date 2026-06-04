@@ -21,17 +21,17 @@ function TrendBadge({ pct, positive }) {
 
 function KpiCard({ icon, label, value, trendPct, trendPositive, trendLabel }) {
   return (
-    <div className="card p-4 flex gap-3">
-      <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
-        {icon}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-xs text-gray-500 font-medium">{label}</div>
-        <div className="text-2xl font-bold text-gray-900 mt-0.5">{value}</div>
-        <div className="flex items-center gap-1 mt-0.5">
-          <TrendBadge pct={trendPct} positive={trendPositive} />
-          <span className="text-xs text-gray-400">{trendLabel}</span>
+    <div className="card p-3 sm:p-4 flex flex-col gap-1.5">
+      <div className="flex items-center gap-2">
+        <div className="w-7 h-7 rounded-md bg-red-50 flex items-center justify-center flex-shrink-0">
+          {icon}
         </div>
+        <span className="text-xs text-gray-500 font-medium leading-tight">{label}</span>
+      </div>
+      <div className="text-2xl font-bold text-gray-900">{value}</div>
+      <div className="flex items-center gap-1 flex-wrap">
+        <TrendBadge pct={trendPct} positive={trendPositive} />
+        <span className="text-xs text-gray-400">{trendLabel}</span>
       </div>
     </div>
   )
@@ -99,25 +99,25 @@ export default function DonorInformation() {
       {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         <KpiCard
-          icon={<Users className="w-5 h-5 text-primary" />}
+          icon={<Users className="w-4 h-4 text-primary" />}
           label="Active Donors"
           value={(summary.activeDonors ?? 0).toLocaleString()}
           trendPct={4.2} trendPositive={true} trendLabel="vs last month"
         />
         <KpiCard
-          icon={<CalendarDays className="w-5 h-5 text-primary" />}
+          icon={<CalendarDays className="w-4 h-4 text-primary" />}
           label="Eligible Repeat Donors"
           value={(summary.eligibleRepeat ?? 0).toLocaleString()}
           trendPct={3.6} trendPositive={true} trendLabel="vs last month"
         />
         <KpiCard
-          icon={<Users className="w-5 h-5 text-gray-400" />}
+          icon={<Users className="w-4 h-4 text-gray-400" />}
           label="Dormant Donors"
           value={(summary.dormant ?? 0).toLocaleString()}
           trendPct={2.1} trendPositive={false} trendLabel="vs last month"
         />
         <KpiCard
-          icon={<TrendingUp className="w-5 h-5 text-primary" />}
+          icon={<TrendingUp className="w-4 h-4 text-primary" />}
           label="Past Response Rate"
           value={`${summary.responseRate ?? 0}%`}
           trendPct={2.8} trendPositive={true} trendLabel="vs last campaign"

@@ -10,10 +10,10 @@ import Pagination, { usePagination } from '../../components/common/Pagination'
 const PAGE_SIZE = 10
 
 const SEVERITY_CONFIG = {
-  Critical: { bg: 'bg-red-50',    border: 'border-red-200',    badge: 'bg-red-100 text-red-700',       dot: 'bg-red-500',    icon: AlertTriangle },
-  High:     { bg: 'bg-orange-50', border: 'border-orange-200', badge: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500', icon: AlertTriangle },
-  Medium:   { bg: 'bg-yellow-50', border: 'border-yellow-200', badge: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500', icon: AlertTriangle },
-  Low:      { bg: 'bg-green-50',  border: 'border-green-200',  badge: 'bg-green-100 text-green-700',   dot: 'bg-green-500',  icon: CheckCircle  },
+  Critical: { bg: 'bg-red-50',    border: 'border-red-200',    badge: 'bg-red-100 text-red-700',       dot: 'bg-red-500',    accent: 'border-l-red-400',    icon: AlertTriangle },
+  High:     { bg: 'bg-orange-50', border: 'border-orange-200', badge: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500', accent: 'border-l-orange-400', icon: AlertTriangle },
+  Medium:   { bg: 'bg-yellow-50', border: 'border-yellow-200', badge: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500', accent: 'border-l-yellow-400', icon: AlertTriangle },
+  Low:      { bg: 'bg-green-50',  border: 'border-green-200',  badge: 'bg-green-100 text-green-700',   dot: 'bg-green-500',  accent: 'border-l-green-400',  icon: CheckCircle  },
 }
 
 export default function AlertsFromHSA() {
@@ -127,9 +127,70 @@ export default function AlertsFromHSA() {
         <span className="ml-auto text-xs text-gray-400">{totalItems} alert{totalItems !== 1 ? 's' : ''}</span>
       </div>
 
-      {/* Alert table */}
-      <div className="card overflow-hidden overflow-x-auto">
-        <table className="w-full text-xs min-w-[700px]">
+      {/* Mobile card list */}
+      <motion.div
+        key={`cards-${filter}-${page}`}
+        className="sm:hidden space-y-3"
+        initial="hidden"
+        animate="visible"
+        variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06 } } }}
+      >
+        {pageItems.map((alert) => {
+          const cfg = SEVERITY_CONFIG[alert.severity] ?? SEVERITY_CONFIG.Medium
+          return (
+            <motion.div
+              key={alert.id}
+              variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0, transition: { duration: 0.25 } } }}
+              onClick={() => setSelected(alert)}
+              className="card p-4 cursor-pointer hover:shadow-md transition-shadow space-y-3"
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-semibold text-sm text-gray-900 font-mono">{alert.id}</div>
+                  <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
+                    <Clock className="w-3 h-3 flex-shrink-0" />
+                    <span>{alert.receivedAt}</span>
+                  </div>
+                </div>
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold flex-shrink-0 ${cfg.badge}`}>{alert.severity}</span>
+              </div>
+
+              {/* Data grid */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                <div>
+                  <div className="text-[10px] text-gray-400 font-medium mb-1">Blood Type</div>
+                  <span className="flex items-center gap-1 font-semibold text-primary">
+                    <Droplets className="w-3 h-3" /> {alert.bloodType}
+                  </span>
+                </div>
+                <div>
+                  <div className="text-[10px] text-gray-400 font-medium mb-1">Forecasted Shortage</div>
+                  <div className="font-semibold text-gray-800">{alert.forecastedShortage.toLocaleString()} units</div>
+                </div>
+                <div className="col-span-2">
+                  <div className="text-[10px] text-gray-400 font-medium mb-1">Shortage Window</div>
+                  <div className="font-medium text-gray-700">{alert.shortageWindow}</div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end pt-1 border-t border-gray-100">
+                <button
+                  onClick={e => { e.stopPropagation(); handlePlanDrive(alert.id) }}
+                  className="flex items-center gap-1.5 btn-primary px-3 py-1.5 text-xs font-semibold"
+                >
+                  <Map className="w-3.5 h-3.5" /> Plan Drive
+                </button>
+              </div>
+            </motion.div>
+          )
+        })}
+      </motion.div>
+
+      {/* Desktop table */}
+      <div className="hidden sm:block card overflow-hidden">
+        <table className="w-full text-xs">
           <thead>
             <tr className="bg-gray-50 text-gray-500 border-b border-gray-100">
               <th className="text-left px-4 py-3 font-medium">Alert ID</th>
