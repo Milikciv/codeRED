@@ -199,13 +199,13 @@ export default function DrivePlanning() {
   // Load alerts and hotspots once
   useEffect(() => {
     Promise.all([
-      api.get('/src-alerts').then(r => {
+      api.get('/alerts/src').then(r => {
         setAlerts(r.data)
         const paramId = searchParams.get('alertId')
         const initialId = paramId ?? (r.data[0]?.id || null)
         setSelectedAlertId(initialId)
       }).catch(() => {}),
-      api.get('/donor-hotspots').then(r => {
+      api.get('/donors/hotspots').then(r => {
         setHotspots(r.data)
         if (r.data.length > 0) setSelectedHotspot(r.data[0])
       }).catch(() => {}),
@@ -215,7 +215,7 @@ export default function DrivePlanning() {
   // Re-fetch recommended drive when selected alert changes
   useEffect(() => {
     if (!selectedAlertId) return
-    api.get(`/recommended-drive?alertCode=${selectedAlertId}`)
+    api.get(`/drives/recommended?alertCode=${selectedAlertId}`)
       .then(r => setRecommendedDrive(r.data))
       .catch(() => {})
   }, [selectedAlertId])

@@ -1,4 +1,4 @@
-package com.codered.controller;
+package com.codered.service;
 
 import com.codered.model.Donor;
 import com.codered.model.enums.BloodType;
@@ -6,28 +6,34 @@ import com.codered.model.enums.DonorStatus;
 import com.codered.repository.DonorDemographicRepository;
 import com.codered.repository.DonorRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@RestController
-@RequestMapping("/api/donors")
+@Service
 @RequiredArgsConstructor
-public class DonorStatsController {
+public class DonorStatsService {
 
     private final DonorRepository donorRepository;
     private final DonorDemographicRepository donorDemographicRepository;
 
-    @GetMapping("/stats")
-    public ResponseEntity<Map<String, Object>> getDonorStats() {
+    public Map<String, Object> getDonorStats() {
         List<Donor> all = donorRepository.findAll();
         LocalDate today = LocalDate.now();
 
-        // ── summary ──────────────────────────────────────────────────────
+        return Map.of(
+            "summary",           buildSummary(all, today),
+            "byBloodType",       buildByBloodType(all),
+            "byAge",             buildByAge(all, today),
+            "byLocation",        buildByLocation(all),
+            "responseRateTrend", buildResponseRateTrend()
+        );
+    }
+
+    private Map<String, Object> buildSummary(List<Donor> all, LocalDate today) {
         long active = all.stream().filter(d -> d.getStatus() == DonorStatus.ACTIVE).count();
         long dormant = all.stream().filter(d -> d.getStatus() == DonorStatus.DORMANT).count();
         long eligibleRepeat = all.stream()
@@ -36,12 +42,11 @@ public class DonorStatsController {
                       || d.getLastDonationDate().isBefore(today.minusMonths(3)))
             .count();
 
-        // Response rate comes from historical outreach campaign data
         double responseRate = donorDemographicRepository
             .findByCategoryOrderBySortOrderAsc("response_rate")
             .stream()
             .mapToDouble(r -> r.getRate() != null ? r.getRate() : 0.0)
-            .reduce((a, b) -> b)  // last (most recent) value
+            .reduce((a, b) -> b)
             .orElse(0.0);
 
         Map<String, Object> summary = new LinkedHashMap<>();
@@ -49,37 +54,41 @@ public class DonorStatsController {
         summary.put("eligibleRepeat", eligibleRepeat);
         summary.put("dormant",        dormant);
         summary.put("responseRate",   responseRate);
+        return summary;
+    }
 
-        // ── by blood type ─────────────────────────────────────────────────
+    private List<Map<String, Object>> buildByBloodType(List<Donor> all) {
         Map<BloodType, Long> btCounts = all.stream()
             .collect(Collectors.groupingBy(Donor::getBloodType, Collectors.counting()));
 
-        long totalDonors = all.size();
-        List<Map<String, Object>> byBloodType = Arrays.stream(BloodType.values())
-            .filter(bt -> btCounts.containsKey(bt))
+        long total = all.size();
+        return Arrays.stream(BloodType.values())
+            .filter(btCounts::containsKey)
             .sorted(Comparator.comparingLong((BloodType bt) -> btCounts.getOrDefault(bt, 0L)).reversed())
             .map(bt -> {
                 long count = btCounts.getOrDefault(bt, 0L);
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("type",  bt.getLabel());
                 m.put("count", count);
-                m.put("pct",   totalDonors > 0 ? Math.round(count * 1000.0 / totalDonors) / 10.0 : 0.0);
-                return m;
+                m.put("pct",   total > 0 ? Math.round(count * 1000.0 / total) / 10.0 : 0.0);
+                return (Map<String, Object>) m;
             })
             .collect(Collectors.toList());
+    }
 
-        // ── by age group ──────────────────────────────────────────────────
+    private List<Map<String, Object>> buildByAge(List<Donor> all, LocalDate today) {
         String[] ageGroups  = {"16-20", "21-30", "31-40", "41-50", "51-60", "60+"};
         int[]    ageMinYear = {2006,    1996,    1986,    1976,    1966,    0};
         int[]    ageMaxYear = {2010,    2005,    1995,    1985,    1975,    1965};
 
-        List<Map<String, Object>> byAge = new ArrayList<>();
+        long total = all.size();
+        List<Map<String, Object>> result = new ArrayList<>();
         for (int i = 0; i < ageGroups.length; i++) {
             final int minYear = ageMinYear[i];
             final int maxYear = ageMaxYear[i];
             long count = all.stream().filter(d -> {
                 int age = Period.between(d.getDateOfBirth(), today).getYears();
-                if (maxYear == 0) return age >= 60;            // 60+
+                if (maxYear == 0) return age >= 60;
                 int birthYear = d.getDateOfBirth().getYear();
                 return birthYear >= minYear && birthYear <= maxYear;
             }).count();
@@ -87,16 +96,18 @@ public class DonorStatsController {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("group", ageGroups[i]);
             m.put("count", count);
-            m.put("pct",   totalDonors > 0 ? Math.round(count * 1000.0 / totalDonors) / 10.0 : 0.0);
-            byAge.add(m);
+            m.put("pct",   total > 0 ? Math.round(count * 1000.0 / total) / 10.0 : 0.0);
+            result.add(m);
         }
+        return result;
+    }
 
-        // ── by location (active donors only, ranked by count) ─────────────
+    private List<Map<String, Object>> buildByLocation(List<Donor> all) {
         Map<String, List<Donor>> byRegion = all.stream()
             .filter(d -> d.getStatus() == DonorStatus.ACTIVE)
             .collect(Collectors.groupingBy(Donor::getRegion));
 
-        List<Map<String, Object>> byLocation = byRegion.entrySet().stream()
+        return byRegion.entrySet().stream()
             .sorted(Comparator.comparingInt((Map.Entry<String, List<Donor>> e) -> e.getValue().size()).reversed())
             .collect(Collectors.toList())
             .stream()
@@ -113,9 +124,10 @@ public class DonorStatsController {
                 }
             })
             .collect(Collectors.toList());
+    }
 
-        // ── response rate trend (historical outreach campaign data) ───────
-        List<Map<String, Object>> responseRateTrend = donorDemographicRepository
+    private List<Map<String, Object>> buildResponseRateTrend() {
+        return donorDemographicRepository
             .findByCategoryOrderBySortOrderAsc("response_rate").stream()
             .map(r -> {
                 Map<String, Object> m = new LinkedHashMap<>();
@@ -124,13 +136,5 @@ public class DonorStatsController {
                 return m;
             })
             .collect(Collectors.toList());
-
-        return ResponseEntity.ok(Map.of(
-            "summary",           summary,
-            "byBloodType",       byBloodType,
-            "byAge",             byAge,
-            "byLocation",        byLocation,
-            "responseRateTrend", responseRateTrend
-        ));
     }
 }

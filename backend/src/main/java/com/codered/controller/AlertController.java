@@ -3,6 +3,7 @@ package com.codered.controller;
 import com.codered.dto.SendAlertRequest;
 import com.codered.model.Alert;
 import com.codered.service.AlertService;
+import com.codered.service.SrcAlertService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -10,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/alerts")
@@ -17,6 +19,7 @@ import java.util.List;
 public class AlertController {
 
     private final AlertService alertService;
+    private final SrcAlertService srcAlertService;
 
     @GetMapping
     public ResponseEntity<List<Alert>> getAlerts(@AuthenticationPrincipal UserDetails userDetails) {
@@ -37,5 +40,10 @@ public class AlertController {
     public ResponseEntity<Void> dismissAlert(@PathVariable Long id) {
         alertService.dismissAlert(id);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/src")
+    public ResponseEntity<List<Map<String, Object>>> getSrcAlerts() {
+        return ResponseEntity.ok(srcAlertService.getSrcAlerts());
     }
 }
