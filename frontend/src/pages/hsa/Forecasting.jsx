@@ -50,7 +50,7 @@ function ForecastingSkeleton() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="card p-4">
           <div className="h-4 bg-red-100 rounded w-32 mb-3" />
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[...Array(4)].map((_, i) => <div key={i} className="h-24 bg-red-50 rounded-xl" />)}
           </div>
         </div>
@@ -284,7 +284,7 @@ export default function Forecasting() {
             <button className="text-xs text-primary font-medium">View All</button>
           </div>
           {data.demandDrivers?.length > 0 ? (
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {data.demandDrivers.map(d => (
                 <div key={d.name} className="bg-gray-50 rounded-xl p-3 text-center">
                   <IonIcon icon={DRIVER_ICONS[d.name] ?? statsChartOutline} style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }} />
