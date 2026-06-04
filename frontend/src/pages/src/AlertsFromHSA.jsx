@@ -25,7 +25,7 @@ export default function AlertsFromHSA() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get('/src-alerts').then(r => setAlerts(r.data)).catch(() => {}).finally(() => setLoading(false))
+    api.get('/alerts/src').then(r => setAlerts(r.data)).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
   if (loading) return (

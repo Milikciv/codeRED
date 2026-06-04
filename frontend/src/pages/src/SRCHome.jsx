@@ -63,7 +63,7 @@ export default function SRCHome() {
 
   useEffect(() => {
     Promise.all([
-      api.get('/src-alerts').then(r => setAlerts(r.data)).catch(() => {}),
+      api.get('/alerts/src').then(r => setAlerts(r.data)).catch(() => {}),
       api.get('/drives').then(r => setDrives(r.data)).catch(() => {}),
       api.get('/donors/stats').then(r => setDonorStats(r.data)).catch(() => {}),
     ]).finally(() => setLoading(false))

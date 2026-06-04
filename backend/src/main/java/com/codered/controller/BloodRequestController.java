@@ -1,8 +1,7 @@
 package com.codered.controller;
 
 import com.codered.model.BloodRequest;
-import com.codered.model.enums.RequestStatus;
-import com.codered.repository.BloodRequestRepository;
+import com.codered.service.BloodRequestService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,25 +14,22 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class BloodRequestController {
 
-    private final BloodRequestRepository bloodRequestRepository;
+    private final BloodRequestService bloodRequestService;
 
     @GetMapping
     public ResponseEntity<List<BloodRequest>> getRequests() {
-        return ResponseEntity.ok(bloodRequestRepository.findAllByOrderByRequestedAtDesc());
+        return ResponseEntity.ok(bloodRequestService.getRequests());
     }
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<BloodRequest> updateStatus(
             @PathVariable Long id,
             @RequestBody Map<String, String> body) {
-        BloodRequest request = bloodRequestRepository.findById(id).orElseThrow();
-        request.setStatus(RequestStatus.valueOf(body.get("status").toUpperCase()));
-        return ResponseEntity.ok(bloodRequestRepository.save(request));
+        return ResponseEntity.ok(bloodRequestService.updateStatus(id, body.get("status")));
     }
 
     @GetMapping("/active-count")
     public ResponseEntity<Map<String, Long>> getActiveCount() {
-        long count = bloodRequestRepository.countByStatus(RequestStatus.PENDING);
-        return ResponseEntity.ok(Map.of("count", count));
+        return ResponseEntity.ok(Map.of("count", bloodRequestService.getActiveCount()));
     }
 }
