@@ -1,5 +1,6 @@
 package com.codered.controller;
 
+import com.codered.dto.SendAlertRequest;
 import com.codered.model.Alert;
 import com.codered.service.AlertService;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,16 @@ public class AlertController {
     @GetMapping
     public ResponseEntity<List<Alert>> getAlerts(@AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(alertService.getAlerts(userDetails.getUsername()));
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<List<Alert>> getAllAlerts() {
+        return ResponseEntity.ok(alertService.getAllAlerts());
+    }
+
+    @PostMapping
+    public ResponseEntity<Alert> sendAlert(@RequestBody SendAlertRequest request) {
+        return ResponseEntity.ok(alertService.sendAlert(request));
     }
 
     @PatchMapping("/{id}/dismiss")

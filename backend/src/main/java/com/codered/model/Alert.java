@@ -17,6 +17,8 @@ public class Alert {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String alertId;
+
     @Column(nullable = false)
     private String title;
 
@@ -34,6 +36,30 @@ public class Alert {
     private String location;
     private boolean dismissed;
     private LocalDateTime createdAt;
+
+    // AlertsToSRC display fields
+    private String bloodType;
+    private String alertStatus;
+    private Integer forecastedShortage;
+    private String windowStart;
+    private String windowEnd;
+    private Integer safeSupplyThreshold;
+    private Integer projectedSupply;
+    private Integer forecastConfidence;
+    private Integer recommendedDrives;
+    private String dateGenerated;
+
+    @Column(length = 1000)
+    private String reason;
+
+    @Column(length = 500)
+    private String recommendedAction;
+
+    @Column(length = 500)
+    private String supportingText;
+
+    @Column(length = 1000)
+    private String defaultNotes;
 
     @PrePersist
     public void onCreate() {

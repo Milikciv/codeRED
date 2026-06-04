@@ -39,6 +39,7 @@ public class DataSeeder implements CommandLineRunner {
         if (hospitalRepository.count() > 1) {
             ensureMultiTypeRequestsExist();
             ensureSrcDataExists();
+            ensureAlertsExist();
             return;
         }
         seedHospitals();
@@ -52,7 +53,6 @@ public class DataSeeder implements CommandLineRunner {
     // ── ensure methods (idempotent backfills) ────────────────────────────
 
     private void ensureSrcDataExists() {
-        if (srcAlertRepository.count() == 0)            seedSrcAlerts();
         if (donationDriveRepository.count() == 0)       seedDonationDrives();
         if (donorRepository.count() == 0)               seedDonors();
         if (donorDemographicRepository.count() == 0)    seedResponseRateTrend();
@@ -60,7 +60,6 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void seedSrcData() {
-        seedSrcAlerts();
         seedDonationDrives();
         seedDonors();
         seedResponseRateTrend();
@@ -584,36 +583,73 @@ public class DataSeeder implements CommandLineRunner {
         bloodRequestRepository.save(req);
     }
 
-    private void seedAlerts() {
-        Hospital sgh = hospitalRepository.findByCode("SGH").orElseThrow();
-        Hospital ttsh = hospitalRepository.findByCode("TTSH").orElseThrow();
+    private void ensureAlertsExist() {
+        if (alertRepository.count() == 0) seedAlerts();
+    }
 
-        Object[][] alertData = {
-            {"O- Shortage Predicted...", "O- blood supply at SGH is predicted to fall below safe threshold within 3 days.",
-             Priority.CRITICAL, sgh, "SGH"},
-            {"O- Shortage Predicted...", "O- blood supply at TTS is predicted to drop. Action recommended.",
-             Priority.HIGH, ttsh, "TTS"},
-            {"A+ Shortage Predicted...", "A+ blood supply at TTS may reach critical levels next week.",
-             Priority.HIGH, ttsh, "TTS"},
-            {"Mass Casualty Incident (MCI) reported at ECP",
-             "Est. 15+ incoming traumas. Massive immediate demand for O- and O+ packed red blood cells expected.",
-             Priority.CRITICAL, sgh, "East Coast Parkway Singapore"},
-            {"Cross-Hospital Request Pending",
-             "National University Hospital has requested a transfer of 10 units of AB-. Approve or decline based on current 7-day forecast.",
-             Priority.HIGH, null, "National University Hospital Singapore"},
-            {"Platelet shelf-life expiration wave in 3 days",
-             "57 units will expire; consider redistributing to other hospitals if needed.",
-             Priority.HIGH, null, "Multiple Locations"},
+    private void seedAlerts() {
+        // {alertId, bloodType, priority, alertStatus, title, message, reason,
+        //  recommendedAction, supportingText, defaultNotes,
+        //  forecastedShortage, windowStart, windowEnd,
+        //  safeSupplyThreshold, projectedSupply, forecastConfidence, recommendedDrives}
+        Object[][] data = {
+            {"ALT-2605-001", "O-",  Priority.CRITICAL, "Draft",
+             "O- Blood Shortage Alert",
+             "O- demand is projected to exceed the safe supply threshold within the next 7 days.",
+             "Demand is projected to exceed the safe supply threshold for O- blood over the next 7 days.",
+             "Organise 2 donor drives targeting O- donors.",
+             "This will help close the projected shortfall and maintain a safe supply.",
+             "Please prioritise donor outreach and drive planning for O- donors. SRC to decide final locations based on donor hotspots and expected donor availability.",
+             420, "21 May 2026", "27 May 2026", 1000, 580, 87, 2},
+            {"ALT-2605-002", "B+",  Priority.HIGH,     "Sent",
+             "B+ Blood Shortage Alert",
+             "B+ demand is forecasted to exceed safe supply. Outreach recommended within 24 hours.",
+             "Demand is projected to exceed the safe supply threshold for B+ blood over the next 7 days.",
+             "Organise 1 donor drive targeting B+ donors.",
+             "This will help close the projected shortfall and maintain a safe supply.",
+             "Please prioritise donor outreach and drive planning for B+ donors.",
+             280, "28 May 2026", "3 Jun 2026", 800, 540, 82, 1},
+            {"ALT-2605-003", "A-",  Priority.MEDIUM,   "Sent",
+             "A- Blood Shortage Alert",
+             "A- supply may fall below safe threshold. Targeted outreach is advised.",
+             "Demand is projected to exceed the safe supply threshold for A- blood over the next 7 days.",
+             "Organise 1 donor drive targeting A- donors.",
+             "This will help close the projected shortfall and maintain a safe supply.",
+             "Please prioritise donor outreach and drive planning for A- donors.",
+             180, "4 Jun 2026", "10 Jun 2026", 600, 420, 79, 1},
+            {"ALT-2605-004", "AB-", Priority.MEDIUM,   "Ready",
+             "AB- Blood Shortage Alert",
+             "AB- stock projected to dip below safe levels. Plan drives as soon as possible.",
+             "Demand is projected to exceed the safe supply threshold for AB- blood over the next 7 days.",
+             "Organise 1 donor drive targeting AB- donors.",
+             "This will help close the projected shortfall and maintain a safe supply.",
+             "Please prioritise donor outreach and drive planning for AB- donors.",
+             120, "11 Jun 2026", "17 Jun 2026", 400, 280, 75, 1},
         };
-        for (Object[] a : alertData) {
+
+        int seq = 1;
+        for (Object[] a : data) {
             Alert alert = new Alert();
-            alert.setTitle((String) a[0]);
-            alert.setMessage((String) a[1]);
+            alert.setAlertId((String) a[0]);
+            alert.setBloodType((String) a[1]);
             alert.setPriority((Priority) a[2]);
-            alert.setHospital((Hospital) a[3]);
-            alert.setLocation((String) a[4]);
+            alert.setAlertStatus((String) a[3]);
+            alert.setTitle((String) a[4]);
+            alert.setMessage((String) a[5]);
+            alert.setReason((String) a[6]);
+            alert.setRecommendedAction((String) a[7]);
+            alert.setSupportingText((String) a[8]);
+            alert.setDefaultNotes((String) a[9]);
+            alert.setForecastedShortage((Integer) a[10]);
+            alert.setWindowStart((String) a[11]);
+            alert.setWindowEnd((String) a[12]);
+            alert.setSafeSupplyThreshold((Integer) a[13]);
+            alert.setProjectedSupply((Integer) a[14]);
+            alert.setForecastConfidence((Integer) a[15]);
+            alert.setRecommendedDrives((Integer) a[16]);
             alert.setDismissed(false);
-            alert.setCreatedAt(LocalDateTime.now().minusHours(2));
+            alert.setDateGenerated(LocalDateTime.now().minusDays(seq++).format(
+                java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy, hh:mm a")));
             alertRepository.save(alert);
         }
     }

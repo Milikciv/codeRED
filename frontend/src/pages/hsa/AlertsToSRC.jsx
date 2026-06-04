@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import api from '../../api/axios'
 import { motion, AnimatePresence } from 'framer-motion'
 import PageLayout from '../../components/layout/PageLayout'
 import { Bell, Filter, List, ChevronDown, Send } from 'lucide-react'
@@ -17,81 +18,6 @@ const MOCK_INVENTORY = [
   { type: 'AB-', units: 250,  pct: 4  },
   { type: 'O+',  units: 1180, pct: 20 },
   { type: 'O-',  units: 580,  pct: 10 },
-]
-
-const INITIAL_ALERTS = [
-  {
-    id: 'ALT-2505-001',
-    bloodType: 'O-',
-    severity: 'Critical',
-    shortage: 420,
-    windowStart: '21 May 2026',
-    windowEnd: '27 May 2026',
-    status: 'Draft',
-    safeSupplyThreshold: 1000,
-    projectedSupply: 580,
-    forecastConfidence: 87,
-    dateGenerated: '30 May 2026, 08:15 AM',
-    reason: 'Demand is projected to exceed the safe supply threshold for O- blood over the next 7 days.',
-    recommendedAction: 'Organise 2 donor drives targeting O- donors.',
-    recommendedDrives: 2,
-    supportingText: 'This will help close the projected shortfall and maintain a safe supply.',
-    defaultNotes: 'Please prioritise donor outreach and drive planning for O- donors. SRC to decide final locations based on donor hotspots and expected donor availability.',
-  },
-  {
-    id: 'ALT-2505-002',
-    bloodType: 'B+',
-    severity: 'High',
-    shortage: 260,
-    windowStart: '28 May 2026',
-    windowEnd: '3 Jun 2026',
-    status: 'Sent',
-    safeSupplyThreshold: 800,
-    projectedSupply: 540,
-    forecastConfidence: 82,
-    dateGenerated: '29 May 2026, 10:30 AM',
-    reason: 'Demand is projected to exceed the safe supply threshold for B+ blood over the next 7 days.',
-    recommendedAction: 'Organise 1 donor drive targeting B+ donors.',
-    recommendedDrives: 1,
-    supportingText: 'This will help close the projected shortfall and maintain a safe supply.',
-    defaultNotes: 'Please prioritise donor outreach and drive planning for B+ donors.',
-  },
-  {
-    id: 'ALT-2505-003',
-    bloodType: 'A-',
-    severity: 'Medium',
-    shortage: 180,
-    windowStart: '4 Jun 2026',
-    windowEnd: '10 Jun 2026',
-    status: 'Sent',
-    safeSupplyThreshold: 600,
-    projectedSupply: 420,
-    forecastConfidence: 79,
-    dateGenerated: '28 May 2026, 02:00 PM',
-    reason: 'Demand is projected to exceed the safe supply threshold for A- blood over the next 7 days.',
-    recommendedAction: 'Organise 1 donor drive targeting A- donors.',
-    recommendedDrives: 1,
-    supportingText: 'This will help close the projected shortfall and maintain a safe supply.',
-    defaultNotes: 'Please prioritise donor outreach and drive planning for A- donors.',
-  },
-  {
-    id: 'ALT-2505-004',
-    bloodType: 'AB-',
-    severity: 'Medium',
-    shortage: 120,
-    windowStart: '11 Jun 2026',
-    windowEnd: '17 Jun 2026',
-    status: 'Ready',
-    safeSupplyThreshold: 400,
-    projectedSupply: 280,
-    forecastConfidence: 75,
-    dateGenerated: '27 May 2026, 09:45 AM',
-    reason: 'Demand is projected to exceed the safe supply threshold for AB- blood over the next 7 days.',
-    recommendedAction: 'Organise 1 donor drive targeting AB- donors.',
-    recommendedDrives: 1,
-    supportingText: 'This will help close the projected shortfall and maintain a safe supply.',
-    defaultNotes: 'Please prioritise donor outreach and drive planning for AB- donors.',
-  },
 ]
 
 const STATUS_TABS = ['All', 'Draft', 'Ready', 'Sent', 'Resolved']
@@ -120,7 +46,31 @@ const TOTAL_INVENTORY = MOCK_INVENTORY.reduce((a, b) => a + b.units, 0)
 
 export default function AlertsToSRC() {
   const [tab, setTab]       = useState('All')
-  const [alerts, setAlerts] = useState(INITIAL_ALERTS)
+  const [alerts, setAlerts] = useState([])
+
+  useEffect(() => {
+    const priorityToSeverity = { CRITICAL: 'Critical', HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low' }
+    api.get('/alerts/all').then(r => {
+      setAlerts(r.data.map(a => ({
+        id:                   a.alertId ?? String(a.id),
+        bloodType:            a.bloodType ?? '—',
+        severity:             priorityToSeverity[a.priority] ?? 'Medium',
+        shortage:             a.forecastedShortage ?? 0,
+        windowStart:          a.windowStart ?? '',
+        windowEnd:            a.windowEnd ?? '',
+        status:               a.alertStatus ?? 'Draft',
+        safeSupplyThreshold:  a.safeSupplyThreshold ?? 0,
+        projectedSupply:      a.projectedSupply ?? 0,
+        forecastConfidence:   a.forecastConfidence ?? 0,
+        recommendedDrives:    a.recommendedDrives ?? 1,
+        dateGenerated:        a.dateGenerated ?? '',
+        reason:               a.reason ?? '',
+        recommendedAction:    a.recommendedAction ?? '',
+        supportingText:       a.supportingText ?? '',
+        defaultNotes:         a.defaultNotes ?? a.message ?? '',
+      })))
+    }).catch(() => {})
+  }, [])
   const [selectedId, setSelectedId] = useState(null)
   const [notes, setNotes]   = useState({})
   const [priority, setPriority] = useState({})
@@ -138,18 +88,38 @@ export default function AlertsToSRC() {
     setConfirmSendOpen(true)
   }
 
-  const confirmSend = () => {
+  const confirmSend = async () => {
     if (!selectedAlert || selectedAlert.status === 'Sent') {
       setConfirmSendOpen(false)
       return
     }
-    setAlerts(prev => prev.map(a => a.id === selectedId ? { ...a, status: 'Sent' } : a))
-    setConfirmSendOpen(false)
-    setToast({
-      type: 'success',
-      title: 'Alert sent to SRC',
-      message: `${selectedAlert.id} has been sent for action.`,
-    })
+    const priorityMap = { Critical: 'CRITICAL', High: 'HIGH', Medium: 'MEDIUM', Low: 'Low' }
+    try {
+      await api.post('/alerts', {
+        title:               `${selectedAlert.bloodType} Blood Shortage — ${selectedAlert.id}`,
+        message:             currentNotes,
+        priority:            priorityMap[selectedAlert.severity] ?? 'MEDIUM',
+        alertStatus:         'Sent',
+        bloodType:           selectedAlert.bloodType,
+        forecastedShortage:  selectedAlert.shortage,
+        windowStart:         selectedAlert.windowStart,
+        windowEnd:           selectedAlert.windowEnd,
+        safeSupplyThreshold: selectedAlert.safeSupplyThreshold,
+        projectedSupply:     selectedAlert.projectedSupply,
+        forecastConfidence:  selectedAlert.forecastConfidence,
+        recommendedDrives:   selectedAlert.recommendedDrives,
+        reason:              selectedAlert.reason,
+        recommendedAction:   selectedAlert.recommendedAction,
+        supportingText:      selectedAlert.supportingText,
+        defaultNotes:        currentNotes,
+      })
+      setAlerts(prev => prev.map(a => a.id === selectedId ? { ...a, status: 'Sent' } : a))
+      setToast({ type: 'success', title: 'Alert sent to SRC', message: `${selectedAlert.id} has been sent for action.` })
+    } catch {
+      setToast({ type: 'error', title: 'Failed to send alert', message: 'Please try again.' })
+    } finally {
+      setConfirmSendOpen(false)
+    }
   }
 
   const handleSaveDraft = () => {

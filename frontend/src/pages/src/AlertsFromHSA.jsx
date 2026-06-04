@@ -34,8 +34,11 @@ export default function AlertsFromHSA() {
     </PageLayout>
   )
 
+  const normalizeSeverity = s => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s
+
   const filters  = ['All', 'Critical', 'High', 'Medium']
-  const filtered = filter === 'All' ? alerts : alerts.filter(a => a.severity === filter)
+  const normalized = alerts.map(a => ({ ...a, severity: normalizeSeverity(a.severity) }))
+  const filtered = filter === 'All' ? normalized : normalized.filter(a => a.severity === filter)
   const { totalItems, totalPages, slice } = usePagination(filtered, PAGE_SIZE)
   const pageItems = slice(page)
 

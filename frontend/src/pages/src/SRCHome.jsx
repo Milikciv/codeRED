@@ -15,10 +15,10 @@ import {
 } from 'recharts'
 
 const SEVERITY_CONFIG = {
-  Critical: { bg: 'bg-red-50',    border: 'border-red-200',    badge: 'bg-red-100 text-red-700',       dot: 'bg-red-500',    bar: '#EF4444' },
-  High:     { bg: 'bg-orange-50', border: 'border-orange-200', badge: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500', bar: '#F97316' },
-  Medium:   { bg: 'bg-yellow-50', border: 'border-yellow-200', badge: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-400', bar: '#EAB308' },
-  Low:      { bg: 'bg-green-50',  border: 'border-green-200',  badge: 'bg-green-100 text-green-700',   dot: 'bg-green-500',  bar: '#22C55E' },
+  CRITICAL: { bg: 'bg-red-50',    border: 'border-red-200',    badge: 'bg-red-100 text-red-700',       dot: 'bg-red-500',    bar: '#EF4444' },
+  HIGH:     { bg: 'bg-orange-50', border: 'border-orange-200', badge: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500', bar: '#F97316' },
+  MEDIUM:   { bg: 'bg-yellow-50', border: 'border-yellow-200', badge: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-400', bar: '#EAB308' },
+  LOW:      { bg: 'bg-green-50',  border: 'border-green-200',  badge: 'bg-green-100 text-green-700',   dot: 'bg-green-500',  bar: '#22C55E' },
 }
 
 const BLOOD_TYPE_COLORS = {
@@ -36,10 +36,11 @@ function getBloodTypeColor(type) {
   return BLOOD_TYPE_COLORS[type] ?? '#9CA3AF'
 }
 
+
 function CustomTooltip({ active, payload }) {
   if (!active || !payload?.length) return null
   const d = payload[0].payload
-  const cfg = SEVERITY_CONFIG[d.severity] ?? SEVERITY_CONFIG.Medium
+  const cfg = SEVERITY_CONFIG[d.severity] ?? SEVERITY_CONFIG.MEDIUM
   return (
     <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-lg text-xs">
       <div className="flex items-center gap-1.5 mb-1">
@@ -80,9 +81,9 @@ export default function SRCHome() {
     severity: a.severity, window: a.shortageWindow, id: a.id,
   }))
   const totalShortage  = alerts.reduce((s, a) => s + (a.forecastedShortage ?? 0), 0)
-  const criticalCount  = alerts.filter(a => a.severity === 'Critical').length
-  const highCount      = alerts.filter(a => a.severity === 'High').length
-  const criticalAlert  = alerts.find(a => a.severity === 'Critical')
+  const criticalCount  = alerts.filter(a => a.severity?.toUpperCase() === 'CRITICAL').length
+  const highCount      = alerts.filter(a => a.severity?.toUpperCase() === 'HIGH').length
+  const criticalAlert  = alerts.find(a => a.severity?.toUpperCase() === 'CRITICAL')
   const byBloodType    = donorStats?.byBloodType ?? []
   const summary        = donorStats?.summary ?? {}
 
@@ -209,7 +210,7 @@ export default function SRCHome() {
               <ReferenceLine y={0} stroke="#E5E7EB" />
               <Bar dataKey="units" radius={[4, 4, 0, 0]} maxBarSize={48}>
                 {forecastData.map((d, i) => (
-                  <Cell key={i} fill={SEVERITY_CONFIG[d.severity]?.bar ?? '#A3A3A3'} />
+                  <Cell key={i} fill={getBloodTypeColor(d.type)} />
                 ))}
               </Bar>
             </BarChart>
@@ -218,9 +219,9 @@ export default function SRCHome() {
           <div className="mt-3 divide-y divide-gray-50">
             {forecastData.map((d, i) => (
               <div key={i} className="flex items-center gap-2 text-xs py-1.5">
-                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: SEVERITY_CONFIG[d.severity]?.bar ?? '#A3A3A3' }} />
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: getBloodTypeColor(d.type) }} />
                 <span className="font-bold text-gray-800 w-7">{d.type}</span>
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex-shrink-0 ${SEVERITY_CONFIG[d.severity]?.badge ?? ''}`}>
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex-shrink-0 ${SEVERITY_CONFIG[d.severity] ?? SEVERITY_CONFIG.MEDIUM.badge}`}>
                   {d.severity}
                 </span>
                 <span className="text-gray-400 flex-1 truncate">{d.window}</span>
@@ -235,11 +236,11 @@ export default function SRCHome() {
             ))}
           </div>
 
-          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-50 text-[10px] text-gray-400">
-            {['Critical', 'High', 'Medium'].map(s => (
-              <div key={s} className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full" style={{ background: SEVERITY_CONFIG[s].bar }} />
-                {s}
+          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-50 text-[10px] text-gray-400 flex-wrap">
+            {forecastData.map((d, i) => (
+              <div key={i} className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full" style={{ background: getBloodTypeColor(d.type) }} />
+                {d.type}
               </div>
             ))}
           </div>
@@ -260,7 +261,7 @@ export default function SRCHome() {
             variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06, delayChildren: 0.15 } } }}
           >
             {alerts.map(a => {
-              const cfg = SEVERITY_CONFIG[a.severity] ?? SEVERITY_CONFIG.Medium
+              const cfg = SEVERITY_CONFIG[a.severity] ?? SEVERITY_CONFIG.MEDIUM
               return (
                 <motion.div key={a.id} variants={listItemX} className={`rounded-lg border px-3 py-2.5 ${cfg.bg} ${cfg.border}`}>
                   <div className="flex items-center justify-between mb-1">

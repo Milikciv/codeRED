@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import PageLayout from '../../../components/layout/PageLayout'
-import { ChevronDown, Calendar } from 'lucide-react'
+import { ChevronDown, Calendar, Clock } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { waterOutline } from 'ionicons/icons'
 import DateRangePicker, { formatDateRange } from '../../../components/common/DateRangePicker'
@@ -32,6 +32,13 @@ export default function BloodTypeAnalytics() {
   const [hospital, setHospital]         = useState('All hospitals')
   const [dateStart, setDateStart]       = useState(new Date(2026, 4, 14))
   const [dateEnd, setDateEnd]           = useState(new Date(2026, 4, 17))
+  const [activePreset, setActivePreset] = useState(null)
+
+  const applyPreset = (days) => {
+    const end   = new Date()
+    const start = new Date(); start.setDate(end.getDate() - days)
+    setDateStart(start); setDateEnd(end); setActivePreset(days)
+  }
 
   const visibleDemand = hospital === 'All hospitals'
     ? HOSPITAL_DEMAND
@@ -84,6 +91,20 @@ export default function BloodTypeAnalytics() {
           </div>
         )}
       </div>
+      <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm p-0.5">
+        {[14, 30].map(d => (
+          <button
+            key={d}
+            onClick={() => applyPreset(d)}
+            className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-colors ${
+              activePreset === d ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <Clock className="w-3 h-3" />
+            {d}d
+          </button>
+        ))}
+      </div>
       <div className="relative">
         <button
           onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
@@ -98,7 +119,7 @@ export default function BloodTypeAnalytics() {
             <DateRangePicker
               start={dateStart}
               end={dateEnd}
-              onChange={(s, e) => { setDateStart(s); setDateEnd(e) }}
+              onChange={(s, e) => { setDateStart(s); setDateEnd(e); setActivePreset(null) }}
               onClose={() => setOpenDropdown(null)}
             />
           </div>
