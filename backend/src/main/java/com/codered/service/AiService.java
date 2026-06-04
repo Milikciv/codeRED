@@ -7,7 +7,6 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -57,15 +56,12 @@ public class AiService {
         try {
             String cleanJson = aiResponse.replaceAll("```json", "").replaceAll("```", "").trim();
             Map<String, Object> result = objectMapper.readValue(cleanJson, Map.class);
+            if (!result.containsKey("message")) return null;
             toCache(cacheKey, result);
             return result;
         } catch (Exception e) {
             System.err.println("Failed to parse Gemini JSON: " + e.getMessage());
-            Map<String, Object> fallback = new HashMap<>();
-            fallback.put("message", "System analyzing data...");
-            fallback.put("confidence", 50);
-            fallback.put("recommendation", "Monitor stock levels closely.");
-            return fallback;
+            return null;
         }
     }
 

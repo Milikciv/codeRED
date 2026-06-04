@@ -8,6 +8,7 @@ import { IonIcon } from '@ionic/react'
 import { alertCircleOutline } from 'ionicons/icons'
 import { staggerContainer, listItem, ease } from '../../lib/motion'
 import ConfirmModal from '../../components/common/ConfirmModal'
+import EmptyState from '../../components/common/EmptyState'
 import Toast from '../../components/common/Toast'
 
 const MOCK_INVENTORY = [
@@ -281,13 +282,12 @@ export default function AlertsToSRC() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
-                className="card flex-1 flex flex-col items-center justify-center text-center p-8"
+                className="card flex-1 flex flex-col items-center justify-center"
               >
-                <IonIcon icon={alertCircleOutline} style={{ fontSize: '3.75rem', marginBottom: '1rem', opacity: 0.2 }} />
-                <h3 className="text-lg font-semibold text-gray-600">Select an alert to view details</h3>
-                <p className="text-sm text-gray-400 mt-2">
-                  Alerts are generated from demand forecasting. Select one to review and send to SRC.
-                </p>
+                <EmptyState
+                  title="Select an alert to view details"
+                  description="Alerts are generated from demand forecasting. Select one to review and send to SRC."
+                />
               </motion.div>
             ) : (
               <motion.div

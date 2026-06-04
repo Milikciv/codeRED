@@ -10,6 +10,7 @@ import { TrendingUp, AlertTriangle, Shield, ChevronDown, Clock } from 'lucide-re
 import { IonIcon } from '@ionic/react'
 import { sunnyOutline, bandageOutline, calendarOutline, giftOutline, statsChartOutline, waterOutline, trendingDownOutline, informationCircleOutline } from 'ionicons/icons'
 import LoadingScreen from '../../components/common/LoadingScreen'
+import EmptyState from '../../components/common/EmptyState'
 
 const STATUS_COLOR = {
   Good: 'text-green-600', Medium: 'text-yellow-600',
@@ -235,7 +236,7 @@ export default function Forecasting() {
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-52 flex items-center justify-center text-sm text-gray-400">No chart data available</div>
+            <div className="h-52 flex items-center justify-center"><EmptyState size="sm" title="No chart data available" /></div>
           )}
           <div className="flex items-center gap-1.5 mt-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
             <span>◇</span> Demand expected to exceed supply on May 22–May 25
@@ -270,7 +271,7 @@ export default function Forecasting() {
               </tbody>
             </table>
           ) : (
-            <p className="text-sm text-gray-400 text-center py-8">No blood type data available</p>
+            <EmptyState size="sm" title="No blood type data available" />
           )}
         </div>
       </div>
@@ -295,7 +296,7 @@ export default function Forecasting() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-400 text-center py-6">No demand drivers available</p>
+            <EmptyState size="sm" title="No demand drivers available" />
           )}
         </div>
 
@@ -318,9 +319,7 @@ export default function Forecasting() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-20 text-center">
-              <p className="text-sm text-gray-400">No early warnings at this time</p>
-            </div>
+            <EmptyState size="sm" title="AI analysis unavailable" description="Could not reach the AI service. Please try again later." />
           )}
         </div>
       </div>

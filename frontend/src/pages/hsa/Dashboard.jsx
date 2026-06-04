@@ -14,6 +14,7 @@ import { IonIcon } from '@ionic/react'
 import { waterOutline, medkitOutline } from 'ionicons/icons'
 import LoadingScreen from '../../components/common/LoadingScreen'
 import ConfirmModal from '../../components/common/ConfirmModal'
+import EmptyState from '../../components/common/EmptyState'
 import { listItem, listItemX } from '../../lib/motion'
 
 const BLOOD_TYPES = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']
@@ -112,7 +113,7 @@ export default function HsaDashboard() {
             </div>
             <div className="p-4 space-y-3 overflow-y-auto">
               {alerts.map(a => <AlertCard key={a.id} alert={a} onDismiss={setDismissTarget} />)}
-              {alerts.length === 0 && <p className="text-sm text-gray-500 text-center py-8">No active alerts</p>}
+              {alerts.length === 0 && <EmptyState size="sm" title="No active alerts" />}
             </div>
           </div>
         </div>
@@ -261,7 +262,7 @@ export default function HsaDashboard() {
             </table>
           </div>
           {Object.keys(stock).length === 0 && (
-            <p className="text-xs text-gray-500 text-center py-3">No stock data available</p>
+            <EmptyState size="xs" title="No stock data available" />
           )}
           <div className="flex items-center gap-5 mt-3 pt-2 border-t border-gray-100 flex-wrap">
             {[
@@ -298,7 +299,7 @@ export default function HsaDashboard() {
               </motion.div>
             ))}
             {alerts.length === 0 && (
-              <p className="text-xs text-gray-500 text-center py-8">No active alerts</p>
+              <EmptyState size="sm" title="No active alerts" />
             )}
           </motion.div>
           <button

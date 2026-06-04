@@ -118,7 +118,7 @@ public class ForecastService {
         Map<String, Object> earlyWarning = aiService.generateEarlyWarning(stockSummary, demandSummary);
 
         // --- NEW CODE: SAVE TO DATABASE TO CLEAR THE IDE WARNING ---
-        if (earlyWarning.containsKey("recommendation")) {
+        if (earlyWarning != null && earlyWarning.containsKey("recommendation")) {
             String recommendationText = earlyWarning.get("recommendation").toString();
 
             // Fetch the drives from the database

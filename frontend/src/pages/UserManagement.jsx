@@ -4,6 +4,7 @@ import PageLayout from '../components/layout/PageLayout'
 import Toast from '../components/common/Toast'
 import ConfirmModal from '../components/common/ConfirmModal'
 import LoadingScreen from '../components/common/LoadingScreen'
+import EmptyState from '../components/common/EmptyState'
 import api from '../api/axios'
 import {
   Search, Plus, Pencil, Trash2, X, Eye, EyeOff,
@@ -423,10 +424,10 @@ export default function UserManagement() {
         </table>
 
         {filtered.length === 0 && (
-          <div className="px-4 py-12 text-center">
-            <p className="font-medium text-gray-500">No users found</p>
-            <p className="text-sm text-gray-400 mt-1">Try a different search or role filter.</p>
-          </div>
+          <EmptyState
+            title="No users found"
+            description="Try a different search or role filter."
+          />
         )}
       </div>
     </PageLayout>
