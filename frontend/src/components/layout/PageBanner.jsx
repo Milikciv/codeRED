@@ -1,11 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
 import { ChevronDown, ChevronRight, LogOut, Menu } from 'lucide-react'
+import { buttonTap, dropdownMenu, reducedTransition } from '../../lib/motion'
 
 export default function PageBanner({ title, subtitle, breadcrumb, isHome, actions, onMenuToggle }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const prefersReducedMotion = useReducedMotion()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -84,9 +87,10 @@ export default function PageBanner({ title, subtitle, breadcrumb, isHome, action
         {/* User chip — fixed, avatar-only on mobile, full chip on sm+ */}
         {user && (
           <div ref={ref} className="fixed top-2.5 right-3 sm:top-3 sm:right-5 z-50">
-            <button
+            <motion.button
               onClick={() => setOpen(o => !o)}
               className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-2 sm:px-3 py-1.5 shadow-md hover:shadow-lg transition-shadow"
+              whileTap={prefersReducedMotion ? undefined : buttonTap}
             >
               <div className="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center text-primary text-xs font-bold flex-shrink-0">
                 {user.name?.charAt(0)}
@@ -96,10 +100,17 @@ export default function PageBanner({ title, subtitle, breadcrumb, isHome, action
                 <div className="text-xs text-gray-500 truncate max-w-[130px]">{user.role === 'ADMIN' ? 'Admin' : user.hospitalName}</div>
               </div>
               <ChevronDown className={`hidden sm:block w-3 h-3 text-gray-400 transition-transform flex-shrink-0 ${open ? 'rotate-180' : ''}`} />
-            </button>
+            </motion.button>
 
-            {open && (
-              <div className="absolute right-0 mt-1.5 min-w-[10rem] bg-white border border-gray-200 rounded-xl shadow-lg py-1 overflow-hidden">
+            <AnimatePresence>
+              {open && (
+              <motion.div
+                className="absolute right-0 mt-1.5 min-w-[10rem] bg-white border border-gray-200 rounded-xl shadow-lg py-1 overflow-hidden origin-top-right"
+                initial={prefersReducedMotion ? false : 'hidden'}
+                animate="visible"
+                exit={prefersReducedMotion ? undefined : 'exit'}
+                variants={prefersReducedMotion ? { visible: { opacity: 1, transition: reducedTransition } } : dropdownMenu}
+              >
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
@@ -107,8 +118,9 @@ export default function PageBanner({ title, subtitle, breadcrumb, isHome, action
                   <LogOut className="w-4 h-4" />
                   Log out
                 </button>
-              </div>
-            )}
+              </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
       </div>

@@ -1,8 +1,13 @@
 import { useState } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
+import { useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import PageBanner from './PageBanner'
+import { pageContent, reducedTransition } from '../../lib/motion'
 
 export default function PageLayout({ title, subtitle, breadcrumb, isHome, actions, children, footer }) {
+  const location = useLocation()
+  const prefersReducedMotion = useReducedMotion()
   const [sidebarOpen, setSidebarOpen] = useState(
     () => typeof window !== 'undefined' && window.innerWidth >= 1024
   )
@@ -27,9 +32,15 @@ export default function PageLayout({ title, subtitle, breadcrumb, isHome, action
             actions={actions}
             onMenuToggle={() => setSidebarOpen(o => !o)}
           />
-          <div className="p-4 lg:p-5 page-enter-animate">
+          <motion.div
+            key={location.pathname}
+            className="p-4 lg:p-5"
+            initial={prefersReducedMotion ? false : 'hidden'}
+            animate="visible"
+            variants={prefersReducedMotion ? { visible: { opacity: 1, transition: reducedTransition } } : pageContent}
+          >
             {children}
-          </div>
+          </motion.div>
         </main>
         {footer}
       </div>

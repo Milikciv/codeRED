@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Check, AlertTriangle, X, Info } from 'lucide-react'
+import { reducedTransition, toastMotion } from '../../lib/motion'
 
 const TYPES = {
   success: { bg: 'bg-white border-green-200', icon: <Check className="w-5 h-5 text-green-500" />, title: 'text-green-800' },
@@ -10,6 +12,7 @@ const TYPES = {
 
 export default function Toast({ type = 'success', title, message, onClose, duration = 4000 }) {
   const s = TYPES[type]
+  const prefersReducedMotion = useReducedMotion()
 
   useEffect(() => {
     const t = setTimeout(onClose, duration)
@@ -17,7 +20,13 @@ export default function Toast({ type = 'success', title, message, onClose, durat
   }, [onClose, duration])
 
   return (
-    <div className={`fixed top-5 right-5 z-[80] border shadow-lg rounded-xl p-4 flex items-start gap-3 max-w-sm toast-enter ${s.bg}`}>
+    <motion.div
+      className={`fixed top-5 right-5 z-[80] border shadow-lg rounded-xl p-4 flex items-start gap-3 max-w-sm ${s.bg}`}
+      initial={prefersReducedMotion ? false : 'hidden'}
+      animate="visible"
+      exit={prefersReducedMotion ? undefined : 'exit'}
+      variants={prefersReducedMotion ? { visible: { opacity: 1, transition: reducedTransition } } : toastMotion}
+    >
       <div className="flex-shrink-0 mt-0.5">{s.icon}</div>
       <div className="flex-1">
         <div className={`font-semibold text-sm ${s.title}`}>{title}</div>
@@ -26,6 +35,6 @@ export default function Toast({ type = 'success', title, message, onClose, durat
       <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
         <X className="w-4 h-4" />
       </button>
-    </div>
+    </motion.div>
   )
 }

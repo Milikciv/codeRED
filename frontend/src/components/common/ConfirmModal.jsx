@@ -1,4 +1,6 @@
+import { motion, useReducedMotion } from 'framer-motion'
 import { AlertTriangle, Info } from 'lucide-react'
+import { modalBackdrop, modalPanel, reducedTransition } from '../../lib/motion'
 
 export default function ConfirmModal({
   icon = 'warning',
@@ -12,10 +14,20 @@ export default function ConfirmModal({
 }) {
   const Icon = icon === 'info' ? Info : AlertTriangle
   const iconColor = icon === 'info' ? 'text-blue-500' : 'text-amber-500'
+  const prefersReducedMotion = useReducedMotion()
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4 modal-backdrop-enter">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 modal-content-enter">
+    <motion.div
+      className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4"
+      initial={prefersReducedMotion ? false : 'hidden'}
+      animate="visible"
+      exit={prefersReducedMotion ? undefined : 'exit'}
+      variants={prefersReducedMotion ? { visible: { opacity: 1, transition: reducedTransition } } : modalBackdrop}
+    >
+      <motion.div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6"
+        variants={prefersReducedMotion ? { visible: { opacity: 1, transition: reducedTransition } } : modalPanel}
+      >
         <div className="flex items-start gap-3 mb-4">
           <Icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${iconColor}`} />
           <div>
@@ -31,7 +43,7 @@ export default function ConfirmModal({
             {confirmLabel}
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
