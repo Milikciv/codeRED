@@ -1301,7 +1301,6 @@ export default function DonorOutreach() {
     <PageLayout
       title="Donor Outreach"
       subtitle="How should SRC maximise donor turnout for this drive?"
-      actions={changeDriveButton}
     >
       {/* Drive summary card */}
       {drive && (
@@ -1338,6 +1337,8 @@ export default function DonorOutreach() {
                   {drive.linkedAlert}<ExternalLink className="w-3 h-3" />
                 </div>
               </div>
+              <div className="w-px h-7 bg-gray-100 hidden sm:block" />
+              {changeDriveButton}
             </div>
           </div>
         </div>

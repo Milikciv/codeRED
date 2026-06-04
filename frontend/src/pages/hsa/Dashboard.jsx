@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import PageLayout from '../../components/layout/PageLayout'
-import StatCard from '../../components/common/StatCard'
 import AlertCard from '../../components/common/AlertCard'
 import BloodStockDot from '../../components/common/BloodStockDot'
 import api from '../../api/axios'
@@ -10,11 +9,12 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
   PieChart, Pie, Cell
 } from 'recharts'
-import { Droplets, Clock, AlertTriangle, Users } from 'lucide-react'
+import { Droplets, Clock, AlertTriangle, Bell, ChevronRight } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
-import { waterOutline, medkitOutline, checkmarkCircleOutline } from 'ionicons/icons'
+import { waterOutline, medkitOutline } from 'ionicons/icons'
 import LoadingScreen from '../../components/common/LoadingScreen'
 import ConfirmModal from '../../components/common/ConfirmModal'
+import { listItem, listItemX } from '../../lib/motion'
 
 const BLOOD_TYPES = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']
 const HOSPITALS = ['SGH', 'NUH', 'KKH', 'CGH', 'NGH', 'TTSH']
@@ -32,51 +32,9 @@ const EXPIRING = [
   { name: '6-7 days', value: 13, color: '#22C55E' },
 ]
 
-function DashboardSkeleton() {
-  return (
-    <div className="animate-pulse">
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 mb-4">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="card p-4 space-y-2">
-            <div className="h-3 bg-red-100 rounded w-3/4" />
-            <div className="h-8 bg-red-100 rounded w-1/2" />
-            <div className="h-3 bg-red-100 rounded w-2/3" />
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <div className="space-y-4">
-          <div className="card p-4">
-            <div className="h-4 bg-red-100 rounded w-24 mb-3" />
-            {[...Array(3)].map((_, i) => <div key={i} className="h-14 bg-red-50 rounded mb-2" />)}
-          </div>
-          <div className="card p-4 h-28" />
-          <div className="card p-4">
-            <div className="h-4 bg-red-100 rounded w-32 mb-2" />
-            {[...Array(2)].map((_, i) => <div key={i} className="h-14 bg-red-50 rounded mb-2" />)}
-          </div>
-        </div>
-        <div className="card p-4 lg:col-span-2">
-          <div className="h-4 bg-red-100 rounded w-40 mb-3" />
-          {[...Array(6)].map((_, i) => <div key={i} className="h-7 bg-red-50 rounded mb-1.5" />)}
-          <div className="h-5 bg-red-50 rounded mt-3 w-3/4" />
-        </div>
-        <div className="space-y-4">
-          <div className="card p-4">
-            <div className="h-4 bg-red-100 rounded w-40 mb-2" />
-            <div className="h-28 bg-red-50 rounded" />
-          </div>
-          <div className="card p-4 h-28" />
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export default function HsaDashboard() {
   const [stock, setStock]       = useState({})
   const [alerts, setAlerts]     = useState([])
-  const [requests, setRequests] = useState([])
   const [summary, setSummary]   = useState({ percentage: 85, criticalTypeCount: 3, totalUnits: 0 })
   const [showAlerts, setShowAlerts] = useState(false)
   const [loading, setLoading]   = useState(true)
@@ -86,7 +44,6 @@ export default function HsaDashboard() {
     Promise.allSettled([
       api.get('/blood-stock').then(r => setStock(r.data)),
       api.get('/alerts').then(r => setAlerts(r.data)),
-      api.get('/requests').then(r => setRequests(r.data)),
       api.get('/blood-stock/summary').then(r => setSummary(r.data)),
     ]).finally(() => setLoading(false))
   }, [])
@@ -110,8 +67,8 @@ export default function HsaDashboard() {
 
   const navigate = useNavigate()
   const criticalTypes = ['A-', 'B+', 'B-']
-  const activeRequests = requests.filter(r => r.status === 'PENDING').length
   const expiringTotal = 1081
+  const criticalAlert = alerts.find(a => a.priority?.toUpperCase() === 'CRITICAL')
 
   if (loading) return (
     <PageLayout title="Home" subtitle="Real-time insights and alerts to help manage blood demand and supply" isHome>
@@ -162,108 +119,120 @@ export default function HsaDashboard() {
         </div>
       )}
 
+      {/* Critical alert banner */}
+      {criticalAlert && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 sm:px-5 sm:py-4 mb-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5 sm:mt-0">
+              <AlertTriangle className="w-4 h-4 text-red-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                <span className="text-xs font-bold text-red-700 uppercase">Critical alert active</span>
+              </div>
+              <p className="text-sm font-medium text-red-800">{criticalAlert.message}</p>
+              <p className="text-xs text-red-400 mt-0.5">{criticalAlert.title}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/hsa/alerts')}
+            className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition-colors sm:flex-shrink-0"
+          >
+            View Alerts <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* KPI row */}
       <motion.div
-        className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 mb-4"
+        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-4"
         initial="hidden"
         animate="visible"
         variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.07 } } }}
       >
-        {[
-          <StatCard key="units" icon={<Droplets className="w-5 h-5 text-primary" />} label="Blood Units" value={`${summary.percentage}%`} sub="of ideal" linkText="View details" onLink={() => navigate('/hsa/forecasting/blood-type-analytics')} highlight />,
-          <StatCard key="critical" icon={<IonIcon icon={waterOutline} style={{ fontSize: '1.5rem', color: '#C20000' }} />} label="Critical Blood Types" value={summary.criticalTypeCount} sub={criticalTypes.join(', ')} highlight />,
-          <StatCard key="hospitals" icon={<IonIcon icon={medkitOutline} style={{ fontSize: '1.5rem', color: '#6366f1' }} />} label="Hospitals Critical" value="2" linkText="View hospitals" onLink={() => navigate('/hsa/forecasting/blood-type-analytics')} />,
-          <StatCard key="expiring" icon={<Clock className="w-5 h-5 text-orange-400" />} label="Expiring Soon" value={expiringTotal.toLocaleString()} sub="within 7 days" />,
-          <StatCard key="requests" icon={<Users className="w-5 h-5 text-yellow-500" />} label="Active Requests" value={activeRequests || 2} linkText="View requests" onLink={() => navigate('/hsa/alerts')} />,
-        ].map((card, i) => (
-          <motion.div key={i} variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 } }}>
-            {card}
-          </motion.div>
-        ))}
+        <motion.div
+          variants={listItem}
+          onClick={() => navigate('/hsa/forecasting/blood-type-analytics')}
+          className="card p-4 cursor-pointer hover:shadow-md transition-shadow"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs text-gray-500 font-medium">Blood Units</span>
+            <Droplets className="w-4 h-4 text-primary" />
+          </div>
+          <div className="text-2xl sm:text-3xl font-bold text-primary mb-1">{summary.percentage}%</div>
+          <div className="text-xs text-gray-400">of ideal capacity</div>
+        </motion.div>
+
+        <motion.div variants={listItem} className="card p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs text-gray-500 font-medium">Critical Blood Types</span>
+            <IonIcon icon={waterOutline} style={{ fontSize: '1rem', color: '#C20000' }} />
+          </div>
+          <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{summary.criticalTypeCount}</div>
+          <div className="text-xs text-gray-400">{criticalTypes.join(', ')}</div>
+        </motion.div>
+
+        <motion.div
+          variants={listItem}
+          onClick={() => navigate('/hsa/forecasting/blood-type-analytics')}
+          className="card p-4 cursor-pointer hover:shadow-md transition-shadow"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs text-gray-500 font-medium">Hospitals Critical</span>
+            <IonIcon icon={medkitOutline} style={{ fontSize: '1rem', color: '#6366f1' }} />
+          </div>
+          <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">2</div>
+          <div className="text-xs text-gray-400">of {HOSPITALS.length} hospitals</div>
+        </motion.div>
+
+        <motion.div variants={listItem} className="card p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs text-gray-500 font-medium">Expiring Soon</span>
+            <Clock className="w-4 h-4 text-orange-400" />
+          </div>
+          <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{expiringTotal.toLocaleString()}</div>
+          <div className="text-xs text-gray-400">units within 7 days</div>
+        </motion.div>
+
+        <motion.div
+          variants={listItem}
+          onClick={() => setShowAlerts(true)}
+          className="card p-4 cursor-pointer hover:shadow-md transition-shadow"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs text-gray-500 font-medium">Active Alerts</span>
+            <Bell className="w-4 h-4 text-gray-400" />
+          </div>
+          <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{alerts.length}</div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {alerts.filter(a => a.priority?.toUpperCase() === 'CRITICAL').length > 0 && (
+              <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-bold">
+                {alerts.filter(a => a.priority?.toUpperCase() === 'CRITICAL').length} Critical
+              </span>
+            )}
+            {alerts.filter(a => a.priority?.toUpperCase() === 'HIGH').length > 0 && (
+              <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-[10px] font-bold">
+                {alerts.filter(a => a.priority?.toUpperCase() === 'HIGH').length} High
+              </span>
+            )}
+            {alerts.length === 0 && <span className="text-xs text-gray-400">No active alerts</span>}
+          </div>
+        </motion.div>
+
       </motion.div>
 
-      {/* Main grid
-          Desktop priority: urgent actions → current state → future context
-          Mobile priority:  alerts first (order-1), then stock, then forecast */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      {/* Main row: blood stock + alerts */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
 
-        {/* Column 1 (desktop): Alerts + Expiring + Recent Requests */}
-        <div className="col-span-1 space-y-4 order-1 lg:order-1">
-
-          <div className="card p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-sm text-gray-800">Alerts</h3>
-              <button onClick={() => setShowAlerts(true)} className="text-xs text-primary font-medium">View all</button>
-            </div>
-            <div className="space-y-2">
-              {alerts.slice(0, 3).map(a => (
-                <AlertCard key={a.id} alert={a} onDismiss={setDismissTarget} />
-              ))}
-              {alerts.length === 0 && (
-                <div className="flex flex-col items-center py-5 text-center">
-                  <IonIcon icon={checkmarkCircleOutline} style={{ fontSize: '1.5rem', color: '#22c55e', marginBottom: '0.25rem' }} />
-                  <p className="text-xs text-gray-500">No active alerts</p>
-                </div>
-              )}
+        {/* Blood stock by type */}
+        <div className="lg:col-span-3 card p-4">
+          <div className="flex items-center justify-between mb-1">
+            <div>
+              <h3 className="font-semibold text-sm text-gray-800">Blood Stock by Type</h3>
+              <p className="text-xs text-gray-400 mt-0.5">Current stock levels across all hospitals</p>
             </div>
           </div>
-
-          <div className="card p-4">
-            <h3 className="font-semibold text-sm text-gray-800 mb-2">Expiring Units</h3>
-            <div className="flex items-center gap-4">
-              <div className="relative flex-shrink-0">
-                <PieChart width={80} height={80}>
-                  <Pie data={EXPIRING} cx={35} cy={35} innerRadius={22} outerRadius={36} dataKey="value" startAngle={90} endAngle={-270}>
-                    {EXPIRING.map((e, i) => <Cell key={i} fill={e.color} />)}
-                  </Pie>
-                </PieChart>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xs font-bold text-gray-700">{expiringTotal.toLocaleString()}</span>
-                </div>
-              </div>
-              <div className="space-y-1 text-xs">
-                {EXPIRING.map(e => (
-                  <div key={e.name} className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: e.color }} />
-                    <span className="text-gray-600">{e.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="card p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-sm text-gray-800">Recent Requests</h3>
-              <button onClick={() => navigate('/hsa/alerts')} className="text-xs text-primary font-medium">View all</button>
-            </div>
-            {requests.length > 0 ? (
-              <div className="space-y-2">
-                {requests.slice(0, 2).map(r => (
-                  <div key={r.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                    <Droplets className="w-4 h-4 text-primary flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-semibold text-gray-800 truncate">
-                        {r.bloodType?.replace('_POSITIVE', '+').replace('_NEGATIVE', '-')} blood needed
-                      </div>
-                      <div className="text-xs text-gray-600 truncate">{r.requestingHospital?.name}</div>
-                      <div className="text-xs text-gray-500">{r.unitsRequested} units · 5 min ago</div>
-                    </div>
-                    <button className="btn-primary text-xs px-2 py-1 flex-shrink-0">Respond</button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-500 text-center py-4">No pending requests</p>
-            )}
-          </div>
-
-        </div>
-
-        {/* Columns 2-3 (desktop): Blood Stock by Type — wider for the 8-type matrix */}
-        <div className="card p-4 order-2 lg:order-2 lg:col-span-2">
-          <h3 className="font-semibold text-sm text-gray-800 mb-3">Blood Stock by Type</h3>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto mt-3">
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-gray-600">
@@ -310,28 +279,116 @@ export default function HsaDashboard() {
           </div>
         </div>
 
-        {/* Column 4 (desktop): Demand Forecast */}
-        <div className="col-span-1 space-y-4 order-3 lg:order-3">
-          <div className="card p-4">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="font-semibold text-sm text-gray-800">Demand Forecast</h3>
-              <button onClick={() => navigate('/hsa/forecasting')} className="text-xs text-primary font-medium">View all</button>
-            </div>
-            <p className="text-xs text-gray-500 mb-2">Next 7 days</p>
-            <ResponsiveContainer width="100%" height={120}>
-              <LineChart data={FORECAST_DATA} margin={{ top: 5, right: 5, left: -30, bottom: 0 }}>
-                <XAxis dataKey="date" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
-                <Tooltip contentStyle={{ fontSize: 11 }} />
-                <ReferenceLine y={1000} stroke="#EF4444" strokeDasharray="4 2" />
-                <Line type="monotone" dataKey="actual" stroke="#C20000" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="predicted" stroke="#C20000" strokeWidth={2} strokeDasharray="5 3" dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
+        {/* Active alerts */}
+        <div className="lg:col-span-2 card p-4 flex flex-col">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-sm text-gray-800">Active Alerts</h3>
+            <button onClick={() => setShowAlerts(true)} className="text-xs text-primary font-medium hover:underline">
+              View all
+            </button>
           </div>
+          <motion.div
+            className="space-y-2 flex-1"
+            initial="hidden"
+            animate="visible"
+            variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06, delayChildren: 0.15 } } }}
+          >
+            {alerts.slice(0, 4).map(a => (
+              <motion.div key={a.id} variants={listItemX}>
+                <AlertCard alert={a} onDismiss={setDismissTarget} />
+              </motion.div>
+            ))}
+            {alerts.length === 0 && (
+              <p className="text-xs text-gray-500 text-center py-8">No active alerts</p>
+            )}
+          </motion.div>
+          <button
+            onClick={() => setShowAlerts(true)}
+            className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            <Bell className="w-3.5 h-3.5" /> Manage All Alerts
+          </button>
         </div>
 
       </div>
+
+      {/* Bottom row: demand forecast + expiring units */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+
+        {/* Demand forecast */}
+        <div className="lg:col-span-3 card p-4">
+          <div className="flex items-center justify-between mb-1">
+            <div>
+              <h3 className="font-semibold text-sm text-gray-800">Demand Forecast</h3>
+              <p className="text-xs text-gray-400 mt-0.5">Projected blood demand — next 7 days</p>
+            </div>
+            <button
+              onClick={() => navigate('/hsa/forecasting')}
+              className="text-xs text-primary font-medium hover:underline"
+            >
+              View all
+            </button>
+          </div>
+          <ResponsiveContainer width="100%" height={160}>
+            <LineChart data={FORECAST_DATA} margin={{ top: 8, right: 5, left: -30, bottom: 0 }}>
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9CA3AF' }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={{ fontSize: 11 }} />
+              <ReferenceLine y={1000} stroke="#EF4444" strokeDasharray="4 2" />
+              <Line type="monotone" dataKey="actual" stroke="#C20000" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="predicted" stroke="#C20000" strokeWidth={2} strokeDasharray="5 3" dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+          <div className="flex items-center gap-5 mt-2 pt-2 border-t border-gray-50 text-[10px] text-gray-400 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <span className="block w-6 h-0.5 bg-primary rounded" />
+              Actual
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="block w-6 h-0.5 bg-primary rounded" style={{ borderTop: '2px dashed #C20000', background: 'none' }} />
+              Predicted
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="block w-4 h-0.5 bg-red-400 rounded" style={{ borderTop: '2px dashed #EF4444', background: 'none' }} />
+              Threshold
+            </div>
+          </div>
+        </div>
+
+        {/* Expiring units */}
+        <div className="lg:col-span-2 card p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="font-semibold text-sm text-gray-800">Expiring Units</h3>
+              <p className="text-xs text-gray-400 mt-0.5">Blood units expiring within 7 days</p>
+            </div>
+            <span className="text-xs text-gray-400">{expiringTotal.toLocaleString()} total</span>
+          </div>
+          <div className="flex items-center gap-6">
+            <div className="relative flex-shrink-0">
+              <PieChart width={96} height={96}>
+                <Pie data={EXPIRING} cx={44} cy={44} innerRadius={26} outerRadius={44} dataKey="value" startAngle={90} endAngle={-270}>
+                  {EXPIRING.map((e, i) => <Cell key={i} fill={e.color} />)}
+                </Pie>
+              </PieChart>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-sm font-bold text-gray-700">{expiringTotal.toLocaleString()}</span>
+                <span className="text-[10px] text-gray-400">units</span>
+              </div>
+            </div>
+            <div className="space-y-3 flex-1">
+              {EXPIRING.map(e => (
+                <div key={e.name} className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: e.color }} />
+                  <span className="text-xs text-gray-600 flex-1">{e.name}</span>
+                  <span className="text-xs font-semibold text-gray-700">{e.value}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
     </PageLayout>
   )
 }

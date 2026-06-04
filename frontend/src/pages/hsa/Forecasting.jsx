@@ -149,37 +149,45 @@ export default function Forecasting() {
     <PageLayout title="Demand Forecasting" subtitle="AI powered predictions to stay ahead of shortages" actions={forecastingActions}>
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        <div className="card p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp className="w-4 h-4 text-primary" />
-            <span className="text-xs text-gray-500">Predicted Peak Demand</span>
+        <div className="card p-4 flex gap-3">
+          <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
+            <TrendingUp className="w-5 h-5 text-primary" />
           </div>
-          <div className="text-2xl font-bold text-gray-900">{data.predictedPeakDemand?.toLocaleString()} <span className="text-sm font-normal text-gray-500">units</span></div>
-          <div className="text-xs text-primary font-medium mt-1">{data.peakDate}</div>
+          <div className="min-w-0 flex-1">
+            <div className="text-xs text-gray-500 font-medium">Predicted Peak Demand</div>
+            <div className="text-2xl font-bold text-gray-900 mt-0.5">{data.predictedPeakDemand?.toLocaleString()}</div>
+            <div className="text-xs text-primary font-medium mt-0.5">{data.peakDate}</div>
+          </div>
         </div>
-        <div className="card p-4 bg-orange-50 border-orange-100">
-          <div className="flex items-center gap-2 mb-1">
-            <AlertTriangle className="w-4 h-4 text-orange-500" />
-            <span className="text-xs text-gray-500">High Risk Period</span>
+        <div className="card p-4 flex gap-3">
+          <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
+            <AlertTriangle className="w-5 h-5 text-orange-500" />
           </div>
-          <div className="text-xl font-bold text-gray-900">{data.highRiskPeriod}</div>
-          <div className="text-xs text-gray-500 mt-1">{data.highRiskDays} days</div>
+          <div className="min-w-0 flex-1">
+            <div className="text-xs text-gray-500 font-medium">High Risk Period</div>
+            <div className="text-2xl font-bold text-gray-900 mt-0.5">{data.highRiskPeriod}</div>
+            <div className="text-xs text-gray-400 mt-0.5">{data.highRiskDays} days</div>
+          </div>
         </div>
-        <div className="card p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <IonIcon icon={trendingDownOutline} style={{ fontSize: '1rem' }} />
-            <span className="text-xs text-gray-500">Expected Shortfall</span>
+        <div className="card p-4 flex gap-3">
+          <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0">
+            <IonIcon icon={trendingDownOutline} style={{ fontSize: '1.25rem', color: '#6B7280' }} />
           </div>
-          <div className="text-2xl font-bold text-gray-900">{data.expectedShortfall} <span className="text-sm font-normal text-gray-500">units</span></div>
-          <div className="text-xs text-gray-400 mt-1">No action needed</div>
+          <div className="min-w-0 flex-1">
+            <div className="text-xs text-gray-500 font-medium">Expected Shortfall</div>
+            <div className="text-2xl font-bold text-gray-900 mt-0.5">{data.expectedShortfall}</div>
+            <div className="text-xs text-gray-400 mt-0.5">units · no action needed</div>
+          </div>
         </div>
-        <div className="card p-4 bg-purple-50 border-purple-100">
-          <div className="flex items-center gap-2 mb-1">
-            <Shield className="w-4 h-4 text-purple-500" />
-            <span className="text-xs text-gray-500">Forecast accuracy</span>
+        <div className="card p-4 flex gap-3">
+          <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
+            <Shield className="w-5 h-5 text-purple-500" />
           </div>
-          <div className="text-2xl font-bold text-gray-900">{data.forecastAccuracy}%</div>
-          <div className="text-xs text-green-600 font-medium mt-1">High Confidence</div>
+          <div className="min-w-0 flex-1">
+            <div className="text-xs text-gray-500 font-medium">Forecast Accuracy</div>
+            <div className="text-2xl font-bold text-gray-900 mt-0.5">{data.forecastAccuracy}%</div>
+            <div className="text-xs text-green-600 font-medium mt-0.5">High Confidence</div>
+          </div>
         </div>
       </div>
 
