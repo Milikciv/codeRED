@@ -71,7 +71,7 @@ export default function HsaDashboard() {
   const criticalAlert = alerts.find(a => a.priority?.toUpperCase() === 'CRITICAL')
 
   if (loading) return (
-    <PageLayout title="Home" subtitle="Real-time insights and alerts to help manage blood demand and supply" isHome>
+    <PageLayout title="Home" subtitle="Real-time insights and alerts to help manage blood demand and supply">
       <LoadingScreen variant="general" />
     </PageLayout>
   )
@@ -80,7 +80,6 @@ export default function HsaDashboard() {
     <PageLayout
       title="Home"
       subtitle="Real-time insights and alerts to help manage blood demand and supply"
-      isHome
     >
       {dismissTarget && (
         <ConfirmModal
