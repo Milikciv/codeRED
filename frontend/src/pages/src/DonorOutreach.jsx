@@ -384,6 +384,7 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false }) {
   const [sent, setSent]     = useState(false)
   const [sending, setSending] = useState(false)
   const [prevRespondersOnly, setPrevRespondersOnly] = useState(true)
+  const [donorsReached, setDonorsReached] = useState(null)
   const [editedBodies, setEditedBodies] = useState(() =>
     Object.fromEntries(variants.map(v => [v.id, v.body]))
   )
@@ -408,9 +409,30 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false }) {
     setSent(false)
   }
 
-  const handleSend = () => {
+  const handleSend = async () => {
     setSending(true)
-    setTimeout(() => { setSending(false); setSent(true) }, 1500)
+    try {
+      const res = await fetch('/api/donor-outreach/push-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: body,
+          bloodType: drive?.bloodType ?? null,   // pass drive's blood type if available
+          region: drive?.region ?? null,         // pass drive's region if available
+          prevRespondersOnly: prevRespondersOnly,
+        }),
+      })
+      if (!res.ok) throw new Error('Failed to send push notification')
+      const data = await res.json()
+      console.log('Push notification sent:', data)
+      setDonorsReached(data.donorsReached)
+      setSent(true)
+    } catch (err) {
+      console.error(err)
+      // Optionally show an error state here
+    } finally {
+      setSending(false)
+    }
   }
 
   const handlePickVariant = (idx) => {
@@ -589,7 +611,7 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false }) {
                   }`}
                 >
                   {sent ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-                  {sent ? 'Sent to 86 donors' : sending ? 'Sending…' : 'Send Push Notification'}
+                  {sent ? `Sent to ${donorsReached ?? 86} donors` : sending ? 'Sending…' : 'Send Push Notification'}
                 </button>
               </div>
             </div>
@@ -873,6 +895,7 @@ function TabYouthCampaigns({ drive }) {
 function OutreachPreview({ partner, subTab, invited, onInvite }) {
   const [toneIdx, setToneIdx] = useState(0)
   const isInvited = invited.has(partner.name)
+  const [sending, setSending] = useState(false)
 
   const tone = OUTREACH_TONES[toneIdx]
 
@@ -917,6 +940,30 @@ function OutreachPreview({ partner, subTab, invited, onInvite }) {
   const handleReset = () => {
     setEditedBodies(prev => ({ ...prev, [tone.id]: tone.getBody(partner, ctx) }))
     setEditedSubjects(prev => ({ ...prev, [tone.id]: tone.getSubject(partner) }))
+  }
+
+  const handleSendInvitation = async () => {
+    setSending(true)
+    try {
+      const res = await fetch('/api/donor-outreach/invitation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          partnerName:     partner.name,
+          partnerCategory: subTab,
+          subject:         subject,
+          message:         body,
+        }),
+      })
+      if (!res.ok) throw new Error('Failed to send invitation')
+      const data = await res.json()
+      console.log('Invitation sent:', data)
+      onInvite(partner.name)  // marks as invited in parent state
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
@@ -1004,16 +1051,16 @@ function OutreachPreview({ partner, subTab, invited, onInvite }) {
       {/* Send action */}
       <div className="px-4 pb-4">
         <button
-          onClick={() => onInvite(partner.name)}
-          disabled={isInvited}
+          onClick={handleSendInvitation}
+          disabled={isInvited || sending}
           className={`w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
             isInvited
               ? 'bg-success text-white cursor-default focus-visible:ring-success'
-              : 'btn-primary focus-visible:ring-primary'
+              : 'btn-primary disabled:opacity-60 focus-visible:ring-primary'
           }`}
         >
           {isInvited ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-          {isInvited ? 'Invitation Sent' : 'Send Invitation'}
+          {isInvited ? 'Invitation Sent' : sending ? 'Sending…' : 'Send Invitation'}
         </button>
       </div>
     </div>
