@@ -412,24 +412,17 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false }) {
   const handleSend = async () => {
     setSending(true)
     try {
-      const res = await fetch('/api/donor-outreach/push-notification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: body,
-          bloodType: drive?.bloodType ?? null,   // pass drive's blood type if available
-          region: drive?.region ?? null,         // pass drive's region if available
-          prevRespondersOnly: prevRespondersOnly,
-        }),
+      const res = await api.post('/api/donor-outreach/push-notification', {
+        message: body,
+        bloodType: drive?.bloodType ?? null,
+        region: drive?.region ?? null,
+        prevRespondersOnly: prevRespondersOnly,
       })
-      if (!res.ok) throw new Error('Failed to send push notification')
-      const data = await res.json()
-      console.log('Push notification sent:', data)
-      setDonorsReached(data.donorsReached)
+      console.log('Push notification sent:', res.data)
+      setDonorsReached(res.data.donorsReached)
       setSent(true)
     } catch (err) {
       console.error(err)
-      // Optionally show an error state here
     } finally {
       setSending(false)
     }
@@ -945,18 +938,12 @@ function OutreachPreview({ partner, subTab, invited, onInvite }) {
   const handleSendInvitation = async () => {
     setSending(true)
     try {
-      const res = await fetch('/api/donor-outreach/invitation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          partnerName:     partner.name,
-          partnerCategory: subTab,
-          subject:         subject,
-          message:         body,
-        }),
+      const res = await api.post('/api/donor-outreach/invitation', {
+        partnerName:     partner.name,
+        partnerCategory: subTab,
+        subject:         subject,
+        message:         body,
       })
-      if (!res.ok) throw new Error('Failed to send invitation')
-      const data = await res.json()
       console.log('Invitation sent:', data)
       onInvite(partner.name)  // marks as invited in parent state
     } catch (err) {
