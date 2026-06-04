@@ -74,9 +74,9 @@ export default function Login() {
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-        className="relative z-10 w-full max-w-sm bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl px-8 py-8"
+        className="relative z-10 w-full max-w-sm mx-4 sm:mx-auto bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl px-5 py-7 sm:px-8 sm:py-8"
       >
-        <h1 className="text-4xl font-bold text-center text-primary mb-8">Login</h1>
+        <h1 className="text-3xl sm:text-4xl font-bold text-center text-primary mb-7 sm:mb-8">Login</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Role selector */}
@@ -86,7 +86,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setShowRoles(!showRoles)}
-                className="w-full flex items-center gap-2 px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-800 hover:border-gray-400 transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-3 border border-gray-300 rounded-lg bg-white text-base sm:text-sm font-medium text-gray-800 hover:border-gray-400 transition-colors"
               >
                 <IonIcon icon={role.icon} style={{ fontSize: '1rem' }} />
                 <span className="flex-1 text-left">{role.label}</span>
@@ -99,7 +99,7 @@ export default function Login() {
                       key={r.value}
                       type="button"
                       onClick={() => handleRoleSelect(r)}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg"
+                      className="w-full flex items-center gap-2 px-3 py-3 text-base sm:text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg"
                     >
                       <IonIcon icon={r.icon} style={{ fontSize: '1rem' }} />
                       <span>{r.label}</span>
@@ -118,7 +118,7 @@ export default function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder={CREDENTIALS[role.value].email}
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+              className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base sm:text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
               required
             />
           </div>
@@ -131,13 +131,13 @@ export default function Login() {
                 type={showPw ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 pr-10"
+                className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base sm:text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 pr-10"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPw(!showPw)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600"
               >
                 {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -152,7 +152,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full btn-primary py-3 text-sm font-semibold disabled:opacity-60"
+            className="w-full btn-primary py-3 text-base sm:text-sm font-semibold disabled:opacity-60"
           >
             {loading ? 'Signing in…' : 'Sign in'}
           </button>

@@ -334,7 +334,7 @@ export default function DrivePlanning() {
             Scores are calculated based on multiple factors to find the best drive locations.
           </p>
 
-          <div className="rounded-xl overflow-hidden" style={{ height: 300 }}>
+          <div className="rounded-xl overflow-hidden isolate" style={{ height: 300 }}>
             <MapContainer center={SG_CENTER} zoom={11} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
