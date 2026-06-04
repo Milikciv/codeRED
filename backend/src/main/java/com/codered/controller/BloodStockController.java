@@ -4,6 +4,7 @@ import com.codered.model.BloodStock;
 import com.codered.model.Hospital;
 import com.codered.repository.BloodStockRepository;
 import com.codered.repository.HospitalRepository;
+import com.codered.service.BloodStockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,7 @@ public class BloodStockController {
 
     private final BloodStockRepository bloodStockRepository;
     private final HospitalRepository hospitalRepository;
+    private final BloodStockService bloodStockService;
 
     @GetMapping
     public ResponseEntity<?> getAllStock() {
@@ -39,6 +41,13 @@ public class BloodStockController {
     public ResponseEntity<List<BloodStock>> getStockByHospital(@PathVariable String code) {
         Hospital hospital = hospitalRepository.findByCode(code).orElseThrow();
         return ResponseEntity.ok(bloodStockRepository.findByHospital(hospital));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<BloodStock> updateStock(
+            @PathVariable Long id,
+            @RequestBody Map<String, Integer> body) {
+        return ResponseEntity.ok(bloodStockService.updateStock(id, body.get("currentUnits")));
     }
 
     @GetMapping("/summary")

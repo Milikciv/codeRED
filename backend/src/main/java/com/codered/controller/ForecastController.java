@@ -5,7 +5,7 @@ import com.codered.service.ForecastService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List; // Added this import
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -20,10 +20,11 @@ public class ForecastController {
         this.aiService = aiService;
     }
 
-    // Existing Forecast Endpoint
     @GetMapping
-    public ResponseEntity<Map<String, Object>> getForecast(@RequestParam(required = false) String bloodType) {
-        return ResponseEntity.ok(forecastService.buildForecast(bloodType));
+    public ResponseEntity<Map<String, Object>> getForecast(
+            @RequestParam(required = false) String bloodType,
+            @RequestParam(defaultValue = "14") int historyDays) {
+        return ResponseEntity.ok(forecastService.buildForecast(bloodType, historyDays));
     }
 
     // NEW Endpoint for Gemini-generated SMS variants
