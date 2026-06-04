@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import api from '../../api/axios'
 import { motion, AnimatePresence } from 'framer-motion'
 import PageLayout from '../../components/layout/PageLayout'
+import LoadingScreen from '../../components/common/LoadingScreen'
 import { Bell, Filter, List, ChevronDown, Send } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { alertCircleOutline } from 'ionicons/icons'
@@ -47,6 +48,7 @@ const TOTAL_INVENTORY = MOCK_INVENTORY.reduce((a, b) => a + b.units, 0)
 export default function AlertsToSRC() {
   const [tab, setTab]       = useState('All')
   const [alerts, setAlerts] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const priorityToSeverity = { CRITICAL: 'Critical', HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low' }
@@ -69,13 +71,19 @@ export default function AlertsToSRC() {
         supportingText:       a.supportingText ?? '',
         defaultNotes:         a.defaultNotes ?? a.message ?? '',
       })))
-    }).catch(() => {})
+    }).catch(() => {}).finally(() => setLoading(false))
   }, [])
   const [selectedId, setSelectedId] = useState(null)
   const [notes, setNotes]   = useState({})
   const [priority, setPriority] = useState({})
   const [confirmSendOpen, setConfirmSendOpen] = useState(false)
   const [toast, setToast] = useState(null)
+
+  if (loading) return (
+    <PageLayout title="Alerts to SRC" subtitle="Review blood shortage alerts issued by the Health Sciences Authority.">
+      <LoadingScreen variant="alerts" />
+    </PageLayout>
+  )
 
   const filteredAlerts = alerts.filter(a => tab === 'All' || a.status === tab)
   const selectedAlert  = alerts.find(a => a.id === selectedId) ?? null

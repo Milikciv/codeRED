@@ -1265,7 +1265,7 @@ export default function DonorOutreach() {
 
   if (loading) return (
     <PageLayout title="Donor Outreach" subtitle="How should SRC maximise donor turnout for this drive?">
-      <LoadingScreen variant="general" />
+      <LoadingScreen variant="donorOutreach" />
     </PageLayout>
   )
 

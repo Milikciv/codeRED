@@ -342,7 +342,7 @@ export default function DonationDrives() {
 
   if (loading) return (
     <PageLayout title="Donation Drives" subtitle="Manage all blood donation drives.">
-      <LoadingScreen variant="general" />
+      <LoadingScreen variant="donationDrives" />
     </PageLayout>
   )
 

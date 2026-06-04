@@ -124,6 +124,11 @@ input[type=number] { -moz-appearance: textfield; }
 @keyframes cr-heartpop    { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.6)} }
 @keyframes cr-shimmer     { 0%,100%{opacity:0.45} 50%{opacity:1} }
 @keyframes cr-progress    { from{width:10%} to{width:70%} }
+@keyframes cr-wave        { 0%,100%{transform:rotate(0deg)} 25%{transform:rotate(28deg)} 75%{transform:rotate(-10deg)} }
+@keyframes cr-float       { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+@keyframes cr-shake       { 0%,100%{transform:rotate(0deg)} 20%{transform:rotate(-7deg)} 40%{transform:rotate(7deg)} 60%{transform:rotate(-4deg)} 80%{transform:rotate(4deg)} }
+@keyframes cr-pulse-ring  { 0%{transform:scale(1);opacity:0.5} 100%{transform:scale(1.5);opacity:0} }
+@keyframes cr-flagwave    { 0%,100%{transform:skewY(0deg)} 50%{transform:skewY(6deg)} }
 @keyframes cr-chart-draw  {
   0%   { stroke-dashoffset: 200; }
   60%  { stroke-dashoffset: 0; }

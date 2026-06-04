@@ -30,7 +30,7 @@ export default function AlertsFromHSA() {
 
   if (loading) return (
     <PageLayout title="Alerts from HSA" subtitle="Review blood shortage alerts issued by the Health Sciences Authority.">
-      <LoadingScreen variant="forecasting" />
+      <LoadingScreen variant="alerts" />
     </PageLayout>
   )
 

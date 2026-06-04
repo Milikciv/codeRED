@@ -67,7 +67,7 @@ export default function DonorInformation() {
 
   if (loading) return (
     <PageLayout title="Donor Information & Summary" subtitle="Overview of the current donor pool and key insights">
-      <LoadingScreen variant="general" />
+      <LoadingScreen variant="donorInformation" />
     </PageLayout>
   )
 
