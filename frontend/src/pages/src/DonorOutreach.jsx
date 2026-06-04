@@ -412,7 +412,7 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false }) {
   const handleSend = async () => {
     setSending(true)
     try {
-      const res = await api.post('/api/donor-outreach/push-notification', {
+      const res = await api.post('/donor-outreach/push-notification', {
         message: body,
         bloodType: drive?.bloodType ?? null,
         region: drive?.region ?? null,
@@ -938,7 +938,7 @@ function OutreachPreview({ partner, subTab, invited, onInvite }) {
   const handleSendInvitation = async () => {
     setSending(true)
     try {
-      const res = await api.post('/api/donor-outreach/invitation', {
+      const res = await api.post('/donor-outreach/invitation', {
         partnerName:     partner.name,
         partnerCategory: subTab,
         subject:         subject,
