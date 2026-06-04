@@ -10,6 +10,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class AiService {
@@ -21,10 +22,32 @@ public class AiService {
     private String apiUrl;
 
     private final RestTemplate restTemplate = new RestTemplate();
-    private final ObjectMapper objectMapper = new ObjectMapper(); // Parses JSON to Java objects
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private static final long CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+    private final ConcurrentHashMap<String, Object> cache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Long> cacheTime = new ConcurrentHashMap<>();
+
+    @SuppressWarnings("unchecked")
+    private <T> T fromCache(String key) {
+        Long t = cacheTime.get(key);
+        if (t != null && System.currentTimeMillis() - t < CACHE_TTL_MS)
+            return (T) cache.get(key);
+        return null;
+    }
+
+    private void toCache(String key, Object value) {
+        cache.put(key, value);
+        cacheTime.put(key, System.currentTimeMillis());
+    }
 
     // 1. Generate the Early Warning Forecast Block
+    @SuppressWarnings("unchecked")
     public Map<String, Object> generateEarlyWarning(String stockSummary, String demandTrends) {
+        String cacheKey = "earlyWarning:" + stockSummary + "|" + demandTrends;
+        Map<String, Object> cached = fromCache(cacheKey);
+        if (cached != null) return cached;
+
         String prompt = "You are an AI for a blood bank system. Analyze the following data and output ONLY raw JSON (no markdown, no backticks).\n"
                 + "Data: Stock: " + stockSummary + " | Demand: " + demandTrends + "\n"
                 + "Generate a risk assessment JSON with these exact keys: 'message' (string), 'confidence' (integer 0-100), and 'recommendation' (string).";
@@ -32,12 +55,12 @@ public class AiService {
         String aiResponse = callGeminiApi(prompt);
 
         try {
-            // Strip any markdown blocks Gemini might accidentally include
             String cleanJson = aiResponse.replaceAll("```json", "").replaceAll("```", "").trim();
-            return objectMapper.readValue(cleanJson, Map.class);
+            Map<String, Object> result = objectMapper.readValue(cleanJson, Map.class);
+            toCache(cacheKey, result);
+            return result;
         } catch (Exception e) {
             System.err.println("Failed to parse Gemini JSON: " + e.getMessage());
-            // Safe fallback if the AI hallucinates bad JSON
             Map<String, Object> fallback = new HashMap<>();
             fallback.put("message", "System analyzing data...");
             fallback.put("confidence", 50);
@@ -47,7 +70,12 @@ public class AiService {
     }
 
     // 2. Generate Donor Outreach Variants
+    @SuppressWarnings("unchecked")
     public List<String> generateDonorMessages(String bloodType, String shortfallContext) {
+        String cacheKey = "donorMessages:" + bloodType;
+        List<String> cached = fromCache(cacheKey);
+        if (cached != null) return cached;
+
         String prompt = "You are an urgent communication AI for a blood bank. Output ONLY a raw JSON array of strings (no markdown).\n"
                 + "Task: We have a critical shortfall of " + bloodType + " blood. Context: " + shortfallContext + ".\n"
                 + "Generate 3 distinct, empathetic, and urgent SMS message variants to send to past donors.";
@@ -56,7 +84,9 @@ public class AiService {
 
         try {
             String cleanJson = aiResponse.replaceAll("```json", "").replaceAll("```", "").trim();
-            return objectMapper.readValue(cleanJson, List.class);
+            List<String> result = objectMapper.readValue(cleanJson, List.class);
+            toCache(cacheKey, result);
+            return result;
         } catch (Exception e) {
             System.err.println("Failed to parse Gemini Messages: " + e.getMessage());
             return List.of(
