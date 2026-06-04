@@ -2,7 +2,6 @@ package com.codered.service;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,7 +9,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.TreeMap;
 
 
 import org.springframework.stereotype.Service;
@@ -55,6 +53,10 @@ public class ForecastService {
     private static final DateTimeFormatter FULL_DATE = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH);
 
     public Map<String, Object> buildForecast(String bloodTypeFilter) {
+        return buildForecast(bloodTypeFilter, HISTORY_DAYS);
+    }
+
+    public Map<String, Object> buildForecast(String bloodTypeFilter, int historyDays) {
         LocalDate today = LocalDate.now();
         String selectedBloodType = normalizeBloodType(bloodTypeFilter);
 
@@ -63,13 +65,15 @@ public class ForecastService {
         List<Map<String, Object>> byBloodType = buildByBloodType(stockByType);
         int[] selectedStock = stockFor(stockByType, selectedBloodType);
         int totalCurrentSupply = selectedStock[0];
-        int totalIdeal = selectedStock[1];
+        int totalIdeal         = selectedStock[1];
+        int hospitalCount      = Math.max(selectedStock[2], 1);
+        int riskThreshold      = (int) Math.round((totalIdeal / (double) hospitalCount) * 0.40);
 
         // 2. Historical daily demand from real requests
-        Map<LocalDate, Integer> stockHistory = getHistoricalStock(today, selectedBloodType);
+        Map<LocalDate, Integer> stockHistory = getHistoricalStock(today, selectedBloodType, historyDays);
         // 3. Fit a simple trend model + build the chart series
-        double[] fit = linearFit(today, stockHistory); // [slope, intercept, residualStd]
-        List<Map<String, Object>> chartData = buildChart(today, stockHistory, fit);
+        double[] fit = linearFit(today, stockHistory, historyDays); // [slope, intercept, residualStd]
+        List<Map<String, Object>> chartData = buildChart(today, stockHistory, fit, historyDays);
 
         // 4. Summary metrics derived from the forecast + a depletion model
         int safetyBuffer = (int) Math.round(totalIdeal * 0.25); // treat <25% of ideal as risk
@@ -79,7 +83,7 @@ public class ForecastService {
         List<LocalDate> riskDays = new ArrayList<>();
         for (int i = 1; i <= FORECAST_DAYS; i++) {
             LocalDate d = today.plusDays(i);
-            int forecast = forecastValue(fit, HISTORY_DAYS - 1 + i);
+            int forecast = forecastValue(fit, historyDays - 1 + i);
             if (forecast > predictedPeakDemand) {
                 predictedPeakDemand = forecast;
                 peakDate = d;
@@ -140,6 +144,7 @@ public class ForecastService {
         result.put("highRiskDays", highRiskDays);
         result.put("expectedShortfall", expectedShortfall);
         result.put("forecastAccuracy", forecastAccuracy);
+        result.put("riskThreshold", riskThreshold);
         result.put("chartData", chartData);
         result.put("byBloodType", byBloodType);
         result.put("demandDrivers", demandDrivers);
@@ -155,41 +160,48 @@ public class ForecastService {
             if (s.getBloodType() == null)
                 continue;
             String type = displayName(s.getBloodType());
-            int[] agg = map.computeIfAbsent(type, k -> new int[2]);
+            int[] agg = map.computeIfAbsent(type, k -> new int[3]); // [current, ideal, count]
             agg[0] += s.getCurrentUnits() == null ? 0 : s.getCurrentUnits();
             agg[1] += s.getIdealUnits() == null ? 0 : s.getIdealUnits();
+            agg[2]++;
         }
         return map;
     }
 
     private int[] stockFor(Map<String, int[]> stockByType, String selectedBloodType) {
         if (selectedBloodType != null) {
-            int[] stock = stockByType.getOrDefault(selectedBloodType, new int[2]);
-            return new int[] { stock[0], stock[1] };
+            int[] stock = stockByType.getOrDefault(selectedBloodType, new int[3]);
+            return new int[] { stock[0], stock[1], stock[2] };
         }
         int current = stockByType.values().stream().mapToInt(a -> a[0]).sum();
-        int ideal = stockByType.values().stream().mapToInt(a -> a[1]).sum();
-        return new int[] { current, ideal };
+        int ideal   = stockByType.values().stream().mapToInt(a -> a[1]).sum();
+        int count   = stockByType.values().stream().mapToInt(a -> a[2]).max().orElse(1);
+        return new int[] { current, ideal, count };
     }
 
-    // Replace getHistoricalStock entirely
-    private Map<LocalDate, Integer> getHistoricalStock(LocalDate today, String selectedBloodType) {
-        LocalDate cutoff = today.minusDays(HISTORY_DAYS - 1);
+    private Map<LocalDate, Integer> getHistoricalStock(LocalDate today, String selectedBloodType, int historyDays) {
+        LocalDate from = today.minusDays(historyDays - 1);
 
         List<BloodStockHistory> history = bloodStockHistoryRepository
-                .findBySnapshotDateBetweenOrderBySnapshotDateAsc(cutoff, today);
+                .findBySnapshotDateBetweenOrderBySnapshotDateAsc(from, today);
 
-        Map<LocalDate, Integer> stockByDay = new LinkedHashMap<>();
-
+        // Track sum and count separately so we can average per day.
+        // Summing across hospitals without normalisation causes wild swings when
+        // different numbers of hospitals have rows on different dates.
+        Map<LocalDate, int[]> raw = new LinkedHashMap<>(); // date -> [sum, count]
         for (BloodStockHistory h : history) {
             if (!matchesBloodType(h.getBloodType(), selectedBloodType))
                 continue;
             Integer units = h.getCurrentUnits();
             if (units == null)
                 continue;
-            stockByDay.merge(h.getSnapshotDate(), units, Integer::sum); // sum across hospitals per day
+            raw.computeIfAbsent(h.getSnapshotDate(), k -> new int[2]);
+            raw.get(h.getSnapshotDate())[0] += units;
+            raw.get(h.getSnapshotDate())[1]++;
         }
 
+        Map<LocalDate, Integer> stockByDay = new LinkedHashMap<>();
+        raw.forEach((date, sc) -> stockByDay.put(date, sc[1] > 0 ? sc[0] / sc[1] : 0));
         return stockByDay;
     }
 
@@ -239,11 +251,11 @@ public class ForecastService {
 
     // ---------- forecasting ----------
 
-    private double[] linearFit(LocalDate today, Map<LocalDate, Integer> stockHistory) {
+    private double[] linearFit(LocalDate today, Map<LocalDate, Integer> stockHistory, int historyDays) {
         if (stockHistory.isEmpty())
             return new double[] { 0, 0, 30 };
 
-        LocalDate cutoff = today.minusDays(HISTORY_DAYS - 1);
+        LocalDate cutoff = today.minusDays(historyDays - 1);
         int n = stockHistory.size();
         double sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
         double[] ys = new double[n];
@@ -279,33 +291,41 @@ public class ForecastService {
 
     private List<Map<String, Object>> buildChart(LocalDate today,
             Map<LocalDate, Integer> stockHistory,
-            double[] fit) {
+            double[] fit,
+            int historyDays) {
         List<Map<String, Object>> chart = new ArrayList<>();
-        double band = Math.max(fit[2] * 1.5, 30);
-        LocalDate cutoff = today.minusDays(HISTORY_DAYS - 1);
+        // Use at least 12% of the starting forecast value so the band is always visible
+        double baseBand = Math.abs(fit[1]) > 0 ? Math.abs(fit[1]) * 0.12 : 50;
+        double band = Math.max(fit[2] * 1.5, baseBand);
+        LocalDate cutoff = today.minusDays(historyDays - 1);
 
-        // Historical portion — use date-derived x so fit alignment is correct
         for (Map.Entry<LocalDate, Integer> entry : stockHistory.entrySet()) {
             LocalDate d = entry.getKey();
-            int x = (int) (d.toEpochDay() - cutoff.toEpochDay()); // 0-based offset from window start
+            int x = (int) (d.toEpochDay() - cutoff.toEpochDay());
             int forecast = forecastValue(fit, x);
+            int upper = forecast + (int) Math.round(band);
+            int lower = Math.max(0, forecast - (int) Math.round(band));
             Map<String, Object> p = new LinkedHashMap<>();
             p.put("date", d.format(DAY_LABEL));
             p.put("actual", entry.getValue());
             p.put("forecast", forecast);
-            p.put("upper", forecast + (int) Math.round(band));
-            p.put("lower", Math.max(0, forecast - (int) Math.round(band)));
+            p.put("upper", upper);
+            p.put("lower", lower);
+            p.put("bandWidth", upper - lower);
             chart.add(p);
         }
         for (int j = 1; j <= FORECAST_DAYS; j++) {
             LocalDate d = today.plusDays(j);
-            int forecast = forecastValue(fit, HISTORY_DAYS - 1 + j);
-            double futureBand = band * (1 + 0.1 * j); // widen further out
+            int forecast = forecastValue(fit, historyDays - 1 + j);
+            double futureBand = band * (1 + 0.1 * j);
+            int upper = forecast + (int) Math.round(futureBand);
+            int lower = Math.max(0, forecast - (int) Math.round(futureBand));
             Map<String, Object> p = new LinkedHashMap<>();
             p.put("date", d.format(DAY_LABEL));
             p.put("forecast", forecast);
-            p.put("upper", forecast + (int) Math.round(futureBand));
-            p.put("lower", Math.max(0, forecast - (int) Math.round(futureBand)));
+            p.put("upper", upper);
+            p.put("lower", lower);
+            p.put("bandWidth", upper - lower);
             chart.add(p);
         }
         return chart;

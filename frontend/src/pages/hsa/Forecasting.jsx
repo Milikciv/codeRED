@@ -4,14 +4,12 @@ import PageLayout from '../../components/layout/PageLayout'
 import PageError from '../../components/common/PageError'
 import api from '../../api/axios'
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
-  Area, AreaChart,
+  ComposedChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Area,
 } from 'recharts'
-import { TrendingUp, AlertTriangle, Calendar, Shield, ChevronDown } from 'lucide-react'
+import { TrendingUp, AlertTriangle, Shield, ChevronDown, Clock } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { sunnyOutline, bandageOutline, calendarOutline, giftOutline, statsChartOutline, waterOutline, trendingDownOutline, informationCircleOutline } from 'ionicons/icons'
 import LoadingScreen from '../../components/common/LoadingScreen'
-import DateRangePicker, { formatDateRange } from '../../components/common/DateRangePicker'
 
 const STATUS_COLOR = {
   Good: 'text-green-600', Medium: 'text-yellow-600',
@@ -73,22 +71,23 @@ export default function Forecasting() {
   const [loading, setLoading]         = useState(true)
   const [error, setError]             = useState(false)
   const [openDropdown, setOpenDropdown] = useState(null)
-  const [bloodType, setBloodType]     = useState('All Blood Types')
-  const [dateStart, setDateStart]     = useState(new Date(2026, 4, 14))
-  const [dateEnd, setDateEnd]         = useState(new Date(2026, 4, 17))
+  const [bloodType, setBloodType]       = useState('All Blood Types')
+  const [historyDays, setHistoryDays]   = useState(14)
 
   const fetchData = () => {
     setError(false)
     setLoading(true)
-    api.get('/forecast', {
-      params: bloodType === 'All Blood Types' ? {} : { bloodType },
-    })
+    const params = {
+      ...(bloodType !== 'All Blood Types' && { bloodType }),
+      historyDays,
+    }
+    api.get('/forecast', { params })
       .then(r => setData(r.data))
       .catch(() => setError(true))
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { fetchData() }, [bloodType])
+  useEffect(() => { fetchData() }, [bloodType, historyDays])
 
   const forecastingActions = (
     <div className="flex items-center gap-2">
@@ -115,25 +114,21 @@ export default function Forecasting() {
           </div>
         )}
       </div>
-      <div className="relative">
-        <button
-          onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
-        >
-          <Calendar className="w-3.5 h-3.5 text-gray-500" />
-          {formatDateRange(dateStart, dateEnd)}
-          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${openDropdown === 'date' ? 'rotate-180' : ''}`} />
-        </button>
-        {openDropdown === 'date' && (
-          <div className="absolute right-0 top-full mt-1 z-20">
-            <DateRangePicker
-              start={dateStart}
-              end={dateEnd}
-              onChange={(s, e) => { setDateStart(s); setDateEnd(e) }}
-              onClose={() => setOpenDropdown(null)}
-            />
-          </div>
-        )}
+      <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm p-0.5">
+        {[14, 30].map(d => (
+          <button
+            key={d}
+            onClick={() => setHistoryDays(d)}
+            className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-colors ${
+              historyDays === d
+                ? 'bg-primary text-white'
+                : 'text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <Clock className="w-3 h-3" />
+            {d}d
+          </button>
+        ))}
       </div>
     </div>
   )
@@ -206,22 +201,30 @@ export default function Forecasting() {
           </div>
           {data.chartData?.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={data.chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+              <ComposedChart data={data.chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="riskGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#FEE2E2" stopOpacity={0.9} />
-                    <stop offset="95%" stopColor="#FEE2E2" stopOpacity={0} />
+                  <linearGradient id="bandGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#FEE2E2" stopOpacity={0.7} />
+                    <stop offset="95%" stopColor="#FEE2E2" stopOpacity={0.15} />
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="date" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
-                <Tooltip contentStyle={{ fontSize: 11 }} />
-                <ReferenceLine y={1200} stroke="#EF4444" strokeDasharray="4 2" strokeWidth={1.5} />
-                <Area type="monotone" dataKey="upper" stroke="#D1D5DB" strokeWidth={1} fill="url(#riskGrad)" dot={false} />
-                <Line type="monotone" dataKey="actual" stroke="#C20000" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="forecast" stroke="#C20000" strokeWidth={2} strokeDasharray="6 3" dot={false} />
+                <Tooltip
+                  contentStyle={{ fontSize: 11 }}
+                  formatter={(value, name) => name === 'bandWidth' || name === 'lower' ? [null, null] : [value, name]}
+                />
+                <ReferenceLine y={data.riskThreshold} stroke="#EF4444" strokeDasharray="4 2" strokeWidth={1.5} />
+                {/* Confidence band: transparent base up to lower, pink fill for the width between lower and upper */}
+                <Area type="monotone" dataKey="lower" stackId="band" stroke="none" fill="transparent" dot={false} legendType="none" />
+                <Area type="monotone" dataKey="bandWidth" stackId="band" stroke="none" fill="url(#bandGrad)" dot={false} legendType="none" />
+                {/* Bound marker lines */}
+                <Line type="monotone" dataKey="upper" stroke="#D1D5DB" strokeWidth={1} dot={false} />
                 <Line type="monotone" dataKey="lower" stroke="#D1D5DB" strokeWidth={1} dot={false} />
-              </AreaChart>
+                {/* Main lines — rendered last so they sit on top of the fill */}
+                <Line type="monotone" dataKey="actual" stroke="#C20000" strokeWidth={2} dot={false} connectNulls={false} />
+                <Line type="monotone" dataKey="forecast" stroke="#C20000" strokeWidth={2} strokeDasharray="6 3" dot={false} />
+              </ComposedChart>
             </ResponsiveContainer>
           ) : (
             <div className="h-52 flex items-center justify-center text-sm text-gray-400">No chart data available</div>
