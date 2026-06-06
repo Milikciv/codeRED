@@ -68,12 +68,12 @@ const BLOOD_TYPE_OPTIONS = ['All Blood Types', 'O+', 'O-', 'A+', 'A-', 'B+', 'B-
 
 export default function Forecasting() {
   const navigate = useNavigate()
-  const [data, setData]               = useState(null)
-  const [loading, setLoading]         = useState(true)
-  const [error, setError]             = useState(false)
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [openDropdown, setOpenDropdown] = useState(null)
-  const [bloodType, setBloodType]       = useState('All Blood Types')
-  const [historyDays, setHistoryDays]   = useState(14)
+  const [bloodType, setBloodType] = useState('All Blood Types')
+  const [historyDays, setHistoryDays] = useState(14)
 
   const fetchData = () => {
     setError(false)
@@ -92,13 +92,15 @@ export default function Forecasting() {
 
   const forecastingActions = (
     <div className="flex items-center gap-2">
-      <div className="relative">
+      <div className="relative w-40">
         <button
           onClick={() => setOpenDropdown(openDropdown === 'bloodType' ? null : 'bloodType')}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
+          className="flex items-center justify-between w-full gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
         >
-          <IonIcon icon={waterOutline} style={{ fontSize: '0.875rem', color: '#C20000' }} />
-          {bloodType}
+          <div className="flex items-center gap-1.5">
+            <IonIcon icon={waterOutline} style={{ fontSize: '0.875rem', color: '#C20000' }} />
+            <span>{bloodType}</span>
+          </div>
           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${openDropdown === 'bloodType' ? 'rotate-180' : ''}`} />
         </button>
         {openDropdown === 'bloodType' && (
@@ -120,11 +122,10 @@ export default function Forecasting() {
           <button
             key={d}
             onClick={() => setHistoryDays(d)}
-            className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-colors ${
-              historyDays === d
-                ? 'bg-primary text-white'
-                : 'text-gray-600 hover:bg-gray-50'
-            }`}
+            className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-colors ${historyDays === d
+              ? 'bg-primary text-white'
+              : 'text-gray-600 hover:bg-gray-50'
+              }`}
           >
             <Clock className="w-3 h-3" />
             {d}d
@@ -239,7 +240,7 @@ export default function Forecasting() {
             <div className="h-52 flex items-center justify-center"><EmptyState size="sm" title="No chart data available" /></div>
           )}
           <div className="flex items-center gap-1.5 mt-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
-            <span>◇</span> Demand expected to exceed supply on May 22–May 25
+            <span>◇</span> Demand expected to exceed supply on 11 December
           </div>
         </div>
 
