@@ -93,6 +93,42 @@ public class AiService {
         }
     }
 
+    // 3. Generate Recommended Drive Reasoning
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> generateRecommendedDriveReasoning(
+            String location, String bloodType, Integer eligibleDonors,
+            Integer highResponseDonors, Integer pastSuccessRate, String hotspotContext) {
+        String cacheKey = "driveReasoning:" + location + "|" + bloodType;
+        Map<String, Object> cached = fromCache(cacheKey);
+        if (cached != null) return cached;
+
+        String prompt = "You are an AI analyst for a blood bank donation drive recommendation system. Output ONLY raw JSON (no markdown, no backticks).\n"
+                + "Analyze the following data and generate compelling reasoning for why this location is ideal for a donation drive.\n"
+                + "Data:\n"
+                + "  Location: " + location + "\n"
+                + "  Blood Type Needed: " + bloodType + "\n"
+                + "  Eligible Donors: " + eligibleDonors + "\n"
+                + "  High Response Donors: " + highResponseDonors + "\n"
+                + "  Past Success Rate: " + pastSuccessRate + "%\n"
+                + "  Context: " + hotspotContext + "\n\n"
+                + "Generate a JSON object with exactly these keys:\n"
+                + "  'reasons' (array of objects with 'label' and 'detail' - generate 3-4 reasons)\n"
+                + "  'narrative' (string - a compelling 2-3 sentence summary of why this location/timing is ideal)";
+
+        String aiResponse = callGeminiApi(prompt);
+
+        try {
+            String cleanJson = aiResponse.replaceAll("```json", "").replaceAll("```", "").trim();
+            Map<String, Object> result = objectMapper.readValue(cleanJson, Map.class);
+            if (!result.containsKey("reasons") || !result.containsKey("narrative")) return null;
+            toCache(cacheKey, result);
+            return result;
+        } catch (Exception e) {
+            System.err.println("Failed to parse Gemini Drive Reasoning: " + e.getMessage());
+            return null;
+        }
+    }
+
     // The core HTTP engine to talk to Gemini
     private String callGeminiApi(String fullPrompt) {
         HttpHeaders headers = new HttpHeaders();

@@ -4,6 +4,7 @@ import com.codered.model.RecommendedDrive;
 import com.codered.repository.RecommendedDriveRepository;
 import com.codered.service.DonationDriveService;
 import com.codered.service.DonorHotspotService;
+import com.codered.service.RecommendationReasoningService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ public class DriveController {
     private final DonationDriveService donationDriveService;
     private final RecommendedDriveRepository recommendedDriveRepository;
     private final DonorHotspotService donorHotspotService;
+    private final RecommendationReasoningService recommendationReasoningService;
 
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> getDrives() {
@@ -75,5 +77,21 @@ public class DriveController {
         result.put("scoreBreakdown",       scoreBreakdown);
         result.put("alternativeLocations", altLocations);
         return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/recommended/{alertCode}/regenerate-reasoning")
+    public ResponseEntity<Map<String, Object>> regenerateRecommendedDriveReasoning(
+            @PathVariable String alertCode,
+            @RequestBody(required = false) Map<String, String> body) {
+        RecommendedDrive drive = recommendedDriveRepository.findByAlertCode(alertCode)
+            .orElseThrow(() -> new IllegalArgumentException("Recommended drive not found: " + alertCode));
+
+        String hotspotContext = body != null && body.containsKey("hotspotContext")
+            ? body.get("hotspotContext")
+            : "High-density area with good accessibility and community engagement.";
+
+        recommendationReasoningService.generateAndSaveReasoningForDrive(drive, hotspotContext);
+
+        return getRecommendedDrive(alertCode);
     }
 }

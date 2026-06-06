@@ -39,6 +39,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/forecast/**").permitAll() // Whitelists our new AI endpoint
+                        .requestMatchers("/api/drives/recommended/**").permitAll()
                         .requestMatchers("/error").permitAll()           // Unmasks hidden backend crashes
                         .anyRequest().authenticated()
                 )

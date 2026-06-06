@@ -3,6 +3,7 @@ package com.codered.config;
 import com.codered.model.*;
 import com.codered.model.enums.*;
 import com.codered.repository.*;
+import com.codered.service.RecommendationReasoningService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -29,6 +30,7 @@ public class DataSeeder implements CommandLineRunner {
     private final DonorDemographicRepository donorDemographicRepository;
     private final RecommendedDriveRepository recommendedDriveRepository;
     private final DonorRepository donorRepository;
+    private final RecommendationReasoningService recommendationReasoningService;
 
     @Override
     public void run(String... args) {
@@ -53,10 +55,11 @@ public class DataSeeder implements CommandLineRunner {
     // ── ensure methods (idempotent backfills) ────────────────────────────
 
     private void ensureSrcDataExists() {
+        if (srcAlertRepository.count() == 0)            seedSrcAlerts();
         if (donationDriveRepository.count() == 0)       seedDonationDrives();
         if (donorRepository.count() == 0)               seedDonors();
         if (donorDemographicRepository.count() == 0)    seedResponseRateTrend();
-        if (recommendedDriveRepository.count() == 0)    seedRecommendedDrive();
+        seedRecommendedDrive(); // Always re-seed recommended drives
     }
 
     private void seedSrcData() {
@@ -296,52 +299,50 @@ public class DataSeeder implements CommandLineRunner {
     // ── recommended_drives ───────────────────────────────────────────────
 
     private void seedRecommendedDrive() {
-        RecommendedDrive rd = new RecommendedDrive();
-        rd.setAlertCode("ALT-2505-001");
-        rd.setLocation("Tampines Community Plaza");
-        rd.setBloodType("O-");
-        rd.setDate("Sat, 31 May 2026");
-        rd.setStartTime("10:00 AM");
-        rd.setEndTime("4:00 PM");
-        rd.setEligibleDonors(86);
-        rd.setHighResponseDonors(18);
-        rd.setPastSuccessRate(72);
-        rd.setConfidenceScore(87);
-        rd.setImpact("High Impact");
-        recommendedDriveRepository.save(rd);
-
-        String[][] reasons = {
-            {"High eligible donor density",    "Large pool of O- donors within 5km"},
-            {"Low recent donation activity",   "Lower donation rate in the past 12 weeks"},
-            {"Excellent accessibility",        "Near MRT & bus interchange"},
-            {"Nearby amenities",               "Close to schools, offices & community centres"},
-            {"Strong past performance",        "High turnout and conversion in previous drives"},
+        recommendedDriveRepository.deleteAll();
+        Object[][] drives = {
+            {"ALT-2505-001", "Tampines Community Plaza",  "O-",  "Sat, 31 May 2026", "10:00 AM", "4:00 PM", 86, 18, 72, 87,
+             "High-density residential area with strong community engagement. Good MRT connectivity and parking availability."},
+            {"ALT-2505-002", "Jurong East Sports Centre", "B+",  "Fri, 7 Jun 2026",  "9:00 AM",  "3:00 PM", 75, 22, 68, 82,
+             "Central location with excellent accessibility. Sports complex offers large venue capacity and ample parking."},
+            {"ALT-2505-003", "Woodlands Galaxy CC",       "A-",  "Sat, 14 Jun 2026", "10:00 AM", "5:00 PM", 68, 15, 75, 79,
+             "Community center with strong local engagement. Easy access via MRT and bus networks. High foot traffic."},
+            {"ALT-2505-004", "Bedok Community Centre",    "O+",  "Sun, 22 Jun 2026", "10:00 AM", "4:00 PM", 92, 25, 70, 85,
+             "Large residential catchment area. Excellent public transport links. Past drives showed strong turnout."},
         };
-        for (String[] r : reasons) {
-            RecommendedDriveReason reason = new RecommendedDriveReason();
-            reason.setRecommendedDrive(rd);
-            reason.setLabel(r[0]);
-            reason.setDetail(r[1]);
-            rd.getReasons().add(reason);
-        }
 
-        Object[][] breakdown = {
-            {"Eligible donor density",       30, 28},
-            {"Low recent donation activity", 25, 22},
-            {"Accessibility",                20, 17},
-            {"Nearby amenities",             15, 10},
-            {"Past drive success",           10,  9},
-        };
-        for (Object[] b : breakdown) {
-            RecommendedDriveScoreBreakdown s = new RecommendedDriveScoreBreakdown();
-            s.setRecommendedDrive(rd);
-            s.setCriterion((String) b[0]);
-            s.setWeight((Integer) b[1]);
-            s.setScore((Integer) b[2]);
-            rd.getScoreBreakdown().add(s);
-        }
+        for (Object[] driveData : drives) {
+            RecommendedDrive rd = new RecommendedDrive();
+            rd.setAlertCode((String) driveData[0]);
+            rd.setLocation((String) driveData[1]);
+            rd.setBloodType((String) driveData[2]);
+            rd.setDate((String) driveData[3]);
+            rd.setStartTime((String) driveData[4]);
+            rd.setEndTime((String) driveData[5]);
+            rd.setEligibleDonors((Integer) driveData[6]);
+            rd.setHighResponseDonors((Integer) driveData[7]);
+            rd.setPastSuccessRate((Integer) driveData[8]);
+            rd.setConfidenceScore((Integer) driveData[9]);
 
-        recommendedDriveRepository.save(rd);
+            Object[][] breakdown = {
+                {"Eligible donor density",       30, 28},
+                {"Low recent donation activity", 25, 22},
+                {"Accessibility",                20, 17},
+                {"Nearby amenities",             15, 10},
+                {"Past drive success",           10,  9},
+            };
+            for (Object[] b : breakdown) {
+                RecommendedDriveScoreBreakdown s = new RecommendedDriveScoreBreakdown();
+                s.setRecommendedDrive(rd);
+                s.setCriterion((String) b[0]);
+                s.setWeight((Integer) b[1]);
+                s.setScore((Integer) b[2]);
+                rd.getScoreBreakdown().add(s);
+            }
+
+            recommendedDriveRepository.save(rd);
+            recommendationReasoningService.generateAndSaveReasoningForDrive(rd, (String) driveData[10]);
+        }
     }
 
     // ── existing methods (unchanged) ─────────────────────────────────────
@@ -444,6 +445,7 @@ public class DataSeeder implements CommandLineRunner {
             {"TTSH", "Tan Tock Seng Hospital",              "11 Jln Tan Tock Seng, Singapore 308433"}
         };
         for (String[] h : hospitals) {
+            if (hospitalRepository.findByCode(h[0]).isPresent()) continue;
             Hospital hospital = new Hospital();
             hospital.setCode(h[0]);
             hospital.setName(h[1]);
@@ -453,21 +455,25 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void seedUsers() {
-        User hsa = new User();
-        hsa.setEmail("winnie@hsa.gov.sg");
-        hsa.setPassword(passwordEncoder.encode("password123"));
-        hsa.setName("Winnie Koh");
-        hsa.setRole(UserRole.HSA);
-        hsa.setDesignation("Blood Services Manager");
-        userRepository.save(hsa);
+        if (userRepository.findByEmail("winnie@hsa.gov.sg").isEmpty()) {
+            User hsa = new User();
+            hsa.setEmail("winnie@hsa.gov.sg");
+            hsa.setPassword(passwordEncoder.encode("password123"));
+            hsa.setName("Winnie Koh");
+            hsa.setRole(UserRole.HSA);
+            hsa.setDesignation("Blood Services Manager");
+            userRepository.save(hsa);
+        }
 
-        User src = new User();
-        src.setEmail("winnie@redcross.org.sg");
-        src.setPassword(passwordEncoder.encode("password123"));
-        src.setName("Winnie Koh");
-        src.setRole(UserRole.SRC_STAFF);
-        src.setDesignation("SRC Staff");
-        userRepository.save(src);
+        if (userRepository.findByEmail("winnie@redcross.org.sg").isEmpty()) {
+            User src = new User();
+            src.setEmail("winnie@redcross.org.sg");
+            src.setPassword(passwordEncoder.encode("password123"));
+            src.setName("Winnie Koh");
+            src.setRole(UserRole.SRC_STAFF);
+            src.setDesignation("SRC Staff");
+            userRepository.save(src);
+        }
     }
 
     private void seedBloodStock() {
