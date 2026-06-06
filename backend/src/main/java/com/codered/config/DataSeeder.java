@@ -3,7 +3,6 @@ package com.codered.config;
 import com.codered.model.*;
 import com.codered.model.enums.*;
 import com.codered.repository.*;
-import com.codered.service.RecommendationReasoningService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -12,6 +11,8 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -30,7 +31,6 @@ public class DataSeeder implements CommandLineRunner {
     private final DonorDemographicRepository donorDemographicRepository;
     private final RecommendedDriveRepository recommendedDriveRepository;
     private final DonorRepository donorRepository;
-    private final RecommendationReasoningService recommendationReasoningService;
 
     @Override
     public void run(String... args) {
@@ -59,7 +59,7 @@ public class DataSeeder implements CommandLineRunner {
         if (donationDriveRepository.count() == 0)       seedDonationDrives();
         if (donorRepository.count() == 0)               seedDonors();
         if (donorDemographicRepository.count() == 0)    seedResponseRateTrend();
-        seedRecommendedDrive(); // Always re-seed recommended drives
+        seedRecommendedDrive();
     }
 
     private void seedSrcData() {
@@ -299,49 +299,248 @@ public class DataSeeder implements CommandLineRunner {
     // ── recommended_drives ───────────────────────────────────────────────
 
     private void seedRecommendedDrive() {
-        recommendedDriveRepository.deleteAll();
-        Object[][] drives = {
-            {"ALT-2505-001", "Tampines Community Plaza",  "O-",  "Sat, 31 May 2026", "10:00 AM", "4:00 PM", 86, 18, 72, 87,
-             "High-density residential area with strong community engagement. Good MRT connectivity and parking availability."},
-            {"ALT-2505-002", "Jurong East Sports Centre", "B+",  "Fri, 7 Jun 2026",  "9:00 AM",  "3:00 PM", 75, 22, 68, 82,
-             "Central location with excellent accessibility. Sports complex offers large venue capacity and ample parking."},
-            {"ALT-2505-003", "Woodlands Galaxy CC",       "A-",  "Sat, 14 Jun 2026", "10:00 AM", "5:00 PM", 68, 15, 75, 79,
-             "Community center with strong local engagement. Easy access via MRT and bus networks. High foot traffic."},
-            {"ALT-2505-004", "Bedok Community Centre",    "O+",  "Sun, 22 Jun 2026", "10:00 AM", "4:00 PM", 92, 25, 70, 85,
-             "Large residential catchment area. Excellent public transport links. Past drives showed strong turnout."},
-        };
+        record AltEntry(String location, int eligibleDonors, int pastSuccessRate, int confidenceScore, double lat, double lng,
+                        String narrative, String[][] reasons, int[][] breakdown) {}
+        record DriveEntry(String alertCode, String bloodType, String date, String startTime, String endTime,
+                          int eligibleDonors, int highResponseDonors, int pastSuccessRate, int confidenceScore,
+                          String location, double lat, double lng,
+                          String narrative, String[][] reasons, int[][] breakdown,
+                          AltEntry[] alternatives) {}
 
-        for (Object[] driveData : drives) {
-            RecommendedDrive rd = new RecommendedDrive();
-            rd.setAlertCode((String) driveData[0]);
-            rd.setLocation((String) driveData[1]);
-            rd.setBloodType((String) driveData[2]);
-            rd.setDate((String) driveData[3]);
-            rd.setStartTime((String) driveData[4]);
-            rd.setEndTime((String) driveData[5]);
-            rd.setEligibleDonors((Integer) driveData[6]);
-            rd.setHighResponseDonors((Integer) driveData[7]);
-            rd.setPastSuccessRate((Integer) driveData[8]);
-            rd.setConfidenceScore((Integer) driveData[9]);
+        String[] breakdownCriteria = {"Eligible donor density","Low recent donation activity","Accessibility","Nearby amenities","Past drive success"};
 
-            Object[][] breakdown = {
-                {"Eligible donor density",       30, 28},
-                {"Low recent donation activity", 25, 22},
-                {"Accessibility",                20, 17},
-                {"Nearby amenities",             15, 10},
-                {"Past drive success",           10,  9},
-            };
-            for (Object[] b : breakdown) {
-                RecommendedDriveScoreBreakdown s = new RecommendedDriveScoreBreakdown();
-                s.setRecommendedDrive(rd);
-                s.setCriterion((String) b[0]);
-                s.setWeight((Integer) b[1]);
-                s.setScore((Integer) b[2]);
-                rd.getScoreBreakdown().add(s);
+        List<DriveEntry> entries = List.of(
+            new DriveEntry("ALT-2505-001", "O-", "Sat, 31 May 2026", "10:00 AM", "4:00 PM", 86, 18, 72, 87,
+                "Tampines Community Plaza", 1.3540, 103.9440,
+                "Tampines Community Plaza is an ideal venue due to its high-density residential catchment and strong community spirit. With 86 eligible donors within 5km and a 72% past success rate, this location consistently delivers strong drive outcomes.",
+                new String[][]{
+                    {"High donor density","Over 86 eligible donors live within 5km, giving this drive a large pool to draw from."},
+                    {"Strong community engagement","Tampines has historically shown high participation in community health events."},
+                    {"Good MRT connectivity","Located near Tampines MRT, making it easily accessible for donors island-wide."},
+                    {"High past success rate","72% of past drives here met or exceeded their donation targets."},
+                },
+                new int[][]{{30,28},{25,22},{20,17},{15,10},{10,9}},
+                new AltEntry[]{
+                    new AltEntry("Woodlands Civic Centre", 74, 65, 78, 1.4382, 103.7891,
+                        "Woodlands Civic Centre is a well-known community landmark with strong foot traffic. Its 74 eligible donors and 65% past success rate make it a solid alternative for an O- drive in the north.",
+                        new String[][]{
+                            {"Strong foot traffic","The civic centre sees high daily foot traffic from residents and commuters."},
+                            {"North-region coverage","Covers Woodlands and surrounding estates with a large eligible donor base."},
+                            {"Community familiarity","Regular community events at the venue improve donor awareness and participation."},
+                            {"MRT accessibility","Served by Woodlands MRT on the North-South Line."},
+                        },
+                        new int[][]{{30,26},{25,20},{20,16},{15,9},{10,7}}),
+                    new AltEntry("Jurong East CC", 68, 60, 72, 1.3330, 103.7430,
+                        "Jurong East CC is a high-traffic hub in the west with strong transport links and a reliable donor base. Its 68 eligible donors and 60% past success rate make it a dependable fallback for O- drives.",
+                        new String[][]{
+                            {"Major transport hub","Jurong East interchange connects multiple MRT lines and numerous bus routes."},
+                            {"West-region donor reach","Covers Jurong East and nearby estates, tapping a sizeable O- eligible pool."},
+                            {"Established venue","CC has hosted multiple past drives with adequate facilities and parking."},
+                            {"Good past success","60% past success rate reflects a consistent local donor response."},
+                        },
+                        new int[][]{{30,23},{25,19},{20,15},{15,9},{10,6}}),
+                    new AltEntry("Bishan CC", 55, 58, 65, 1.3510, 103.8480,
+                        "Bishan CC sits in a central location with good island-wide accessibility. While its eligible donor pool is smaller at 55, its central position maximises reach across multiple neighbourhoods.",
+                        new String[][]{
+                            {"Central island location","Bishan's central position makes it accessible from north, east, and west regions."},
+                            {"Multi-line MRT access","Served by both the North-South and Circle Lines at Bishan MRT."},
+                            {"Active CC programmes","Regular health and community events keep residents familiar with donation drives."},
+                            {"Moderate donor base","55 eligible donors provides a workable target pool for O- outreach."},
+                        },
+                        new int[][]{{30,19},{25,17},{20,14},{15,8},{10,7}}),
+                }),
+
+            new DriveEntry("ALT-2505-002", "B+", "Fri, 7 Jun 2026", "9:00 AM", "3:00 PM", 75, 22, 68, 82,
+                "Jurong East Sports Centre", 1.3329, 103.7436,
+                "Jurong East Sports Centre offers central accessibility and a large venue capacity suited for high-volume drives. Its 22 high-response donors and 68% past success rate reflect a reliable and motivated local donor base.",
+                new String[][]{
+                    {"Central location","Jurong East is a major transport hub, accessible from multiple MRT lines and bus routes."},
+                    {"Large venue capacity","The sports centre can accommodate high donor volumes with minimal wait times."},
+                    {"High-response donor base","22 high-response donors in the area are likely to turn up reliably."},
+                    {"Consistent past performance","68% past success rate indicates a reliable and motivated local donor community."},
+                },
+                new int[][]{{30,25},{25,20},{20,18},{15,11},{10,8}},
+                new AltEntry[]{
+                    new AltEntry("Tampines Hub", 62, 63, 74, 1.3527, 103.9453,
+                        "Tampines Hub is a flagship community facility with high daily visitorship. Its 62 eligible donors and 63% past success rate make it a strong east-region alternative for B+ drives.",
+                        new String[][]{
+                            {"High visitorship","Tampines Hub integrates a library, sports centre, and hawker centre, drawing large crowds."},
+                            {"East-region coverage","Covers Tampines and Pasir Ris with a healthy B+ eligible donor pool."},
+                            {"Good past performance","63% past success rate reflects reliable turnout from east-region donors."},
+                            {"Strong transport links","Well-connected via Tampines MRT and major bus routes."},
+                        },
+                        new int[][]{{30,24},{25,20},{20,15},{15,9},{10,6}}),
+                    new AltEntry("Yishun CC", 58, 60, 70, 1.4295, 103.8353,
+                        "Yishun CC serves one of Singapore's most populous towns with strong community outreach. Its 58 eligible donors and 60% past success rate reflect consistent north-region donor engagement.",
+                        new String[][]{
+                            {"Large residential catchment","Yishun is one of Singapore's largest towns with a high donor-eligible population."},
+                            {"North-region access","Covers Yishun and nearby Sembawang, expanding outreach coverage."},
+                            {"Active CC network","Yishun CC regularly organises community events, improving drive visibility."},
+                            {"MRT and bus access","Served by Yishun MRT and multiple feeder bus routes."},
+                        },
+                        new int[][]{{30,22},{25,19},{20,15},{15,8},{10,6}}),
+                    new AltEntry("Toa Payoh Hub", 50, 55, 63, 1.3318, 103.8470,
+                        "Toa Payoh Hub is a well-known central-region landmark with steady community participation. Its 50 eligible donors and central location make it a viable option for broadening B+ drive coverage.",
+                        new String[][]{
+                            {"Central location","Toa Payoh Hub is easily accessible from multiple parts of Singapore."},
+                            {"Established community venue","A long-standing community destination with strong resident familiarity."},
+                            {"MRT proximity","Located near Toa Payoh MRT on the North-South Line."},
+                            {"Reliable past participation","55% past success rate indicates consistent donor engagement in the area."},
+                        },
+                        new int[][]{{30,20},{25,16},{20,14},{15,8},{10,5}}),
+                }),
+
+            new DriveEntry("ALT-2505-003", "A-", "Sat, 14 Jun 2026", "10:00 AM", "5:00 PM", 68, 15, 75, 79,
+                "Woodlands Galaxy CC", 1.4372, 103.7864,
+                "Woodlands Galaxy CC benefits from strong MRT and bus connectivity and a highly engaged community. With 68 eligible donors and a 75% past success rate, this location has a proven track record for successful drives.",
+                new String[][]{
+                    {"Proven track record","75% past success rate is among the highest across all recommended locations."},
+                    {"Strong local engagement","Woodlands CC runs active community programmes that drive foot traffic and awareness."},
+                    {"Excellent public transport access","Well-served by Woodlands MRT and multiple bus routes for easy donor access."},
+                    {"Eligible donor pool","68 eligible donors within 5km ensures sufficient reach for the A- blood type target."},
+                },
+                new int[][]{{30,22},{25,21},{20,16},{15,10},{10,9}},
+                new AltEntry[]{
+                    new AltEntry("Bedok Community Centre", 60, 68, 73, 1.3236, 103.9273,
+                        "Bedok Community Centre has one of the highest past success rates among alternative locations at 68%. Its 60 eligible donors and east-region positioning make it a strong option for A- drives.",
+                        new String[][]{
+                            {"High past success rate","68% past success rate is the highest among this drive's alternatives."},
+                            {"East-region donor coverage","Covers Bedok and surrounding estates with a solid A- eligible pool."},
+                            {"Community drive experience","Bedok CC has hosted multiple drives with experienced logistics and setup."},
+                            {"Transport accessibility","Served by Bedok MRT and a major bus interchange."},
+                        },
+                        new int[][]{{30,23},{25,20},{20,15},{15,9},{10,6}}),
+                    new AltEntry("Clementi CC", 55, 62, 68, 1.3154, 103.7649,
+                        "Clementi CC benefits from a dense residential catchment and proximity to NUS, expanding the potential donor demographic. Its 55 eligible donors and 62% success rate reflect steady west-region engagement.",
+                        new String[][]{
+                            {"University-adjacent location","Proximity to NUS broadens the eligible donor demographic to include younger adults."},
+                            {"Dense residential area","Clementi's high-density housing ensures a sizeable local donor pool."},
+                            {"Good past performance","62% past success rate reflects reliable donor participation in the west."},
+                            {"MRT access","Served by Clementi MRT on the East-West Line."},
+                        },
+                        new int[][]{{30,21},{25,18},{20,15},{15,8},{10,6}}),
+                    new AltEntry("Ang Mo Kio CC", 48, 58, 61, 1.3691, 103.8454,
+                        "Ang Mo Kio CC sits in a mature estate with an active senior community and strong civic participation. Its central-north position provides coverage for donors not reachable by Woodlands-based drives.",
+                        new String[][]{
+                            {"Mature estate engagement","AMK residents have strong familiarity with community health programmes."},
+                            {"Central-north coverage","Offers complementary geographic reach to supplement north-region drives."},
+                            {"Active civic participation","Regular CC events build awareness and drive footfall for donation campaigns."},
+                            {"MRT and bus access","Served by Ang Mo Kio MRT and extensive feeder bus routes."},
+                        },
+                        new int[][]{{30,18},{25,16},{20,14},{15,8},{10,5}}),
+                }),
+
+            new DriveEntry("ALT-2505-004", "O+", "Sun, 22 Jun 2026", "10:00 AM", "4:00 PM", 92, 25, 70, 85,
+                "Bedok Community Centre", 1.3236, 103.9273,
+                "Bedok Community Centre draws from one of Singapore's largest residential catchments with 92 eligible donors nearby. Its 25 high-response donors and strong public transport links make it a top-performing drive location.",
+                new String[][]{
+                    {"Largest donor catchment","92 eligible donors nearby — the highest of all recommended locations."},
+                    {"Top high-response donors","25 high-response donors make Bedok the strongest location for reliable turnout."},
+                    {"Strong past drive performance","Previous drives at Bedok CC consistently attracted strong donor numbers."},
+                    {"Excellent accessibility","Served by Bedok MRT and major bus interchanges, convenient for the wider east region."},
+                },
+                new int[][]{{30,29},{25,23},{20,17},{15,10},{10,9}},
+                new AltEntry[]{
+                    new AltEntry("Jurong West CC", 80, 67, 79, 1.3479, 103.7069,
+                        "Jurong West CC draws from one of Singapore's largest western residential estates with 80 eligible donors nearby. Its 67% past success rate and strong community infrastructure make it a top alternative for O+ drives.",
+                        new String[][]{
+                            {"Large western donor pool","80 eligible donors in the vicinity — the highest among this drive's alternatives."},
+                            {"Strong past success rate","67% past success rate reflects consistently high turnout at this venue."},
+                            {"Large estate coverage","Jurong West is one of Singapore's most populous towns, maximising outreach potential."},
+                            {"Good transport connectivity","Accessible via Boon Lay MRT and multiple major bus routes."},
+                        },
+                        new int[][]{{30,27},{25,21},{20,16},{15,9},{10,6}}),
+                    new AltEntry("Sembawang CC", 72, 63, 74, 1.4491, 103.8185,
+                        "Sembawang CC is well-positioned in the north with 72 eligible donors and a 63% past success rate. Its strong community ties and proximity to naval and military estates broaden the donor demographic.",
+                        new String[][]{
+                            {"North-region coverage","Covers Sembawang and Canberra estates, reaching donors not served by east-region drives."},
+                            {"Diverse donor demographic","Proximity to HDB estates and military housing expands the eligible donor profile."},
+                            {"Active CC engagement","Sembawang CC runs regular health outreach programmes that support drive visibility."},
+                            {"Bus and MRT access","Served by Sembawang MRT and feeder bus routes."},
+                        },
+                        new int[][]{{30,24},{25,20},{20,16},{15,9},{10,5}}),
+                    new AltEntry("Queenstown CC", 65, 60, 68, 1.2944, 103.8060,
+                        "Queenstown CC offers central-south coverage with good MRT connectivity and a steady community donor base. Its 65 eligible donors and 60% past success rate make it a reliable south-west option for O+ drives.",
+                        new String[][]{
+                            {"Central-south positioning","Provides geographic coverage in the south, complementing east and north drives."},
+                            {"MRT accessibility","Close to Queenstown MRT on the East-West Line for easy donor access."},
+                            {"Mature estate participation","Queenstown is one of Singapore's oldest towns with strong community health awareness."},
+                            {"Steady donor engagement","60% past success rate reflects consistent outreach outcomes in this area."},
+                        },
+                        new int[][]{{30,22},{25,18},{20,15},{15,8},{10,5}}),
+                })
+        );
+
+        for (DriveEntry e : entries) {
+            // Rank-1: seed only if reasons are missing
+            Optional<RecommendedDrive> existingTop = recommendedDriveRepository.findByAlertCodeAndRank(e.alertCode(), 1);
+            if (existingTop.isEmpty() || existingTop.get().getReasons().isEmpty()) {
+                RecommendedDrive rd = existingTop.orElse(new RecommendedDrive());
+                rd.setAlertCode(e.alertCode()); rd.setRank(1);
+                rd.setLocation(e.location());   rd.setBloodType(e.bloodType());
+                rd.setDate(e.date());           rd.setStartTime(e.startTime()); rd.setEndTime(e.endTime());
+                rd.setEligibleDonors(e.eligibleDonors()); rd.setHighResponseDonors(e.highResponseDonors());
+                rd.setPastSuccessRate(e.pastSuccessRate()); rd.setConfidenceScore(e.confidenceScore());
+                rd.setLatitude(e.lat()); rd.setLongitude(e.lng());
+
+                rd.getReasons().clear();
+                RecommendedDriveReason narrativeReason = new RecommendedDriveReason();
+                narrativeReason.setLabel("Narrative"); narrativeReason.setDetail(e.narrative());
+                narrativeReason.setRecommendedDrive(rd);
+                rd.getReasons().add(narrativeReason);
+                for (String[] r : e.reasons()) {
+                    RecommendedDriveReason reason = new RecommendedDriveReason();
+                    reason.setLabel(r[0]); reason.setDetail(r[1]);
+                    reason.setRecommendedDrive(rd);
+                    rd.getReasons().add(reason);
+                }
+                rd.getScoreBreakdown().clear();
+                int[][] bd = e.breakdown();
+                for (int i = 0; i < bd.length; i++) {
+                    RecommendedDriveScoreBreakdown s = new RecommendedDriveScoreBreakdown();
+                    s.setRecommendedDrive(rd); s.setCriterion(breakdownCriteria[i]);
+                    s.setWeight(bd[i][0]);     s.setScore(bd[i][1]);
+                    rd.getScoreBreakdown().add(s);
+                }
+                recommendedDriveRepository.save(rd);
             }
 
-            recommendedDriveRepository.save(rd);
-            recommendationReasoningService.generateAndSaveReasoningForDrive(rd, (String) driveData[10]);
+            // Rank 2+: seed alternative if missing or reasons not yet populated
+            int rank = 2;
+            for (AltEntry alt : e.alternatives()) {
+                int altRank = rank++;
+                Optional<RecommendedDrive> existingAlt = recommendedDriveRepository.findByAlertCodeAndRank(e.alertCode(), altRank);
+                if (existingAlt.isPresent() && !existingAlt.get().getReasons().isEmpty()) continue;
+
+                RecommendedDrive altDrive = existingAlt.orElse(new RecommendedDrive());
+                altDrive.setAlertCode(e.alertCode()); altDrive.setRank(altRank);
+                altDrive.setLocation(alt.location());  altDrive.setBloodType(e.bloodType());
+                altDrive.setDate(e.date());            altDrive.setStartTime(e.startTime()); altDrive.setEndTime(e.endTime());
+                altDrive.setEligibleDonors(alt.eligibleDonors());
+                altDrive.setPastSuccessRate(alt.pastSuccessRate());
+                altDrive.setConfidenceScore(alt.confidenceScore());
+                altDrive.setLatitude(alt.lat()); altDrive.setLongitude(alt.lng());
+
+                altDrive.getReasons().clear();
+                RecommendedDriveReason altNarrative = new RecommendedDriveReason();
+                altNarrative.setLabel("Narrative"); altNarrative.setDetail(alt.narrative());
+                altNarrative.setRecommendedDrive(altDrive);
+                altDrive.getReasons().add(altNarrative);
+                for (String[] r : alt.reasons()) {
+                    RecommendedDriveReason reason = new RecommendedDriveReason();
+                    reason.setLabel(r[0]); reason.setDetail(r[1]);
+                    reason.setRecommendedDrive(altDrive);
+                    altDrive.getReasons().add(reason);
+                }
+                altDrive.getScoreBreakdown().clear();
+                for (int i = 0; i < alt.breakdown().length; i++) {
+                    RecommendedDriveScoreBreakdown s = new RecommendedDriveScoreBreakdown();
+                    s.setRecommendedDrive(altDrive); s.setCriterion(breakdownCriteria[i]);
+                    s.setWeight(alt.breakdown()[i][0]); s.setScore(alt.breakdown()[i][1]);
+                    altDrive.getScoreBreakdown().add(s);
+                }
+                recommendedDriveRepository.save(altDrive);
+            }
         }
     }
 

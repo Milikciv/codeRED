@@ -43,7 +43,8 @@ public class AiService {
     // 1. Generate the Early Warning Forecast Block
     @SuppressWarnings("unchecked")
     public Map<String, Object> generateEarlyWarning(String stockSummary, String demandTrends) {
-        String cacheKey = "earlyWarning:" + stockSummary + "|" + demandTrends;
+        // Fixed key so all filter variations share the same cached result within the TTL window
+        String cacheKey = "earlyWarning:global";
         Map<String, Object> cached = fromCache(cacheKey);
         if (cached != null) return cached;
 

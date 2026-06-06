@@ -3,7 +3,6 @@ package com.codered.controller;
 import com.codered.model.RecommendedDrive;
 import com.codered.repository.RecommendedDriveRepository;
 import com.codered.service.DonationDriveService;
-import com.codered.service.DonorHotspotService;
 import com.codered.service.RecommendationReasoningService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +20,6 @@ public class DriveController {
 
     private final DonationDriveService donationDriveService;
     private final RecommendedDriveRepository recommendedDriveRepository;
-    private final DonorHotspotService donorHotspotService;
     private final RecommendationReasoningService recommendationReasoningService;
 
     @GetMapping
@@ -38,15 +36,21 @@ public class DriveController {
 
     @GetMapping("/recommended")
     public ResponseEntity<Map<String, Object>> getRecommendedDrive(
-            @RequestParam(required = false) String alertCode) {
+            @RequestParam(required = false) String alertCode,
+            @RequestParam(defaultValue = "1") int rank) {
         RecommendedDrive drive = alertCode != null
-            ? recommendedDriveRepository.findByAlertCode(alertCode)
-                .orElseGet(() -> recommendedDriveRepository.findAll().stream().findFirst().orElse(null))
-            : recommendedDriveRepository.findAll().stream().findFirst().orElse(null);
+            ? recommendedDriveRepository.findByAlertCodeAndRank(alertCode, rank).orElse(null)
+            : recommendedDriveRepository.findAll().stream().filter(d -> d.getRank() == 1).findFirst().orElse(null);
 
         if (drive == null) return ResponseEntity.notFound().build();
 
+        String narrative = drive.getReasons().stream()
+            .filter(r -> "Narrative".equals(r.getLabel()))
+            .map(r -> r.getDetail())
+            .findFirst().orElse(null);
+
         List<Map<String, Object>> reasons = drive.getReasons().stream()
+            .filter(r -> !"Narrative".equals(r.getLabel()))
             .map(r -> Map.<String, Object>of("label", r.getLabel(), "detail", r.getDetail()))
             .collect(Collectors.toList());
 
@@ -58,12 +62,24 @@ public class DriveController {
             ))
             .collect(Collectors.toList());
 
-        List<Map<String, Object>> altLocations = donorHotspotService.getHotspots().stream()
-            .filter(m -> !drive.getLocation().contains((String) m.get("name")))
+        List<Map<String, Object>> altLocations = recommendedDriveRepository
+            .findByAlertCodeAndRankGreaterThanOrderByRankAsc(drive.getAlertCode(), 1)
+            .stream()
+            .map(d -> {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("rank",            d.getRank());
+                m.put("location",        d.getLocation());
+                m.put("bloodType",       d.getBloodType());
+                m.put("eligibleDonors",  d.getEligibleDonors());
+                m.put("pastSuccessRate", d.getPastSuccessRate());
+                m.put("confidenceScore", d.getConfidenceScore());
+                return m;
+            })
             .collect(Collectors.toList());
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("alertId",              drive.getAlertCode());
+        result.put("rank",                 drive.getRank());
         result.put("location",             drive.getLocation());
         result.put("bloodType",            drive.getBloodType());
         result.put("date",                 drive.getDate());
@@ -72,18 +88,40 @@ public class DriveController {
         result.put("highResponseDonors",   drive.getHighResponseDonors());
         result.put("pastSuccessRate",      drive.getPastSuccessRate());
         result.put("confidenceScore",      drive.getConfidenceScore());
-        result.put("impact",               drive.getImpact());
+        result.put("impact",               narrative);
         result.put("reasons",              reasons);
         result.put("scoreBreakdown",       scoreBreakdown);
         result.put("alternativeLocations", altLocations);
         return ResponseEntity.ok(result);
     }
 
+    @GetMapping("/recommended/locations")
+    public ResponseEntity<List<Map<String, Object>>> getDriveLocations(
+            @RequestParam String alertCode) {
+        List<Map<String, Object>> locations = recommendedDriveRepository
+            .findByAlertCodeOrderByRankAsc(alertCode)
+            .stream()
+            .map(d -> {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("rank",            d.getRank());
+                m.put("location",        d.getLocation());
+                m.put("bloodType",       d.getBloodType());
+                m.put("eligibleDonors",  d.getEligibleDonors());
+                m.put("pastSuccessRate", d.getPastSuccessRate());
+                m.put("confidenceScore", d.getConfidenceScore());
+                m.put("lat",             d.getLatitude());
+                m.put("lng",             d.getLongitude());
+                return m;
+            })
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(locations);
+    }
+
     @PostMapping("/recommended/{alertCode}/regenerate-reasoning")
     public ResponseEntity<Map<String, Object>> regenerateRecommendedDriveReasoning(
             @PathVariable String alertCode,
             @RequestBody(required = false) Map<String, String> body) {
-        RecommendedDrive drive = recommendedDriveRepository.findByAlertCode(alertCode)
+        RecommendedDrive drive = recommendedDriveRepository.findByAlertCodeAndRank(alertCode, 1)
             .orElseThrow(() -> new IllegalArgumentException("Recommended drive not found: " + alertCode));
 
         String hotspotContext = body != null && body.containsKey("hotspotContext")

@@ -26,7 +26,9 @@ public class RecommendedDrive {
     private Integer highResponseDonors;
     private Integer pastSuccessRate;
     private Integer confidenceScore;
-    private String impact;
+    private Integer rank;
+    private Double latitude;
+    private Double longitude;
 
     @OneToMany(mappedBy = "recommendedDrive", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
     private List<RecommendedDriveReason> reasons = new ArrayList<>();

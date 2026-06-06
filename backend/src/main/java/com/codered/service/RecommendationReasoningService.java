@@ -31,16 +31,19 @@ public class RecommendationReasoningService {
             return;
         }
 
-        // Set the narrative impact
+        drive.getReasons().clear();
+
         String narrative = (String) reasoning.get("narrative");
         if (narrative != null) {
-            drive.setImpact(narrative);
+            RecommendedDriveReason narrativeReason = new RecommendedDriveReason();
+            narrativeReason.setLabel("Narrative");
+            narrativeReason.setDetail(narrative);
+            narrativeReason.setRecommendedDrive(drive);
+            drive.getReasons().add(narrativeReason);
         }
 
-        // Parse and create reason entities
         List<Map<String, String>> reasonsList = (List<Map<String, String>>) reasoning.get("reasons");
         if (reasonsList != null) {
-            drive.getReasons().clear();
             for (Map<String, String> reason : reasonsList) {
                 RecommendedDriveReason driveReason = new RecommendedDriveReason();
                 driveReason.setLabel(reason.get("label"));

@@ -84,6 +84,9 @@ function WhyModal({ drive, onClose }) {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
         </div>
         <div className="p-5 space-y-3">
+          {drive.impact && (
+            <p className="text-xs text-gray-600 leading-relaxed pb-2 border-b border-gray-100">{drive.impact}</p>
+          )}
           {(drive.reasons ?? []).map((r, i) => (
             <div key={i} className="flex items-start gap-3">
               <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
@@ -133,7 +136,7 @@ function ScoreModal({ drive, onClose }) {
   )
 }
 
-function AltLocationsModal({ drive, onClose }) {
+function AltLocationsModal({ drive, topDrive, onSelectDrive, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
@@ -142,6 +145,7 @@ function AltLocationsModal({ drive, onClose }) {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
         </div>
         <div className="p-5">
+          <p className="text-xs text-gray-500 mb-3">Other suitable venues for <span className="font-semibold text-gray-800">{drive.bloodType}</span> donation drive on {drive.date}.</p>
           <table className="w-full text-xs">
             <thead>
               <tr className="text-gray-400 border-b border-gray-100">
@@ -153,29 +157,46 @@ function AltLocationsModal({ drive, onClose }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {(drive.alternativeLocations ?? []).map((loc, i) => (
+              {/* Rank-1: top recommended row */}
+              <tr className="bg-red-50/60 hover:bg-red-50">
+                <td className="py-2.5">
+                  <div className="font-semibold text-gray-900"><span className="text-yellow-400">★</span> {topDrive?.location ?? drive.location}</div>
+                </td>
+                <td className="text-center">
+                  <span className="font-bold" style={{ color: SCORE_COLOR(topDrive?.confidenceScore ?? drive.confidenceScore) }}>{topDrive?.confidenceScore ?? drive.confidenceScore}</span>
+                </td>
+                <td className="text-center text-gray-600">{topDrive?.eligibleDonors ?? drive.eligibleDonors}</td>
+                <td className="text-center text-gray-600">{topDrive?.pastSuccessRate ?? drive.pastSuccessRate}%</td>
+                <td className="text-right">
+                  <button
+                    onClick={() => { onSelectDrive(1); onClose(); }}
+                    className="px-2.5 py-1 border border-primary text-primary rounded text-[10px] font-semibold hover:bg-primary/5"
+                  >
+                    View
+                  </button>
+                </td>
+              </tr>
+              {/* Rank 2+: alternatives */}
+              {(drive.alternativeLocations ?? []).map((loc, i) => { const rank = loc.rank ?? (i + 2); return (
                 <tr key={i} className="hover:bg-gray-50">
-                  <td className="py-2.5">
-                    <div className="font-semibold text-gray-800">{loc.name}</div>
-                    <div className="text-gray-400">{loc.venue}</div>
-                  </td>
+                  <td className="py-2.5 font-semibold text-gray-800">{loc.location}</td>
                   <td className="text-center">
-                    <span className="font-bold" style={{ color: SCORE_COLOR(loc.score) }}>{loc.score}</span>
+                    <span className="font-bold" style={{ color: SCORE_COLOR(loc.confidenceScore) }}>{loc.confidenceScore}</span>
                   </td>
                   <td className="text-center text-gray-600">{loc.eligibleDonors}</td>
-                  <td className="text-center text-gray-600">{loc.successRate}%</td>
+                  <td className="text-center text-gray-600">{loc.pastSuccessRate}%</td>
                   <td className="text-right">
-                    <button className="px-2.5 py-1 border border-primary text-primary rounded text-[10px] font-semibold hover:bg-primary/5">
+                    <button
+                      onClick={() => { onSelectDrive(rank); onClose(); }}
+                      className="px-2.5 py-1 border border-primary text-primary rounded text-[10px] font-semibold hover:bg-primary/5"
+                    >
                       View
                     </button>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
-          <button className="mt-4 w-full text-xs text-primary font-semibold py-2 hover:underline flex items-center justify-center gap-1">
-            View All Locations <ExternalLink className="w-3 h-3" />
-          </button>
         </div>
       </div>
     </div>
@@ -189,36 +210,50 @@ export default function DrivePlanning() {
   const [alerts, setAlerts]             = useState([])
   const [hotspots, setHotspots]         = useState([])
   const [recommendedDrive, setRecommendedDrive] = useState(null)
+  const [topDrive, setTopDrive]                 = useState(null)
   const [selectedAlertId, setSelectedAlertId]   = useState(null)
+  const [selectedRank, setSelectedRank]         = useState(1)
   const [showAlertDropdown, setShowAlertDropdown] = useState(false)
   const alertBtnRef = useRef(null)
   const [selectedHotspot, setSelectedHotspot]   = useState(null)
   const [modal, setModal] = useState(null) // 'why' | 'score' | 'alt'
   const [loading, setLoading] = useState(true)
 
-  // Load alerts and hotspots once
+  // Load alerts once
   useEffect(() => {
-    Promise.all([
-      api.get('/alerts/src').then(r => {
-        setAlerts(r.data)
-        const paramId = searchParams.get('alertId')
-        const initialId = paramId ?? (r.data[0]?.id || null)
-        setSelectedAlertId(initialId)
-      }).catch(() => {}),
-      api.get('/donors/hotspots').then(r => {
-        setHotspots(r.data)
-        if (r.data.length > 0) setSelectedHotspot(r.data[0])
-      }).catch(() => {}),
-    ]).finally(() => setLoading(false))
+    api.get('/alerts/src').then(r => {
+      setAlerts(r.data)
+      const paramId = searchParams.get('alertId')
+      const initialId = paramId ?? (r.data[0]?.id || null)
+      setSelectedAlertId(initialId)
+    }).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
-  // Re-fetch recommended drive when selected alert changes
+  // Re-fetch drive locations (hotspots) when alert changes
   useEffect(() => {
     if (!selectedAlertId) return
-    api.get(`/drives/recommended?alertCode=${selectedAlertId}`)
-      .then(r => setRecommendedDrive(r.data))
+    api.get(`/drives/recommended/locations?alertCode=${selectedAlertId}`)
+      .then(r => {
+        setHotspots(r.data)
+        if (r.data.length > 0) setSelectedHotspot(r.data[0])
+      }).catch(() => {})
+  }, [selectedAlertId])
+
+  // Re-fetch rank-1 (top pick) whenever alert changes
+  useEffect(() => {
+    if (!selectedAlertId) return
+    api.get(`/drives/recommended?alertCode=${selectedAlertId}&rank=1`)
+      .then(r => setTopDrive(r.data))
       .catch(() => {})
   }, [selectedAlertId])
+
+  // Re-fetch displayed drive when alert or rank changes
+  useEffect(() => {
+    if (!selectedAlertId) return
+    api.get(`/drives/recommended?alertCode=${selectedAlertId}&rank=${selectedRank}`)
+      .then(r => setRecommendedDrive(r.data))
+      .catch(() => {})
+  }, [selectedAlertId, selectedRank])
 
   // Sync with URL param changes
   useEffect(() => {
@@ -255,7 +290,7 @@ export default function DrivePlanning() {
             {alerts.map(a => (
               <button
                 key={a.id}
-                onClick={() => { setSelectedAlertId(a.id); setShowAlertDropdown(false) }}
+                onClick={() => { setSelectedAlertId(a.id); setSelectedRank(1); setShowAlertDropdown(false) }}
                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-xs hover:bg-gray-50 ${a.id === selectedAlertId ? 'bg-primary/5' : ''}`}
               >
                 <Droplets className="w-3.5 h-3.5 text-primary flex-shrink-0" />
@@ -340,22 +375,22 @@ export default function DrivePlanning() {
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              {hotspots.map((h) => (
+              {hotspots.filter(h => h.lat && h.lng).map((h) => (
                 <Circle
-                  key={h.name}
-                  center={h.pos}
-                  radius={3000}
-                  pathOptions={{ color: 'transparent', fillColor: SCORE_COLOR(h.score), fillOpacity: 0.25 }}
+                  key={h.rank}
+                  center={[h.lat, h.lng]}
+                  radius={2000}
+                  pathOptions={{ color: 'transparent', fillColor: SCORE_COLOR(h.confidenceScore), fillOpacity: 0.25 }}
                 />
               ))}
-              {hotspots.map((h) => (
+              {hotspots.filter(h => h.lat && h.lng).map((h) => (
                 <Marker
-                  key={h.name}
-                  position={h.pos}
-                  icon={createHotspotIcon(h.rank, h.score)}
-                  eventHandlers={{ click: () => setSelectedHotspot(h) }}
+                  key={h.rank}
+                  position={[h.lat, h.lng]}
+                  icon={createHotspotIcon(h.rank, h.confidenceScore)}
+                  eventHandlers={{ click: () => { setSelectedHotspot(h); setSelectedRank(h.rank) } }}
                 >
-                  <Tooltip direction="top" offset={[0, -22]}>{h.name} — Score {h.score}</Tooltip>
+                  <Tooltip direction="top" offset={[0, -22]}>{h.location} — Score {h.confidenceScore}</Tooltip>
                 </Marker>
               ))}
             </MapContainer>
@@ -380,23 +415,23 @@ export default function DrivePlanning() {
           <div className="flex gap-2 mt-3 flex-wrap">
             {hotspots.map(h => (
               <button
-                key={h.name}
-                onClick={() => setSelectedHotspot(h)}
+                key={h.rank}
+                onClick={() => { setSelectedHotspot(h); setSelectedRank(h.rank) }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
-                  selectedHotspot?.name === h.name
+                  selectedHotspot?.rank === h.rank
                     ? 'border-primary bg-primary/5 text-primary'
                     : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                <span className="w-2 h-2 rounded-full" style={{ background: SCORE_COLOR(h.score) }} />
-                {h.rank}. {h.name}
-                <span className="font-bold ml-0.5">Score {h.score}</span>
+                <span className="w-2 h-2 rounded-full" style={{ background: SCORE_COLOR(h.confidenceScore) }} />
+                {h.rank}. {h.location}
+                <span className="font-bold ml-0.5">Score {h.confidenceScore}</span>
               </button>
             ))}
           </div>
 
           <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
-            <Info className="w-3 h-3" /> Click on a hotspot on the map or in the list to view AI recommendation.
+            <Info className="w-3 h-3" /> Click on a location on the map or in the list to view details.
           </p>
         </div>
 
@@ -409,18 +444,16 @@ export default function DrivePlanning() {
             </div>
 
             <div className="relative">
-              <span className="absolute top-0 right-0 text-[10px] font-bold text-primary bg-red-50 px-2 py-0.5 rounded-full border border-red-100">
-                Top Recommendation
-              </span>
+              {selectedRank === 1
+                ? <span className="absolute top-0 right-0 text-[10px] font-bold text-primary bg-red-50 px-2 py-0.5 rounded-full border border-red-100">Top Recommendation</span>
+                : <button onClick={() => setSelectedRank(1)} className="absolute top-0 right-0 text-[10px] font-medium text-gray-500 hover:text-primary underline">← Back to Top pick</button>
+              }
               <div className="flex items-center gap-2 mt-1 mb-2">
                 <Droplets className="w-5 h-5 text-primary" />
                 <span className="text-lg font-bold text-primary">{drive.bloodType}</span>
               </div>
               <div className="flex items-center gap-2 mb-3">
                 <h4 className="font-bold text-gray-900 text-base">{drive.location}</h4>
-                <span className="text-[10px] font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                  {drive.impact}
-                </span>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mb-3 text-xs text-gray-600">
                 <div className="flex items-center gap-1.5">
@@ -456,7 +489,7 @@ export default function DrivePlanning() {
                 <div className="flex items-center gap-1 text-xs font-semibold text-gray-700 mb-0.5">
                   Confidence Score <Info className="w-3 h-3 text-gray-400" />
                 </div>
-                <div className="text-xs text-gray-400 leading-snug max-w-28">
+                <div className="text-xs text-gray-400 leading-snug max-w-70">
                   AI confidence that this location and timing will lead to strong turnout.
                 </div>
               </div>
@@ -504,7 +537,7 @@ export default function DrivePlanning() {
 
       {modal === 'why'   && drive && <WhyModal drive={drive} onClose={() => setModal(null)} />}
       {modal === 'score' && drive && <ScoreModal drive={drive} onClose={() => setModal(null)} />}
-      {modal === 'alt'   && drive && <AltLocationsModal drive={drive} onClose={() => setModal(null)} />}
+      {modal === 'alt'   && drive && <AltLocationsModal drive={drive} topDrive={topDrive} onSelectDrive={(rank) => setSelectedRank(rank)} onClose={() => setModal(null)} />}
     </PageLayout>
   )
 }
