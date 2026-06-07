@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout'
-import LoadingScreen from '../../components/common/LoadingScreen'
+import LoadingScreen, { SectionLoader } from '../../components/common/LoadingScreen'
 import { MapContainer, TileLayer, Circle, Marker, Tooltip } from 'react-leaflet'
 import L from 'leaflet'
 import api from '../../api/axios'
@@ -95,18 +95,24 @@ function WhyModal({ drive, onClose, onRefresh, refreshing }) {
           </div>
         </div>
         <div className="p-5 space-y-3">
-          {drive.impact && (
-            <p className="text-xs text-gray-600 leading-relaxed pb-2 border-b border-gray-100">{drive.impact}</p>
+          {refreshing ? (
+            <SectionLoader variant="recommendation" message="Regenerating AI reasoning…" />
+          ) : (
+            <>
+              {drive.impact && (
+                <p className="text-xs text-gray-600 leading-relaxed pb-2 border-b border-gray-100">{drive.impact}</p>
+              )}
+              {(drive.reasons ?? []).map((r, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-sm font-semibold text-gray-800">{r.label}</div>
+                    <div className="text-xs text-gray-500">{r.detail}</div>
+                  </div>
+                </div>
+              ))}
+            </>
           )}
-          {(drive.reasons ?? []).map((r, i) => (
-            <div key={i} className="flex items-start gap-3">
-              <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-              <div>
-                <div className="text-sm font-semibold text-gray-800">{r.label}</div>
-                <div className="text-xs text-gray-500">{r.detail}</div>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </div>

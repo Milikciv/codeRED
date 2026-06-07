@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
-import LoadingScreen from '../../components/common/LoadingScreen'
+import LoadingScreen, { SectionLoader } from '../../components/common/LoadingScreen'
 import api from '../../api/axios'
 import {
   CalendarDays, Clock, Droplets, MapPin, ExternalLink,
@@ -517,93 +517,95 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false, onRef
             {/* Right panel */}
             <div className="flex-1 min-w-0 flex flex-col gap-5 w-full sm:w-auto">
 
-              {/* Group 1: variant selection + name + response rate */}
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex gap-1.5 flex-wrap">
-                    {aiLoading && (
-                      <span className="flex items-center gap-1.5 px-3 py-1 text-xs text-gray-400">
-                        <Sparkles className="w-3 h-3 animate-pulse text-primary" />Gemini AI drafting…
-                      </span>
-                    )}
-                    {!aiLoading && variants.map((v, i) => (
-                      <button
-                        key={v.id}
-                        onClick={() => handlePickVariant(i)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
-                          i === variantIdx
-                            ? 'bg-gray-900 text-white focus-visible:ring-gray-900'
-                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200 focus-visible:ring-gray-400'
-                        }`}
-                      >
-                        {v.name}
-                      </button>
-                    ))}
-                  </div>
-                  {onRefresh && !aiLoading && (
+              {/* Variant selector + regenerate button */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex gap-1.5 flex-wrap">
+                  {!aiLoading && variants.map((v, i) => (
                     <button
-                      onClick={onRefresh}
-                      className="flex items-center gap-1 text-xs text-gray-500 hover:text-primary flex-shrink-0"
-                      title="Regenerate AI messages"
+                      key={v.id}
+                      onClick={() => handlePickVariant(i)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
+                        i === variantIdx
+                          ? 'bg-gray-900 text-white focus-visible:ring-gray-900'
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200 focus-visible:ring-gray-400'
+                      }`}
                     >
-                      <RefreshCw className="w-3 h-3" />
-                      Regenerate
+                      {v.name}
                     </button>
-                  )}
+                  ))}
                 </div>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 flex-wrap min-w-0">
-                    <span className="font-bold text-gray-900 text-base leading-tight">{variant.name}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold flex-shrink-0 ${variant.badgeColor}`}>
-                      {variant.badge}
+                {onRefresh && (
+                  <button
+                    onClick={onRefresh}
+                    disabled={aiLoading}
+                    className="flex items-center gap-1 text-xs text-gray-500 hover:text-primary flex-shrink-0 disabled:opacity-40"
+                    title="Regenerate AI messages"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${aiLoading ? 'animate-spin' : ''}`} />
+                    {aiLoading ? 'Regenerating…' : 'Regenerate'}
+                  </button>
+                )}
+              </div>
+
+              {aiLoading ? (
+                <SectionLoader variant="donorOutreach" message="Gemini AI drafting messages…" />
+              ) : (
+                <>
+                  {/* Name + response rate */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 flex-wrap min-w-0">
+                      <span className="font-bold text-gray-900 text-base leading-tight">{variant.name}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold flex-shrink-0 ${variant.badgeColor}`}>
+                        {variant.badge}
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-1 flex-shrink-0">
+                      <span className="text-2xl font-bold text-green-600">{variant.responseRate}%</span>
+                      <span className="text-[10px] text-gray-400">response rate</span>
+                    </div>
+                  </div>
+
+                  {/* Message editor */}
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <label htmlFor="message-body" className="text-xs font-medium text-gray-600 cursor-pointer">
+                        Message
+                      </label>
+                      {isDirty && (
+                        <button onClick={handleReset} className="text-xs text-gray-400 hover:text-gray-600 transition-colors focus-visible:outline-none focus-visible:text-gray-600">
+                          Reset
+                        </button>
+                      )}
+                    </div>
+                    <textarea
+                      id="message-body"
+                      value={body}
+                      onChange={handleBodyChange}
+                      rows={4}
+                      className="w-full px-3 py-2.5 text-xs text-gray-800 bg-gray-50 border border-gray-200 rounded-lg resize-none outline-none focus:border-primary focus:bg-white focus:ring-1 focus:ring-primary/20 transition-colors leading-relaxed"
+                    />
+                    <span className={`text-[10px] ${body.length > 160 ? 'text-amber-700 font-medium' : 'text-gray-400'}`}>
+                      {body.length} / 160 chars{body.length > 160 ? ' · 2 segments' : ''}
                     </span>
                   </div>
-                  <div className="flex items-baseline gap-1 flex-shrink-0">
-                    <span className="text-2xl font-bold text-green-600">{variant.responseRate}%</span>
-                    <span className="text-[10px] text-gray-400">response rate</span>
-                  </div>
-                </div>
-              </div>
 
-              {/* Group 2: message editor */}
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="message-body" className="text-xs font-medium text-gray-600 cursor-pointer">
-                    Message
-                  </label>
-                  {isDirty && (
-                    <button onClick={handleReset} className="text-xs text-gray-400 hover:text-gray-600 transition-colors focus-visible:outline-none focus-visible:text-gray-600">
-                      Reset
+                  {/* Send action */}
+                  <div>
+                    <button
+                      onClick={handleSend}
+                      disabled={sending || sent}
+                      className={`w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
+                        sent
+                          ? 'bg-success text-white cursor-default focus-visible:ring-success'
+                          : 'btn-primary disabled:opacity-60 focus-visible:ring-primary'
+                      }`}
+                    >
+                      {sent ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+                      {sent ? 'Sent to 86 donors' : sending ? 'Sending…' : 'Send Push Notification'}
                     </button>
-                  )}
-                </div>
-                <textarea
-                  id="message-body"
-                  value={body}
-                  onChange={handleBodyChange}
-                  rows={4}
-                  className="w-full px-3 py-2.5 text-xs text-gray-800 bg-gray-50 border border-gray-200 rounded-lg resize-none outline-none focus:border-primary focus:bg-white focus:ring-1 focus:ring-primary/20 transition-colors leading-relaxed"
-                />
-                <span className={`text-[10px] ${body.length > 160 ? 'text-amber-700 font-medium' : 'text-gray-400'}`}>
-                  {body.length} / 160 chars{body.length > 160 ? ' · 2 segments' : ''}
-                </span>
-              </div>
-
-              {/* Group 3: send action */}
-              <div>
-                <button
-                  onClick={handleSend}
-                  disabled={sending || sent}
-                  className={`w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
-                    sent
-                      ? 'bg-success text-white cursor-default focus-visible:ring-success'
-                      : 'btn-primary disabled:opacity-60 focus-visible:ring-primary'
-                  }`}
-                >
-                  {sent ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-                  {sent ? 'Sent to 86 donors' : sending ? 'Sending…' : 'Send Push Notification'}
-                </button>
-              </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

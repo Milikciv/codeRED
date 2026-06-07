@@ -314,6 +314,22 @@ function AlertsIllustration() {
   )
 }
 
+/* ── SectionLoader — inline AI regeneration loader ── */
+export function SectionLoader({ variant = 'recommendation', message }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-4 gap-2 select-none">
+      <div style={{ height: 100, overflow: 'hidden' }}>
+        <div style={{ transform: 'scale(0.65)', transformOrigin: 'top center' }}>
+          {variant === 'forecasting'    && <ForecastingIllustration />}
+          {variant === 'donorOutreach'  && <DonorOutreachIllustration />}
+          {variant === 'recommendation' && <RecommendationIllustration />}
+        </div>
+      </div>
+      {message && <p className="text-xs text-gray-400">{message}</p>}
+    </div>
+  )
+}
+
 /* ── LoadingScreen ── */
 export default function LoadingScreen({ variant = 'general' }) {
   return (

@@ -9,7 +9,7 @@ import {
 import { TrendingUp, AlertTriangle, Shield, ChevronDown, Clock, RefreshCw } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { sunnyOutline, bandageOutline, calendarOutline, giftOutline, statsChartOutline, waterOutline, trendingDownOutline, informationCircleOutline } from 'ionicons/icons'
-import LoadingScreen from '../../components/common/LoadingScreen'
+import LoadingScreen, { SectionLoader } from '../../components/common/LoadingScreen'
 import EmptyState from '../../components/common/EmptyState'
 
 const STATUS_COLOR = {
@@ -331,7 +331,9 @@ export default function Forecasting() {
               <button onClick={() => navigate('/hsa/alerts')} className="text-xs text-primary font-medium">View All</button>
             </div>
           </div>
-          {data.earlyWarning ? (
+          {earlyWarningLoading ? (
+            <SectionLoader variant="forecasting" message="Regenerating AI analysis…" />
+          ) : data.earlyWarning ? (
             <div className="flex gap-3 p-3 bg-red-50 border border-red-100 rounded-lg">
               <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
               <div>
