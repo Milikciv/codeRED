@@ -18,6 +18,24 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DriveController {
 
+    private static final Map<String, String> LOCATION_ADDRESSES = Map.ofEntries(
+        Map.entry("Tampines Community Plaza",  "1 Tampines Walk, Singapore 528523"),
+        Map.entry("Woodlands Civic Centre",    "900 South Woodlands Drive, Singapore 730900"),
+        Map.entry("Jurong East CC",            "210 Jurong East Street 21, Singapore 600210"),
+        Map.entry("Bishan CC",                 "51 Bishan Street 13, Singapore 579799"),
+        Map.entry("Jurong East Sports Centre", "21 Jurong East Street 31, Singapore 609517"),
+        Map.entry("Tampines Hub",              "1 Tampines Walk, Singapore 528523"),
+        Map.entry("Yishun CC",                 "51 Yishun Avenue 9, Singapore 769200"),
+        Map.entry("Toa Payoh Hub",             "480 Lor 6 Toa Payoh, Singapore 310480"),
+        Map.entry("Woodlands Galaxy CC",       "31 Woodlands Avenue 6, Singapore 738991"),
+        Map.entry("Bedok Community Centre",    "850 New Upper Changi Rd, Singapore 467352"),
+        Map.entry("Clementi CC",               "220 Clementi Avenue 4, Singapore 129880"),
+        Map.entry("Ang Mo Kio CC",             "795 Ang Mo Kio Avenue 1, Singapore 569976"),
+        Map.entry("Jurong West CC",            "20 Jurong West Street 93, Singapore 648965"),
+        Map.entry("Sembawang CC",              "90 Sembawang Drive, Singapore 750090"),
+        Map.entry("Queenstown CC",             "1 Queensway, Singapore 149053")
+    );
+
     private final DonationDriveService donationDriveService;
     private final RecommendedDriveRepository recommendedDriveRepository;
     private final RecommendationReasoningService recommendationReasoningService;
@@ -25,6 +43,11 @@ public class DriveController {
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> getDrives() {
         return ResponseEntity.ok(donationDriveService.getDrives());
+    }
+
+    @PostMapping
+    public ResponseEntity<Map<String, Object>> createDrive(@RequestBody Map<String, Object> body) {
+        return ResponseEntity.ok(donationDriveService.createDrive(body));
     }
 
     @PutMapping("/{driveCode}")
@@ -81,6 +104,7 @@ public class DriveController {
         result.put("alertId",              drive.getAlertCode());
         result.put("rank",                 drive.getRank());
         result.put("location",             drive.getLocation());
+        result.put("address",              LOCATION_ADDRESSES.getOrDefault(drive.getLocation(), ""));
         result.put("bloodType",            drive.getBloodType());
         result.put("date",                 drive.getDate());
         result.put("time",                 drive.getStartTime() + " – " + drive.getEndTime());
@@ -115,6 +139,12 @@ public class DriveController {
             })
             .collect(Collectors.toList());
         return ResponseEntity.ok(locations);
+    }
+
+    @DeleteMapping("/{driveCode}")
+    public ResponseEntity<Void> deleteDrive(@PathVariable String driveCode) {
+        donationDriveService.deleteDrive(driveCode);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/recommended/{alertCode}/regenerate-reasoning")
