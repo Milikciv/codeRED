@@ -3,6 +3,7 @@ package com.codered.config;
 import com.codered.model.*;
 import com.codered.model.enums.*;
 import com.codered.repository.*;
+import com.codered.model.Collaborator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Component
@@ -31,6 +33,7 @@ public class DataSeeder implements CommandLineRunner {
     private final DonorDemographicRepository donorDemographicRepository;
     private final RecommendedDriveRepository recommendedDriveRepository;
     private final DonorRepository donorRepository;
+    private final CollaboratorRepository collaboratorRepository;
 
     @Override
     public void run(String... args) {
@@ -42,6 +45,9 @@ public class DataSeeder implements CommandLineRunner {
             ensureMultiTypeRequestsExist();
             ensureSrcDataExists();
             ensureAlertsExist();
+            backfillDriveCoordinates();
+            backfillDonorEmails();
+            ensureCollaboratorsExist();
             return;
         }
         seedHospitals();
@@ -60,6 +66,7 @@ public class DataSeeder implements CommandLineRunner {
         if (donorRepository.count() == 0)               seedDonors();
         if (donorDemographicRepository.count() == 0)    seedResponseRateTrend();
         seedRecommendedDrive();
+        ensureCollaboratorsExist();
     }
 
     private void seedSrcData() {
@@ -67,6 +74,11 @@ public class DataSeeder implements CommandLineRunner {
         seedDonors();
         seedResponseRateTrend();
         seedRecommendedDrive();
+        seedCollaborators();
+    }
+
+    private void ensureCollaboratorsExist() {
+        if (collaboratorRepository.count() == 0) seedCollaborators();
     }
 
     // ── src_alerts ───────────────────────────────────────────────────────
@@ -107,7 +119,8 @@ public class DataSeeder implements CommandLineRunner {
             true, 312, 3, true,
             "Drive targeting O- donors in response to critical shortage alert. Venue booked, awaiting more registrations.",
             null, null, null,
-            420, 180, 240, 43, 87, "30 May 2026, 08:15 AM", 86, 18, 180, 21);
+            420, 180, 240, 43, 87, "30 May 2026, 08:15 AM", 86, 18, 180, 21,
+            1.3540, 103.9440);
 
         seedDrive("DD-002", "Jurong East Sports Centre",
             "21 Jurong East Street 31, Singapore 609517", "B+",
@@ -116,7 +129,8 @@ public class DataSeeder implements CommandLineRunner {
             true, 245, 2, true,
             "B+ shortage drive. Second outreach wave scheduled for 3 Jun to boost registrations.",
             null, null, null,
-            260, 120, 140, 46, 82, "29 May 2026, 02:30 PM", 72, 15, 120, 21);
+            260, 120, 140, 46, 82, "29 May 2026, 02:30 PM", 72, 15, 120, 21,
+            1.3329, 103.7436);
 
         seedDrive("DD-003", "Woodlands Galaxy CC",
             "31 Woodlands Avenue 6, Singapore 738991", "A-",
@@ -125,7 +139,8 @@ public class DataSeeder implements CommandLineRunner {
             true, 198, 4, true,
             "Drive confirmed. All logistics in place. Staff briefing scheduled for 13 Jun.",
             null, null, null,
-            150, 90, 60, 60, 79, "28 May 2026, 11:00 AM", 65, 14, 90, 22);
+            150, 90, 60, 60, 79, "28 May 2026, 11:00 AM", 65, 14, 90, 22,
+            1.4372, 103.7864);
 
         // History drives (Completed)
         seedDrive("DD-H001", "Tampines Hub",
@@ -134,7 +149,8 @@ public class DataSeeder implements CommandLineRunner {
             "26 Apr 2026", "10:00 AM", "5:00 PM", "Completed",
             true, 0, 3, true, null,
             112, 96, 45,
-            null, null, null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null, null,
+            1.3527, 103.9453);
 
         seedDrive("DD-H002", "Jurong East Sports Centre",
             "21 Jurong East Street 31", "B+",
@@ -142,7 +158,8 @@ public class DataSeeder implements CommandLineRunner {
             "13 Apr 2026", "10:00 AM", "4:00 PM", "Completed",
             true, 0, 3, true, null,
             98, 82, 42,
-            null, null, null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null, null,
+            1.3329, 103.7436);
 
         seedDrive("DD-H003", "Causeway Point Atrium",
             "1 Woodlands Square", "A-",
@@ -150,7 +167,8 @@ public class DataSeeder implements CommandLineRunner {
             "30 Mar 2026", "10:00 AM", "4:00 PM", "Completed",
             true, 0, 2, true, null,
             76, 63, 37,
-            null, null, null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null, null,
+            1.4381, 103.7863);
 
         seedDrive("DD-H004", "Bedok Community Centre",
             "850 New Upper Changi Rd", "O+",
@@ -158,7 +176,8 @@ public class DataSeeder implements CommandLineRunner {
             "16 Mar 2026", "10:00 AM", "4:00 PM", "Completed",
             true, 0, 3, true, null,
             85, 71, 40,
-            null, null, null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null, null,
+            1.3236, 103.9273);
     }
 
     private void seedDrive(String code, String location, String address, String bloodType,
@@ -170,7 +189,8 @@ public class DataSeeder implements CommandLineRunner {
                            Integer hsaShortage, Integer expectedCollection, Integer shortfall,
                            Integer progressPct, Integer outreachConfidence, String outreachLastUpdated,
                            Integer outreachRecipients, Integer expectedResponders,
-                           Integer expectedUnits, Integer outreachResponseRate) {
+                           Integer expectedUnits, Integer outreachResponseRate,
+                           double lat, double lng) {
         DonationDrive d = new DonationDrive();
         d.setDriveCode(code);
         d.setLocation(location);
@@ -202,6 +222,8 @@ public class DataSeeder implements CommandLineRunner {
         d.setExpectedResponders(expectedResponders);
         d.setExpectedUnits(expectedUnits);
         d.setOutreachResponseRate(outreachResponseRate);
+        d.setLatitude(lat);
+        d.setLongitude(lng);
         donationDriveRepository.save(d);
     }
 
@@ -276,6 +298,7 @@ public class DataSeeder implements CommandLineRunner {
                 }
 
                 d.setRegisteredAt(LocalDate.of(2019 + (ci % 6), 1 + (ci % 12), 1 + (ci % 15)));
+                d.setEmail("donor." + String.format("d%05d", seq - 1).toLowerCase() + "@donors.sg");
                 donorRepository.save(d);
             }
         }
@@ -541,6 +564,73 @@ public class DataSeeder implements CommandLineRunner {
                 }
                 recommendedDriveRepository.save(altDrive);
             }
+        }
+    }
+
+    // ── drive coordinate backfill ────────────────────────────────────────
+
+    private void backfillDriveCoordinates() {
+        Map<String, double[]> coords = Map.of(
+            "DD-001",  new double[]{1.3540, 103.9440},
+            "DD-002",  new double[]{1.3329, 103.7436},
+            "DD-003",  new double[]{1.4372, 103.7864},
+            "DD-H001", new double[]{1.3527, 103.9453},
+            "DD-H002", new double[]{1.3329, 103.7436},
+            "DD-H003", new double[]{1.4381, 103.7863},
+            "DD-H004", new double[]{1.3236, 103.9273}
+        );
+        donationDriveRepository.findAll().forEach(d -> {
+            if (d.getLatitude() == null && coords.containsKey(d.getDriveCode())) {
+                double[] c = coords.get(d.getDriveCode());
+                d.setLatitude(c[0]);
+                d.setLongitude(c[1]);
+                donationDriveRepository.save(d);
+            }
+        });
+    }
+
+    // ── donor email backfill ─────────────────────────────────────────────
+
+    private void backfillDonorEmails() {
+        donorRepository.findAll().forEach(d -> {
+            if (d.getEmail() == null || d.getEmail().isBlank()) {
+                d.setEmail("donor." + d.getDonorId().toLowerCase().replace("-", "") + "@donors.sg");
+                donorRepository.save(d);
+            }
+        });
+    }
+
+    // ── collaborators ─────────────────────────────────────────────────────
+
+    private void seedCollaborators() {
+        // { name, email, address, lat, lng, reach, score, category, tags }
+        Object[][] data = {
+            {"DBS Bank",              "csr@dbs.com",                   "Tampines Central 1",                1.3547, 103.9442, "4,500 employees", 82, "Companies",        new String[]{"Large Company", "Health Partner"}},
+            {"Singapore Airlines",    "community@singaporeair.com",    "Airline House, 25 Airline Rd",      1.3357, 103.8594, "3,200 employees", 76, "Companies",        new String[]{"Large Company", "Health Partner"}},
+            {"CapitaLand",            "csr@capitaland.com",            "168 Robinson Rd",                   1.2791, 103.8490, "2,800 employees", 61, "Companies",        new String[]{"Large Company", "Community Partner"}},
+            {"ST Engineering",        "community@stengg.com",          "1 Ang Mo Kio Electronics Park",     1.3695, 103.8591, "2,100 employees", 70, "Companies",        new String[]{"Large Company"}},
+            {"Temasek Polytechnic",   "studentaffairs@tp.edu.sg",      "21 Tampines Ave 1",                 1.3456, 103.9311, "2,000 students",  92, "Schools",          new String[]{"Polytechnic", "Youth Partner"}},
+            {"SUTD",                  "studentlife@sutd.edu.sg",       "8 Somapah Rd",                      1.3414, 103.9635, "1,800 students",  85, "Schools",          new String[]{"University", "Research Partner"}},
+            {"ITE College East",      "studentservices@ite.edu.sg",    "10 Simei Ave",                      1.3428, 103.9424, "1,500 students",  78, "Schools",          new String[]{"ITE", "Youth Partner"}},
+            {"Temasek JC",            "general@temasekjc.moe.edu.sg", "22 Bedok South Rd",                 1.3254, 103.9324, "1,200 students",  81, "Schools",          new String[]{"Junior College", "Youth Partner"}},
+            {"Community Clubs",       "pa_tampines@pa.gov.sg",         "Tampines Town Council",             1.3521, 103.9406, "3,000 members",   90, "Community Groups", new String[]{"Community", "Grassroots"}},
+            {"Religious Organisations","outreach@ircc.sg",             "Various Locations",                 1.3530, 103.9420, "1,500 members",   86, "Community Groups", new String[]{"Faith-based", "Community"}},
+            {"Grassroots Organisations","tampines@grassroots.gov.sg",  "Tampines GRC",                      1.3510, 103.9380, "2,200 members",   88, "Community Groups", new String[]{"Grassroots", "Community"}},
+        };
+
+        for (Object[] row : data) {
+            if (collaboratorRepository.existsByName((String) row[0])) continue;
+            Collaborator c = new Collaborator();
+            c.setName((String) row[0]);
+            c.setEmail((String) row[1]);
+            c.setAddress((String) row[2]);
+            c.setLatitude((double) row[3]);
+            c.setLongitude((double) row[4]);
+            c.setReach((String) row[5]);
+            c.setScore((int) row[6]);
+            c.setCategory((String) row[7]);
+            c.setTags(List.of((String[]) row[8]));
+            collaboratorRepository.save(c);
         }
     }
 

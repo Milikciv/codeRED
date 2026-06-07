@@ -21,6 +21,9 @@ public class Donor {
     @Column(unique = true, nullable = false)
     private String donorId;
 
+    @Column(unique = true)
+    private String email;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private BloodType bloodType;

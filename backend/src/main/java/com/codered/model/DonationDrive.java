@@ -18,6 +18,8 @@ public class DonationDrive {
     private String driveCode;
     private String location;
     private String address;
+    private Double latitude;
+    private Double longitude;
     private String bloodType;
     private Integer expectedDonorsMin;
     private Integer expectedDonorsMax;

@@ -20,6 +20,10 @@ public class DonorOutreachService {
 
     private final DonorRepository donorRepository;
     private final DonorOutreachRepository donorOutreachRepository;
+    private final EmailService emailService;
+    private final EmailTemplateService emailTemplateService;
+
+    private static final String ADMIN_EMAIL = "codered.notify@gmail.com";
 
     public Map<String, Object> sendPushNotification(SendOutreachRequest request) {
 
@@ -63,6 +67,16 @@ public class DonorOutreachService {
         saved.setOutreachId(generateOutreachId(saved.getId()));
         saved = donorOutreachRepository.save(saved);
 
+        String html = emailTemplateService.buildPushNotificationEmail(
+            saved.getMessage(),
+            saved.getBloodType(),
+            saved.getRegion(),
+            saved.getDonorsReached(),
+            saved.getOutreachId(),
+            saved.getDateSent()
+        );
+        emailService.sendEmail(ADMIN_EMAIL, "Push Notification Sent — " + saved.getOutreachId(), html, true);
+
         return Map.of(
             "outreachId",    saved.getOutreachId(),
             "type",          saved.getType(),
@@ -87,6 +101,17 @@ public class DonorOutreachService {
         DonorOutreach saved = donorOutreachRepository.save(outreach);
         saved.setOutreachId(generateOutreachId(saved.getId()));
         saved = donorOutreachRepository.save(saved);
+
+        if (request.getRecipientEmail() != null && !request.getRecipientEmail().isBlank()) {
+            String html = emailTemplateService.buildInvitationEmail(
+                saved.getPartnerName(),
+                saved.getSubject(),
+                saved.getMessage(),
+                saved.getOutreachId(),
+                saved.getDateSent()
+            );
+            emailService.sendEmail(request.getRecipientEmail(), saved.getSubject(), html, true);
+        }
 
         return Map.of(
             "outreachId",      saved.getOutreachId(),

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import LoadingScreen, { SectionLoader } from '../../components/common/LoadingScreen'
+import EmptyState from '../../components/common/EmptyState'
 import api from '../../api/axios'
 import {
   CalendarDays, Clock, Droplets, MapPin, ExternalLink,
@@ -49,25 +50,6 @@ const STRATEGY_COMPARISON = [
   { id: 'combined', label: 'Combined Approach',  donors: 68, color: 'text-green-700', bg: 'bg-green-50',  border: 'border-green-200', best: true },
 ]
 
-const PARTNERS = {
-  Companies: [
-    { name: 'DBS Bank',           address: 'Tampines Central 1',      distance: '0.8km', reach: '4,500 employees', score: 82, tags: ['Large Company', 'Health Partner'] },
-    { name: 'Singapore Airlines', address: 'Airline House, 25 Airline Rd', distance: '1.8km', reach: '3,200 employees', score: 76, tags: ['Large Company', 'Health Partner'] },
-    { name: 'CapitaLand',         address: '168 Robinson Rd',          distance: '1.5km', reach: '2,800 employees', score: 61, tags: ['Large Company', 'Community Partner'] },
-    { name: 'ST Engineering',     address: '1 Ang Mo Kio Electronics Park', distance: '1.8km', reach: '2,100 employees', score: 70, tags: ['Large Company'] },
-  ],
-  Schools: [
-    { name: 'Temasek Polytechnic', address: '21 Tampines Ave 1',  distance: '0.8km', reach: '2,000 students', score: 92, tags: ['Polytechnic', 'Youth Partner'] },
-    { name: 'SUTD',                address: '8 Somapah Rd',       distance: '1.4km', reach: '1,800 students', score: 85, tags: ['University', 'Research Partner'] },
-    { name: 'ITE College East',    address: '10 Simei Ave',        distance: '1.1km', reach: '1,500 students', score: 78, tags: ['ITE', 'Youth Partner'] },
-    { name: 'Temasek JC',          address: '22 Bedok South Rd',  distance: '0.6km', reach: '1,200 students', score: 81, tags: ['Junior College', 'Youth Partner'] },
-  ],
-  'Community Groups': [
-    { name: 'Community Clubs',          address: 'Tampines Town Council', distance: '0.3km', reach: '3,000 members', score: 90, tags: ['Community', 'Grassroots'] },
-    { name: 'Religious Organisations',  address: 'Various Locations',     distance: '0.5km', reach: '1,500 members', score: 86, tags: ['Faith-based', 'Community'] },
-    { name: 'Grassroots Organisations', address: 'Tampines GRC',           distance: '0.4km', reach: '2,200 members', score: 88, tags: ['Grassroots', 'Community'] },
-  ],
-}
 
 const OUTREACH_TONES = [
   {
@@ -115,7 +97,7 @@ const AI_STEPS = [
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
 
-function SelectDropdown({ label, value, options, icon }) {
+function SelectDropdown({ label, value, options, icon, onChange }) {
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState(value)
   const labelId = label ? `label-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined
@@ -142,7 +124,7 @@ function SelectDropdown({ label, value, options, icon }) {
               key={opt}
               role="option"
               aria-selected={opt === selected}
-              onClick={() => { setSelected(opt); setOpen(false) }}
+              onClick={() => { setSelected(opt); setOpen(false); onChange?.(opt) }}
               className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg transition-colors duration-100 focus-visible:outline-none focus-visible:bg-gray-50"
             >
               {opt}
@@ -412,14 +394,14 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false, onRef
   const handleSend = async () => {
     setSending(true)
     try {
-      const res = await api.post('/donor-outreach/push-notification', {
+      const { data } = await api.post('/donor-outreach/push-notification', {
         message: body,
         bloodType: drive?.bloodType ?? null,
         region: drive?.region ?? null,
         prevRespondersOnly: prevRespondersOnly,
       })
-      console.log('Push notification sent:', res.data)
-      setDonorsReached(res.data.donorsReached)
+      console.log('Push notification sent:', data)
+      setDonorsReached(data.donorsReached)
       setSent(true)
     } catch (err) {
       console.error(err)
@@ -952,9 +934,10 @@ function OutreachPreview({ partner, subTab, invited, onInvite }) {
   const handleSendInvitation = async () => {
     setSending(true)
     try {
-      const res = await api.post('/donor-outreach/invitation', {
+      const { data } = await api.post('/donor-outreach/invitation', {
         partnerName:     partner.name,
         partnerCategory: subTab,
+        recipientEmail:  partner.email,
         subject:         subject,
         message:         body,
       })
@@ -1068,7 +1051,7 @@ function OutreachPreview({ partner, subTab, invited, onInvite }) {
   )
 }
 
-function TabCollaborations() {
+function TabCollaborations({ drive }) {
   const SUB_TABS = [
     { label: 'Nearby Companies',         category: 'Companies' },
     { label: 'Educational Institutions', category: 'Schools' },
@@ -1077,26 +1060,56 @@ function TabCollaborations() {
 
   const [subTab, setSubTab] = useState('Nearby Companies')
   const [invited, setInvited] = useState(new Set())
-  const [selectedPartner, setSelectedPartner] = useState(PARTNERS['Companies'][0])
+  const [selectedPartner, setSelectedPartner] = useState(null)
   const [search, setSearch] = useState('')
+  const [partners, setPartners] = useState({})
+  const [loadingPartners, setLoadingPartners] = useState(true)
+  const [radiusKm, setRadiusKm] = useState(5)
+  const [expanded, setExpanded] = useState(false)
+  const PAGE_SIZE = 3
+
+  useEffect(() => {
+    const params = drive?.id ? `?driveCode=${drive.id}` : ''
+    api.get(`/collaborators${params}`)
+      .then(({ data }) => {
+        setPartners(data)
+        const firstCategory = SUB_TABS[0].category
+        if (data[firstCategory]?.length > 0) setSelectedPartner(data[firstCategory][0])
+      })
+      .catch(() => {})
+      .finally(() => setLoadingPartners(false))
+  }, [drive?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { setExpanded(false) }, [search, radiusKm])
+
+  const parseDistanceKm = (str) => {
+    if (!str) return null
+    const [num, unit] = str.split(' ')
+    return unit === 'km' ? parseFloat(num) : parseFloat(num) / 1000
+  }
 
   const activeTab = SUB_TABS.find(t => t.label === subTab)
   const category = activeTab?.category
-  const allPartners = category ? (PARTNERS[category] ?? []) : []
-  const filteredPartners = search
-    ? allPartners.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
-    : allPartners
+  const allPartners = category ? (partners[category] ?? []) : []
+  const filteredPartners = allPartners.filter(p => {
+    const distKm = parseDistanceKm(p.distance)
+    if (distKm !== null && distKm > radiusKm) return false
+    if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false
+    return true
+  })
 
   const handleSubTabChange = (label) => {
     setSubTab(label)
     setSearch('')
+    setRadiusKm(5)
+    setExpanded(false)
     const tab = SUB_TABS.find(t => t.label === label)
-    if (tab?.category) setSelectedPartner(PARTNERS[tab.category][0])
+    if (tab?.category && partners[tab.category]?.length > 0) setSelectedPartner(partners[tab.category][0])
   }
 
   const handleInvite = name => setInvited(s => { const n = new Set(s); n.add(name); return n })
 
-  const parseReach = (str) => parseInt(str.replace(/[^0-9]/g, ''), 10) || 0
+  const parseReach = (str) => parseInt(str?.replace(/[^0-9]/g, '') ?? '0', 10) || 0
   const currentReach = allPartners.reduce((sum, p) => sum + parseReach(p.reach), 0)
   const recommendedCount = allPartners.filter(p => p.score >= 80).length
   const sentCount = allPartners.filter(p => invited.has(p.name)).length
@@ -1169,7 +1182,11 @@ function TabCollaborations() {
             <div className="px-5 py-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 border-b border-gray-100">
               <div className="flex gap-2">
                 <div className="flex-1 sm:flex-none sm:w-[130px]">
-                  <SelectDropdown value="Within 3 km" options={['Within 1 km', 'Within 3 km', 'Within 5 km', 'Within 10 km']} />
+                  <SelectDropdown
+                    value="Within 5 km"
+                    options={['Within 1 km', 'Within 3 km', 'Within 5 km', 'Within 10 km']}
+                    onChange={opt => setRadiusKm(parseInt(opt.replace(/\D/g, ''), 10))}
+                  />
                 </div>
                 <div className="flex-1 sm:flex-none sm:w-[110px]">
                   <SelectDropdown value="All Types" options={['All Types', 'Large Company', 'SME', 'Health Partner', 'Community Partner']} />
@@ -1191,8 +1208,19 @@ function TabCollaborations() {
           {/* Partner rows */}
           {category && (
             <>
+              {loadingPartners && (
+                <div className="px-5 py-8 text-center text-sm text-gray-400">Loading partners…</div>
+              )}
+              {!loadingPartners && filteredPartners.length === 0 && (
+                <EmptyState
+                  size="sm"
+                  title="No organisations found"
+                  description="Try widening the radius or clearing the search filter."
+                  className="flex flex-col items-center justify-center py-12 text-center select-none"
+                />
+              )}
               <div className="divide-y divide-gray-50">
-                {filteredPartners.map(partner => {
+                {(expanded ? filteredPartners : filteredPartners.slice(0, PAGE_SIZE)).map(partner => {
                   const isSelected = selectedPartner?.name === partner.name
                   const match = getMatch(partner.score)
                   const initials = partner.name.split(' ').slice(0, 2).map(w => w[0]).join('')
@@ -1217,7 +1245,7 @@ function TabCollaborations() {
                           {partner.name}
                         </div>
                         <div className="text-xs text-gray-400 mt-0.5">{partner.address}</div>
-                        <div className="text-xs text-gray-400">– {partner.distance}</div>
+                        {partner.distance && <div className="text-xs text-gray-400">– {partner.distance} from drive</div>}
                         <div className="flex flex-wrap gap-1 mt-1.5">
                           {partner.tags.map(tag => (
                             <span key={tag} className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-medium rounded-full">
@@ -1240,12 +1268,17 @@ function TabCollaborations() {
               </div>
 
               {/* View More */}
-              <div className="px-5 py-3.5 border-t border-gray-100 flex justify-center">
-                <button className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
-                  {viewMoreLabel}
-                  <ChevronDown className="w-4 h-4" />
-                </button>
-              </div>
+              {filteredPartners.length > PAGE_SIZE && (
+                <div className="px-5 py-3.5 border-t border-gray-100 flex justify-center">
+                  <button
+                    onClick={() => setExpanded(e => !e)}
+                    className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    {expanded ? 'Show Less' : `${viewMoreLabel} (${filteredPartners.length - PAGE_SIZE} more)`}
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -1420,7 +1453,7 @@ export default function DonorOutreach() {
         {activeTab === 'ai'     && <TabAIRecommended onViewCombined={() => setShowCombined(true)} />}
         {activeTab === 'push'   && <TabPushNotifications drive={drive} aiVariants={messageVariants} aiLoading={aiLoading} onRefresh={() => fetchMessages(true)} />}
         {activeTab === 'youth'  && <TabYouthCampaigns drive={drive} />}
-        {activeTab === 'collab' && <TabCollaborations />}
+        {activeTab === 'collab' && <TabCollaborations drive={drive} />}
       </div>
 
       {showCombined && <CombinedPlanModal onClose={() => setShowCombined(false)} />}
