@@ -24,6 +24,9 @@ public class SendOutreachRequest {
     // Organisation name e.g. "DBS Bank"
     private String partnerName;
 
+    // Recipient email address
+    private String recipientEmail;
+
     // "Companies", "Schools", or "Community Groups"
     private String partnerCategory;
 
