@@ -18,6 +18,7 @@ public class RecommendedDrive {
 
     private String alertCode;
     private String location;
+    private String address;
     private String bloodType;
     private String date;
     private String startTime;

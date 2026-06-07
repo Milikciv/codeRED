@@ -153,6 +153,176 @@ function ScoreModal({ drive, onClose }) {
   )
 }
 
+const ALL_BLOOD_TYPES = ['O-', 'O+', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']
+const inputCls = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors'
+
+function BloodTypeCheckboxes({ selected, onChange }) {
+  const toggle = (type) => {
+    const next = selected.includes(type) ? selected.filter(t => t !== type) : [...selected, type]
+    onChange(next)
+  }
+  const allSelected = ALL_BLOOD_TYPES.every(t => selected.includes(t))
+  const toggleAll = () => onChange(allSelected ? [] : [...ALL_BLOOD_TYPES])
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        {ALL_BLOOD_TYPES.map(t => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => toggle(t)}
+            className={`px-2.5 py-1 rounded-lg border text-xs font-semibold transition-colors ${
+              selected.includes(t)
+                ? 'bg-primary text-white border-primary'
+                : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={toggleAll}
+        className={`w-full py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+          allSelected ? 'bg-primary text-white border-primary' : 'border-gray-300 text-gray-500 hover:bg-gray-50'
+        }`}
+      >
+        {allSelected ? '✓ All Blood Types Selected' : 'Select All Blood Types'}
+      </button>
+      {selected.length === 0 && (
+        <p className="text-xs text-red-500">Please select at least one blood type.</p>
+      )}
+    </div>
+  )
+}
+
+function recommendedStaff(eligibleDonors) {
+  // Roughly 1 staff per 15 expected donors (30% turnout), minimum 2
+  return Math.max(2, Math.round((eligibleDonors * 0.3) / 15))
+}
+
+function PlanDriveModal({ drive, alertId, onClose, onCreated }) {
+  const [bloodTypes, setBloodTypes] = useState(
+    drive.bloodType ? [drive.bloodType] : ['O+']
+  )
+  const [form, setForm] = useState({
+    date:         drive.date ?? '',
+    startTime:    drive.time?.split(' – ')[0]?.trim() ?? '10:00 AM',
+    endTime:      drive.time?.split(' – ')[1]?.trim() ?? '4:00 PM',
+    staffAssigned: recommendedStaff(drive.eligibleDonors ?? 50),
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState(null)
+
+  const set = (key, val) => setForm(f => ({ ...f, [key]: val }))
+
+  const handleSubmit = async () => {
+    if (bloodTypes.length === 0) return
+    setSaving(true)
+    setError(null)
+    try {
+      await api.post('/drives', {
+        location:     drive.location ?? '',
+        address:      drive.address  ?? '',
+        bloodType:    bloodTypes.join(', '),
+        date:         form.date,
+        startTime:    form.startTime,
+        endTime:      form.endTime,
+        staffAssigned: Number(form.staffAssigned) || 0,
+        expectedMin:  drive.eligibleDonors ? Math.round(drive.eligibleDonors * 0.25) : 0,
+        expectedMax:  drive.eligibleDonors ?? 0,
+        linkedAlert:  alertId ?? '',
+        notes:        '',
+      })
+      onCreated()
+    } catch {
+      setError('Failed to create drive. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
+          <h2 className="font-bold text-gray-900">Plan Drive Here</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          {/* Read-only venue info */}
+          <div className="bg-gray-50 rounded-xl p-3 space-y-1">
+            <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
+              <MapPin className="w-4 h-4 text-primary flex-shrink-0" /> {drive.location}
+            </div>
+            {drive.address && (
+              <div className="text-xs text-gray-400 pl-5">{drive.address}</div>
+            )}
+          </div>
+
+          {/* Blood type checkboxes */}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-2">Target Blood Type(s)</label>
+            <BloodTypeCheckboxes selected={bloodTypes} onChange={setBloodTypes} />
+          </div>
+
+          {/* Date */}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">Date</label>
+            <input className={inputCls} value={form.date} onChange={e => set('date', e.target.value)} placeholder="e.g. Sat, 31 May 2026" />
+          </div>
+
+          {/* Start / End time */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">Start Time</label>
+              <input className={inputCls} value={form.startTime} onChange={e => set('startTime', e.target.value)} placeholder="e.g. 10:00 AM" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">End Time</label>
+              <input className={inputCls} value={form.endTime} onChange={e => set('endTime', e.target.value)} placeholder="e.g. 4:00 PM" />
+            </div>
+          </div>
+
+          {/* Staff assigned */}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">
+              Staff Assigned
+              <span className="ml-1.5 text-[10px] text-primary font-normal bg-primary/10 px-1.5 py-0.5 rounded-full">
+                Recommended: {recommendedStaff(drive.eligibleDonors ?? 50)}
+              </span>
+            </label>
+            <input
+              type="number" min={1}
+              className={inputCls}
+              value={form.staffAssigned}
+              onChange={e => set('staffAssigned', e.target.value === '' ? '' : Number(e.target.value))}
+            />
+            <p className="text-[11px] text-gray-400 mt-1">
+              Based on ~{drive.eligibleDonors ?? '?'} eligible donors in the area (est. {Math.round((drive.eligibleDonors ?? 50) * 0.3)} turnout).
+            </p>
+          </div>
+
+          {error && <p className="text-xs text-red-500">{error}</p>}
+        </div>
+        <div className="px-5 py-4 border-t border-gray-100 flex-shrink-0 flex gap-2">
+          <button onClick={onClose} className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-2 text-sm hover:bg-gray-50">
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={saving || bloodTypes.length === 0}
+            className="flex-1 flex items-center justify-center gap-1.5 btn-primary py-2 text-sm disabled:opacity-60"
+          >
+            <CalendarDays className="w-4 h-4" /> {saving ? 'Creating…' : 'Create Drive'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function AltLocationsModal({ drive, topDrive, onSelectDrive, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4">
@@ -233,7 +403,7 @@ export default function DrivePlanning() {
   const [showAlertDropdown, setShowAlertDropdown] = useState(false)
   const alertBtnRef = useRef(null)
   const [selectedHotspot, setSelectedHotspot]   = useState(null)
-  const [modal, setModal] = useState(null) // 'why' | 'score' | 'alt'
+  const [modal, setModal] = useState(null) // 'why' | 'score' | 'alt' | 'plan'
   const [regeneratingWhy, setRegeneratingWhy] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -542,7 +712,7 @@ export default function DrivePlanning() {
             </div>
 
             <button
-              onClick={() => navigate('/src/donation-drives')}
+              onClick={() => setModal('plan')}
               className="w-full btn-primary py-2.5 text-sm font-semibold flex items-center justify-center gap-2"
             >
               <CalendarDays className="w-4 h-4" /> Plan Drive Here
@@ -566,6 +736,14 @@ export default function DrivePlanning() {
       {modal === 'why'   && drive && <WhyModal drive={drive} onClose={() => setModal(null)} onRefresh={handleRegenerateWhy} refreshing={regeneratingWhy} />}
       {modal === 'score' && drive && <ScoreModal drive={drive} onClose={() => setModal(null)} />}
       {modal === 'alt'   && drive && <AltLocationsModal drive={drive} topDrive={topDrive} onSelectDrive={(rank) => setSelectedRank(rank)} onClose={() => setModal(null)} />}
+      {modal === 'plan'  && drive && (
+        <PlanDriveModal
+          drive={drive}
+          alertId={selectedAlertId}
+          onClose={() => setModal(null)}
+          onCreated={() => { setModal(null); navigate('/src/donation-drives') }}
+        />
+      )}
     </PageLayout>
   )
 }
