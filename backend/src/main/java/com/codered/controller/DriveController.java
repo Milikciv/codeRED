@@ -130,6 +130,6 @@ public class DriveController {
 
         recommendationReasoningService.generateAndSaveReasoningForDrive(drive, hotspotContext);
 
-        return getRecommendedDrive(alertCode, 1);
+        return getRecommendedDrive(alertCode);
     }
 }

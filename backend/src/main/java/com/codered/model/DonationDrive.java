@@ -3,7 +3,6 @@ package com.codered.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "donation_drives")
@@ -55,10 +54,4 @@ public class DonationDrive {
     // NEW: AI Recommendation Storage
     @Column(columnDefinition = "TEXT")
     private String aiRecommendation;
-
-    // AI-generated donor outreach messages (JSON array of strings)
-    @Column(columnDefinition = "TEXT")
-    private String aiMessagesJson;
-
-    private LocalDateTime aiMessagesAt;
 }

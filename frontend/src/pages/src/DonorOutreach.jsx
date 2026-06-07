@@ -378,7 +378,7 @@ const MESSAGE_VARIANTS = [
   },
 ]
 
-function TabPushNotifications({ drive, aiVariants = [], aiLoading = false, onRefresh }) {
+function TabPushNotifications({ drive, aiVariants = [], aiLoading = false }) {
   const variants = aiVariants.length > 0 ? aiVariants : MESSAGE_VARIANTS
   const [variantIdx, setVariantIdx] = useState(0)
   const [sent, setSent]     = useState(false)
@@ -519,37 +519,25 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false, onRef
 
               {/* Group 1: variant selection + name + response rate */}
               <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex gap-1.5 flex-wrap">
-                    {aiLoading && (
-                      <span className="flex items-center gap-1.5 px-3 py-1 text-xs text-gray-400">
-                        <Sparkles className="w-3 h-3 animate-pulse text-primary" />Gemini AI drafting…
-                      </span>
-                    )}
-                    {!aiLoading && variants.map((v, i) => (
-                      <button
-                        key={v.id}
-                        onClick={() => handlePickVariant(i)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
-                          i === variantIdx
-                            ? 'bg-gray-900 text-white focus-visible:ring-gray-900'
-                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200 focus-visible:ring-gray-400'
-                        }`}
-                      >
-                        {v.name}
-                      </button>
-                    ))}
-                  </div>
-                  {onRefresh && !aiLoading && (
-                    <button
-                      onClick={onRefresh}
-                      className="flex items-center gap-1 text-xs text-gray-500 hover:text-primary flex-shrink-0"
-                      title="Regenerate AI messages"
-                    >
-                      <RefreshCw className="w-3 h-3" />
-                      Regenerate
-                    </button>
+                <div className="flex gap-1.5 flex-wrap">
+                  {aiLoading && (
+                    <span className="flex items-center gap-1.5 px-3 py-1 text-xs text-gray-400">
+                      <Sparkles className="w-3 h-3 animate-pulse text-primary" />Gemini AI drafting…
+                    </span>
                   )}
+                  {!aiLoading && variants.map((v, i) => (
+                    <button
+                      key={v.id}
+                      onClick={() => handlePickVariant(i)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
+                        i === variantIdx
+                          ? 'bg-gray-900 text-white focus-visible:ring-gray-900'
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200 focus-visible:ring-gray-400'
+                      }`}
+                    >
+                      {v.name}
+                    </button>
+                  ))}
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 flex-wrap min-w-0">
@@ -1251,12 +1239,13 @@ export default function DonorOutreach() {
       .finally(() => setLoading(false))
   }, [])
 
-  const fetchMessages = (refresh = false) => {
+  useEffect(() => {
     const drive = drives.find(d => d.id === selectedDriveId) ?? drives[0]
     if (!drive) return
     setAiLoading(true)
-    const refreshParam = refresh ? '&refresh=true' : ''
-    api.get(`/forecast/outreach-messages?driveCode=${drive.id}${refreshParam}`)
+    const type = encodeURIComponent(drive.bloodType || 'O+')
+    const context = encodeURIComponent(`Expected shortfall of ${drive.shortfall || 'several'} units`)
+    api.get(`/forecast/outreach-messages?bloodType=${type}&context=${context}`)
       .then(r => {
         const formatted = r.data.map((msg, idx) => ({
           id: String.fromCharCode(65 + idx),
@@ -1270,9 +1259,7 @@ export default function DonorOutreach() {
       })
       .catch(() => setMessageVariants([]))
       .finally(() => setAiLoading(false))
-  }
-
-  useEffect(() => { fetchMessages() }, [selectedDriveId, drives]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedDriveId, drives])
 
   const drive = drives.find(d => d.id === selectedDriveId) ?? drives[0]
 
@@ -1382,7 +1369,7 @@ export default function DonorOutreach() {
       {/* Tab content */}
       <div key={activeTab} className="page-enter-animate">
         {activeTab === 'ai'     && <TabAIRecommended onViewCombined={() => setShowCombined(true)} />}
-        {activeTab === 'push'   && <TabPushNotifications drive={drive} aiVariants={messageVariants} aiLoading={aiLoading} onRefresh={() => fetchMessages(true)} />}
+        {activeTab === 'push'   && <TabPushNotifications drive={drive} aiVariants={messageVariants} aiLoading={aiLoading} />}
         {activeTab === 'youth'  && <TabYouthCampaigns drive={drive} />}
         {activeTab === 'collab' && <TabCollaborations />}
       </div>

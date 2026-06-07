@@ -53,14 +53,10 @@ public class ForecastService {
     private static final DateTimeFormatter FULL_DATE = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH);
 
     public Map<String, Object> buildForecast(String bloodTypeFilter) {
-        return buildForecast(bloodTypeFilter, HISTORY_DAYS, false);
+        return buildForecast(bloodTypeFilter, HISTORY_DAYS);
     }
 
     public Map<String, Object> buildForecast(String bloodTypeFilter, int historyDays) {
-        return buildForecast(bloodTypeFilter, historyDays, false);
-    }
-
-    public Map<String, Object> buildForecast(String bloodTypeFilter, int historyDays, boolean forceRefresh) {
         LocalDate today = LocalDate.now();
         String selectedBloodType = normalizeBloodType(bloodTypeFilter);
 
@@ -119,7 +115,7 @@ public class ForecastService {
         String demandSummary = "Expected shortfall of " + expectedShortfall + " units over the next " + highRiskDays
                 + " high-risk days.";
 
-        Map<String, Object> earlyWarning = aiService.generateEarlyWarning(stockSummary, demandSummary, forceRefresh);
+        Map<String, Object> earlyWarning = aiService.generateEarlyWarning(stockSummary, demandSummary);
 
         // --- NEW CODE: SAVE TO DATABASE TO CLEAR THE IDE WARNING ---
         if (earlyWarning != null && earlyWarning.containsKey("recommendation")) {
@@ -435,7 +431,7 @@ public class ForecastService {
     // ---------- helpers ----------
 
     public Map<String, Object> buildForecast() {
-        return buildForecast(null, HISTORY_DAYS, false);
+        return buildForecast(null);
     }
 
     private String normalizeBloodType(String bloodType) {

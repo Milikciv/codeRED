@@ -9,7 +9,7 @@ import L from 'leaflet'
 import api from '../../api/axios'
 import {
   ChevronDown, X, CheckCircle, Info, CalendarDays,
-  Clock, Droplets, Users, TrendingUp, ExternalLink, MapPin, RefreshCw
+  Clock, Droplets, Users, TrendingUp, ExternalLink, MapPin
 } from 'lucide-react'
 
 // Fix leaflet default icon paths broken by Vite
@@ -75,24 +75,13 @@ function ConfidenceRing({ pct }) {
   )
 }
 
-function WhyModal({ drive, onClose, onRefresh, refreshing }) {
+function WhyModal({ drive, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="font-bold text-gray-900">Why This Location?</h2>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onRefresh}
-              disabled={refreshing}
-              className="flex items-center gap-1 text-xs text-gray-500 hover:text-primary disabled:opacity-40"
-              title="Regenerate AI reasoning"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Regenerating…' : 'Regenerate'}
-            </button>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
-          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
         </div>
         <div className="p-5 space-y-3">
           {drive.impact && (
@@ -228,7 +217,6 @@ export default function DrivePlanning() {
   const alertBtnRef = useRef(null)
   const [selectedHotspot, setSelectedHotspot]   = useState(null)
   const [modal, setModal] = useState(null) // 'why' | 'score' | 'alt'
-  const [regeneratingWhy, setRegeneratingWhy] = useState(false)
   const [loading, setLoading] = useState(true)
 
   // Load alerts once
@@ -272,16 +260,6 @@ export default function DrivePlanning() {
     const paramId = searchParams.get('alertId')
     if (paramId) setSelectedAlertId(paramId)
   }, [searchParams])
-
-  const handleRegenerateWhy = () => {
-    if (!selectedAlertId) return
-    setRegeneratingWhy(true)
-    api.post(`/drives/recommended/${selectedAlertId}/regenerate-reasoning`)
-      .then(() => api.get(`/drives/recommended?alertCode=${selectedAlertId}&rank=${selectedRank}`))
-      .then(r => setRecommendedDrive(r.data))
-      .catch(() => {})
-      .finally(() => setRegeneratingWhy(false))
-  }
 
   if (loading) return (
     <PageLayout title="Drive Planning" subtitle="Find the best locations and plan your next blood donation drive.">
@@ -557,7 +535,7 @@ export default function DrivePlanning() {
         <span>Last updated: 30 May 2026, 08:30 AM</span>
       </div>
 
-      {modal === 'why'   && drive && <WhyModal drive={drive} onClose={() => setModal(null)} onRefresh={handleRegenerateWhy} refreshing={regeneratingWhy} />}
+      {modal === 'why'   && drive && <WhyModal drive={drive} onClose={() => setModal(null)} />}
       {modal === 'score' && drive && <ScoreModal drive={drive} onClose={() => setModal(null)} />}
       {modal === 'alt'   && drive && <AltLocationsModal drive={drive} topDrive={topDrive} onSelectDrive={(rank) => setSelectedRank(rank)} onClose={() => setModal(null)} />}
     </PageLayout>

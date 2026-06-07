@@ -6,7 +6,7 @@ import api from '../../api/axios'
 import {
   ComposedChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Area,
 } from 'recharts'
-import { TrendingUp, AlertTriangle, Shield, ChevronDown, Clock, RefreshCw } from 'lucide-react'
+import { TrendingUp, AlertTriangle, Shield, ChevronDown, Clock } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { sunnyOutline, bandageOutline, calendarOutline, giftOutline, statsChartOutline, waterOutline, trendingDownOutline, informationCircleOutline } from 'ionicons/icons'
 import LoadingScreen from '../../components/common/LoadingScreen'
@@ -74,7 +74,6 @@ export default function Forecasting() {
   const [openDropdown, setOpenDropdown] = useState(null)
   const [bloodType, setBloodType] = useState('All Blood Types')
   const [historyDays, setHistoryDays] = useState(14)
-  const [earlyWarningLoading, setEarlyWarningLoading] = useState(false)
 
   const fetchData = () => {
     setError(false)
@@ -87,18 +86,6 @@ export default function Forecasting() {
       .then(r => setData(r.data))
       .catch(() => setError(true))
       .finally(() => setLoading(false))
-  }
-
-  const regenerateEarlyWarning = () => {
-    setEarlyWarningLoading(true)
-    const params = {
-      ...(bloodType !== 'All Blood Types' && { bloodType }),
-      historyDays,
-      refresh: true,
-    }
-    api.get('/forecast', { params })
-      .then(r => setData(prev => ({ ...prev, earlyWarning: r.data.earlyWarning })))
-      .finally(() => setEarlyWarningLoading(false))
   }
 
   useEffect(() => { fetchData() }, [bloodType, historyDays])
@@ -318,18 +305,7 @@ export default function Forecasting() {
         <div className="card p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm text-gray-800">AI Early Warning</h3>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={regenerateEarlyWarning}
-                disabled={earlyWarningLoading}
-                className="flex items-center gap-1 text-xs text-gray-500 hover:text-primary disabled:opacity-40"
-                title="Regenerate AI analysis"
-              >
-                <RefreshCw className={`w-3 h-3 ${earlyWarningLoading ? 'animate-spin' : ''}`} />
-                {earlyWarningLoading ? 'Regenerating…' : 'Regenerate'}
-              </button>
-              <button onClick={() => navigate('/hsa/alerts')} className="text-xs text-primary font-medium">View All</button>
-            </div>
+            <button onClick={() => navigate('/hsa/alerts')} className="text-xs text-primary font-medium">View All</button>
           </div>
           {data.earlyWarning ? (
             <div className="flex gap-3 p-3 bg-red-50 border border-red-100 rounded-lg">

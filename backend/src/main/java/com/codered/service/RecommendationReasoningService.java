@@ -23,8 +23,7 @@ public class RecommendationReasoningService {
             drive.getEligibleDonors(),
             drive.getHighResponseDonors(),
             drive.getPastSuccessRate(),
-            hotspotContext,
-            true
+            hotspotContext
         );
 
         if (reasoning == null) {

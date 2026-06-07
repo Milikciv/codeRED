@@ -20,15 +20,14 @@ public class ForecastController {
     @GetMapping
     public ResponseEntity<Map<String, Object>> getForecast(
             @RequestParam(required = false) String bloodType,
-            @RequestParam(defaultValue = "14") int historyDays,
-            @RequestParam(defaultValue = "false") boolean refresh) {
-        return ResponseEntity.ok(forecastService.buildForecast(bloodType, historyDays, refresh));
+            @RequestParam(defaultValue = "14") int historyDays) {
+        return ResponseEntity.ok(forecastService.buildForecast(bloodType, historyDays));
     }
 
     @GetMapping("/outreach-messages")
     public ResponseEntity<List<String>> getAiDonorMessages(
-            @RequestParam String driveCode,
-            @RequestParam(defaultValue = "false") boolean refresh) {
-        return ResponseEntity.ok(aiService.generateDonorMessages(driveCode, refresh));
+            @RequestParam String bloodType,
+            @RequestParam String context) {
+        return ResponseEntity.ok(aiService.generateDonorMessages(bloodType, context));
     }
 }
