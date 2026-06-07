@@ -22,6 +22,30 @@ public class DonationDriveService {
             .collect(Collectors.toList());
     }
 
+    public Map<String, Object> createDrive(Map<String, Object> body) {
+        DonationDrive drive = new DonationDrive();
+        // Generate a drive code: DR-XXXXXX
+        String driveCode = "DR-" + String.format("%06d", (long)(Math.random() * 1_000_000));
+        drive.setDriveCode(driveCode);
+        drive.setLocation((String) body.getOrDefault("location", ""));
+        drive.setAddress((String) body.getOrDefault("address", ""));
+        drive.setBloodType((String) body.getOrDefault("bloodType", "O+"));
+        drive.setDate((String) body.getOrDefault("date", ""));
+        drive.setStartTime((String) body.getOrDefault("startTime", "10:00 AM"));
+        drive.setEndTime((String) body.getOrDefault("endTime", "4:00 PM"));
+        drive.setStatus("Planned");
+        drive.setLinkedAlertCode((String) body.getOrDefault("linkedAlert", null));
+        drive.setNotes((String) body.getOrDefault("notes", ""));
+        drive.setStaffAssigned(toInt(body.get("staffAssigned"), 0));
+        drive.setExpectedDonorsMin(toInt(body.get("expectedMin"), 0));
+        drive.setExpectedDonorsMax(toInt(body.get("expectedMax"), 0));
+        drive.setConfirmedDonors(0);
+        drive.setOutreachSent(false);
+        drive.setOutreachCount(0);
+        drive.setVenueConfirmed(false);
+        return toMap(driveRepository.save(drive));
+    }
+
     public Map<String, Object> updateDrive(String driveCode, Map<String, Object> body) {
         DonationDrive drive = driveRepository.findByDriveCode(driveCode)
             .orElseThrow(() -> new RuntimeException("Drive not found: " + driveCode));
@@ -31,10 +55,24 @@ public class DonationDriveService {
         if (body.containsKey("date"))          drive.setDate((String) body.get("date"));
         if (body.containsKey("status"))        drive.setStatus((String) body.get("status"));
         if (body.containsKey("notes"))         drive.setNotes((String) body.get("notes"));
-        if (body.containsKey("staffAssigned")) drive.setStaffAssigned((Integer) body.get("staffAssigned"));
-        if (body.containsKey("expectedMin"))   drive.setExpectedDonorsMin((Integer) body.get("expectedMin"));
-        if (body.containsKey("expectedMax"))   drive.setExpectedDonorsMax((Integer) body.get("expectedMax"));
+        if (body.containsKey("staffAssigned")) drive.setStaffAssigned(toInt(body.get("staffAssigned"), drive.getStaffAssigned()));
+        if (body.containsKey("expectedMin"))   drive.setExpectedDonorsMin(toInt(body.get("expectedMin"), drive.getExpectedDonorsMin()));
+        if (body.containsKey("expectedMax"))   drive.setExpectedDonorsMax(toInt(body.get("expectedMax"), drive.getExpectedDonorsMax()));
         return toMap(driveRepository.save(drive));
+    }
+
+    public void deleteDrive(String driveCode) {
+        DonationDrive drive = driveRepository.findByDriveCode(driveCode)
+            .orElseThrow(() -> new RuntimeException("Drive not found: " + driveCode));
+        driveRepository.delete(drive);
+    }
+
+    private static int toInt(Object val, Integer fallback) {
+        if (val instanceof Number) return ((Number) val).intValue();
+        if (val instanceof String s && !s.isBlank()) {
+            try { return Integer.parseInt(s.trim()); } catch (NumberFormatException ignored) {}
+        }
+        return fallback != null ? fallback : 0;
     }
 
     private Map<String, Object> toMap(DonationDrive d) {
