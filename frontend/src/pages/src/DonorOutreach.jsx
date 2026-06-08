@@ -95,12 +95,23 @@ const AI_STEPS = [
   'Finalising campaign assets...',
 ]
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function parseBloodTypes(bloodType) {
+  if (!bloodType) return []
+  if (Array.isArray(bloodType)) return bloodType
+  return bloodType.split(',').map(s => s.trim()).filter(Boolean)
+}
+
 // ─── Shared sub-components ────────────────────────────────────────────────────
 
 function SelectDropdown({ label, value, options, icon, onChange }) {
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState(value)
   const labelId = label ? `label-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined
+
+  useEffect(() => { setSelected(value) }, [value])
+
   return (
     <div className="relative">
       {label && (
@@ -130,6 +141,61 @@ function SelectDropdown({ label, value, options, icon, onChange }) {
               {opt}
             </button>
           ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MultiSelectDropdown({ label, values, options, icon, onChange }) {
+  const [open, setOpen] = useState(false)
+  const labelId = label ? `label-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined
+
+  const toggle = (opt) => {
+    onChange(values.includes(opt) ? values.filter(v => v !== opt) : [...values, opt])
+  }
+
+  const displayText = values.length === 0 ? 'None'
+    : values.length === 1 ? values[0]
+    : `${values.length} types selected`
+
+  return (
+    <div className="relative">
+      {label && (
+        <div id={labelId} className="text-xs text-gray-500 font-medium mb-1">{label}</div>
+      )}
+      <button
+        aria-labelledby={labelId}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+      >
+        {icon && <span className="text-primary flex-shrink-0">{icon}</span>}
+        <span className="flex-1 text-left truncate">{displayText}</span>
+        <ChevronDown className={`w-3.5 h-3.5 text-gray-400 flex-shrink-0 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div role="listbox" className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-full">
+          {options.map(opt => {
+            const checked = values.includes(opt)
+            return (
+              <button
+                key={opt}
+                role="option"
+                aria-selected={checked}
+                onClick={() => toggle(opt)}
+                className="w-full flex items-center gap-2.5 text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg transition-colors duration-100 focus-visible:outline-none focus-visible:bg-gray-50"
+              >
+                <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
+                  checked ? 'bg-primary border-primary' : 'border-2 border-gray-300 bg-white'
+                }`}>
+                  {checked && <Check className="w-2.5 h-2.5 text-white" />}
+                </div>
+                {opt}
+              </button>
+            )
+          })}
         </div>
       )}
     </div>
@@ -360,7 +426,15 @@ const MESSAGE_VARIANTS = [
   },
 ]
 
+const ALL_BLOOD_TYPES = ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+']
+
 function TabPushNotifications({ drive, aiVariants = [], aiLoading = false, onRefresh }) {
+  const driveBloodTypes = parseBloodTypes(drive?.bloodType)
+  const isMultiBloodType = driveBloodTypes.length > 1
+
+  const [selectedBloodTypes, setSelectedBloodTypes] = useState(driveBloodTypes)
+  const [selectedBloodType, setSelectedBloodType]   = useState(driveBloodTypes[0] ?? 'O-')
+
   const variants = aiVariants.length > 0 ? aiVariants : MESSAGE_VARIANTS
   const [variantIdx, setVariantIdx] = useState(0)
   const [sent, setSent]     = useState(false)
@@ -370,6 +444,12 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false, onRef
   const [editedBodies, setEditedBodies] = useState(() =>
     Object.fromEntries(variants.map(v => [v.id, v.body]))
   )
+
+  useEffect(() => {
+    const types = parseBloodTypes(drive?.bloodType)
+    setSelectedBloodTypes(types)
+    setSelectedBloodType(types[0] ?? 'O-')
+  }, [drive?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setVariantIdx(0)
@@ -396,7 +476,7 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false, onRef
     try {
       const { data } = await api.post('/donor-outreach/push-notification', {
         message: body,
-        bloodType: drive?.bloodType ?? null,
+        bloodType: isMultiBloodType ? selectedBloodTypes.join(',') : selectedBloodType,
         region: drive?.region ?? null,
         prevRespondersOnly: prevRespondersOnly,
       })
@@ -439,12 +519,23 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false, onRef
             <h3 className="font-semibold text-sm text-gray-800">Audience Filters</h3>
           </div>
           <div className="space-y-3">
-            <SelectDropdown
-              label="Blood Type"
-              value={drive?.bloodType ?? 'O-'}
-              options={['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+']}
-              icon={<Droplets className="w-3.5 h-3.5" />}
-            />
+            {isMultiBloodType ? (
+              <MultiSelectDropdown
+                label="Blood Type"
+                values={selectedBloodTypes}
+                options={ALL_BLOOD_TYPES}
+                icon={<Droplets className="w-3.5 h-3.5" />}
+                onChange={setSelectedBloodTypes}
+              />
+            ) : (
+              <SelectDropdown
+                label="Blood Type"
+                value={selectedBloodType}
+                options={ALL_BLOOD_TYPES}
+                icon={<Droplets className="w-3.5 h-3.5" />}
+                onChange={setSelectedBloodType}
+              />
+            )}
             <SelectDropdown
               label="Radius"
               value="5 km"
