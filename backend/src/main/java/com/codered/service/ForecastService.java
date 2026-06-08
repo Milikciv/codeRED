@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-
 import org.springframework.stereotype.Service;
 
 import com.codered.model.BloodRequest;
@@ -69,9 +68,9 @@ public class ForecastService {
         List<Map<String, Object>> byBloodType = buildByBloodType(stockByType);
         int[] selectedStock = stockFor(stockByType, selectedBloodType);
         int totalCurrentSupply = selectedStock[0];
-        int totalIdeal         = selectedStock[1];
-        int hospitalCount      = Math.max(selectedStock[2], 1);
-        int riskThreshold      = (int) Math.round((totalIdeal / (double) hospitalCount) * 0.40);
+        int totalIdeal = selectedStock[1];
+        int hospitalCount = Math.max(selectedStock[2], 1);
+        int riskThreshold = (int) Math.round((totalIdeal / (double) hospitalCount) * 0.40);
 
         // 2. Historical daily demand from real requests
         Map<LocalDate, Integer> stockHistory = getHistoricalStock(today, selectedBloodType, historyDays);
@@ -178,8 +177,8 @@ public class ForecastService {
             return new int[] { stock[0], stock[1], stock[2] };
         }
         int current = stockByType.values().stream().mapToInt(a -> a[0]).sum();
-        int ideal   = stockByType.values().stream().mapToInt(a -> a[1]).sum();
-        int count   = stockByType.values().stream().mapToInt(a -> a[2]).max().orElse(1);
+        int ideal = stockByType.values().stream().mapToInt(a -> a[1]).sum();
+        int count = stockByType.values().stream().mapToInt(a -> a[2]).max().orElse(1);
         return new int[] { current, ideal, count };
     }
 
@@ -189,23 +188,21 @@ public class ForecastService {
         List<BloodStockHistory> history = bloodStockHistoryRepository
                 .findBySnapshotDateBetweenOrderBySnapshotDateAsc(from, today);
 
-        // Track sum and count separately so we can average per day.
-        // Summing across hospitals without normalisation causes wild swings when
-        // different numbers of hospitals have rows on different dates.
-        Map<LocalDate, int[]> raw = new LinkedHashMap<>(); // date -> [sum, count]
+        Map<LocalDate, Integer> stockByDay = new LinkedHashMap<>();
+        for (int i = 0; i < historyDays; i++) {
+            stockByDay.put(from.plusDays(i), 0);
+        }
+
         for (BloodStockHistory h : history) {
             if (!matchesBloodType(h.getBloodType(), selectedBloodType))
                 continue;
             Integer units = h.getCurrentUnits();
             if (units == null)
                 continue;
-            raw.computeIfAbsent(h.getSnapshotDate(), k -> new int[2]);
-            raw.get(h.getSnapshotDate())[0] += units;
-            raw.get(h.getSnapshotDate())[1]++;
-        }
 
-        Map<LocalDate, Integer> stockByDay = new LinkedHashMap<>();
-        raw.forEach((date, sc) -> stockByDay.put(date, sc[1] > 0 ? sc[0] / sc[1] : 0));
+            // Sum the units across all hospitals for this date
+            stockByDay.put(h.getSnapshotDate(), stockByDay.get(h.getSnapshotDate()) + units);
+        }
         return stockByDay;
     }
 
