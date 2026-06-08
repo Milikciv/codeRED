@@ -146,6 +146,86 @@ public class AiService {
         }
     }
 
+    // 4. Generate drive-specific outreach strategy from donor demographics
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> generateOutreachStrategy(
+            String bloodType, String location, Map<String, Object> demographics) {
+
+        // Pre-compute key signals so the model has concrete numbers to reason from
+        List<Map<String, Object>> byAge      = (List<Map<String, Object>>) demographics.getOrDefault("byAge",      List.of());
+        List<Map<String, Object>> byLocation = (List<Map<String, Object>>) demographics.getOrDefault("byLocation", List.of());
+
+        double youth1630 = byAge.stream()
+                .filter(a -> "16-20".equals(a.get("group")) || "21-30".equals(a.get("group")))
+                .mapToDouble(a -> a.get("pct") instanceof Number ? ((Number) a.get("pct")).doubleValue() : 0.0)
+                .sum();
+
+        long totalDonors = demographics.get("activeCount") instanceof Number
+                ? ((Number) demographics.get("activeCount")).longValue() : 1L;
+
+        double topRegionPct = 0.0;
+        String topRegion = "—";
+        if (!byLocation.isEmpty()) {
+            Object cnt = byLocation.get(0).get("count");
+            if (cnt instanceof Number) topRegionPct = ((Number) cnt).doubleValue() / Math.max(totalDonors, 1) * 100.0;
+            Object reg = byLocation.get(0).get("region");
+            if (reg != null) topRegion = reg.toString();
+        }
+
+        double avgDonations = demographics.get("avgDonations") instanceof Number
+                ? ((Number) demographics.get("avgDonations")).doubleValue() : 0.0;
+
+        long totalEligible = demographics.get("totalEligible") instanceof Number
+                ? ((Number) demographics.get("totalEligible")).longValue() : 0L;
+
+        String demographicsJson;
+        try {
+            demographicsJson = objectMapper.writeValueAsString(demographics);
+        } catch (Exception e) {
+            demographicsJson = demographics.toString();
+        }
+
+        String prompt = "You are a donor outreach AI for a blood bank. Output ONLY raw JSON (no markdown, no backticks).\n"
+                + "Drive: " + location + " | Blood type needed: " + bloodType + "\n\n"
+                + "STRATEGY GUIDE — pick the one that best fits the signals:\n"
+                + "  'Push Notifications'  — best when donors are spread across many regions and have high avg donations (experienced donors respond to direct alerts).\n"
+                + "  'Youth Campaign'      — best when 16-30 age group share >= 30%. Engages first-time and younger donors via social media challenges.\n"
+                + "  'Collaborations'      — best when top region concentration >= 25% (donors clustered → partner with local schools, companies, community groups).\n"
+                + "  'Combined Approach'   — use only when two or more signals above are simultaneously strong.\n\n"
+                + "PRE-COMPUTED SIGNALS (use these to make your decision):\n"
+                + "  Youth (16-30) share      : " + String.format("%.1f", youth1630) + "%\n"
+                + "  Top region (" + topRegion + ") share: " + String.format("%.1f", topRegionPct) + "%\n"
+                + "  Avg donations per donor  : " + String.format("%.1f", avgDonations) + "\n"
+                + "  Total eligible donors    : " + totalEligible + "\n\n"
+                + "FULL DEMOGRAPHICS JSON:\n" + demographicsJson + "\n\n"
+                + "Decision rule: if youth share >= 30 → lean Youth Campaign; if top-region >= 25 → lean Collaborations; if both → Combined; otherwise Push Notifications.\n"
+                + "Return JSON with exactly these keys (no extra fields):\n"
+                + "  'recommended'         (string: exactly one of the four strategy names)\n"
+                + "  'audience'            (string: specific target, e.g. '21-30 yrs in Tampines')\n"
+                + "  'confidence'          (integer 0-100)\n"
+                + "  'expectedDonors'      (integer: realistic estimate)\n"
+                + "  'expectedResponseRate'(integer: percentage)\n"
+                + "  'message'             (string: 1-2 sentences citing the specific signals that drove the decision)\n"
+                + "  'reasons'             (array of exactly 4 short strings ≤70 chars each, referencing actual numbers from the signals)";
+
+        String aiResponse = callGeminiApi(prompt);
+        try {
+            String cleanJson = aiResponse.replaceAll("```json", "").replaceAll("```", "").trim();
+            return objectMapper.readValue(cleanJson, Map.class);
+        } catch (Exception e) {
+            System.err.println("Failed to parse outreach strategy JSON: " + e.getMessage());
+            return Map.of(
+                "recommended", "Combined Approach",
+                "audience", "All eligible " + bloodType + " donors",
+                "confidence", 60,
+                "expectedDonors", 20,
+                "expectedResponseRate", 22,
+                "message", "Unable to generate AI recommendation. Please try again.",
+                "reasons", List.of()
+            );
+        }
+    }
+
     private String callGeminiApi(String fullPrompt) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

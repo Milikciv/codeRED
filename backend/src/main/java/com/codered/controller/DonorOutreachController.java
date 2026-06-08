@@ -30,4 +30,13 @@ public class DonorOutreachController {
             @RequestBody SendOutreachRequest request) {
         return ResponseEntity.ok(donorOutreachService.sendInvitation(request));
     }
+
+    // GET /api/donor-outreach/strategy?driveCode=DR-XXXXXX[&refresh=true]
+    // Returns drive-specific donor demographics + AI outreach strategy recommendation
+    @GetMapping("/strategy")
+    public ResponseEntity<Map<String, Object>> getOutreachStrategy(
+            @RequestParam String driveCode,
+            @RequestParam(defaultValue = "false") boolean refresh) {
+        return ResponseEntity.ok(donorOutreachService.getOutreachStrategy(driveCode, refresh));
+    }
 }

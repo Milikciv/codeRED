@@ -63,4 +63,8 @@ public class DonationDrive {
     private String aiMessagesJson;
 
     private LocalDateTime aiMessagesAt;
+
+    // AI-generated outreach strategy + demographics (cached JSON)
+    @Column(columnDefinition = "TEXT")
+    private String aiOutreachStrategyJson;
 }
