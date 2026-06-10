@@ -7,7 +7,7 @@ import BloodStockDot from '../../components/common/BloodStockDot'
 import api from '../../api/axios'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
-  PieChart, Pie, Cell
+  PieChart, Pie, Cell, ComposedChart
 } from 'recharts'
 import { Droplets, Clock, AlertTriangle, Bell, ChevronRight } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
@@ -337,9 +337,14 @@ export default function HsaDashboard() {
         <div className="lg:col-span-3 card p-4">
           <div className="flex items-center justify-between mb-1">
             <div>
-              <h3 className="font-semibold text-sm text-gray-800">Demand Forecast</h3>
-              <p className="text-xs text-gray-400 mt-0.5">Projected blood demand — next 7 days</p>
+              <h3 className="font-semibold text-sm text-gray-800">
+                Demand Forecast
+              </h3>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Projected blood demand — next 7 days
+              </p>
             </div>
+
             <button
               onClick={() => navigate('/hsa/forecasting')}
               className="text-xs text-primary font-medium hover:underline"
@@ -347,29 +352,115 @@ export default function HsaDashboard() {
               View all
             </button>
           </div>
-          <ResponsiveContainer width="100%" height={160}>
-            <LineChart data={forecastData} margin={{ top: 8, right: 5, left: -30, bottom: 0 }}>
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9CA3AF' }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} tickLine={false} axisLine={false} />
-              <Tooltip contentStyle={{ fontSize: 11 }} />
-              {/* <ReferenceLine y={riskThreshold} stroke="#EF4444" strokeDasharray="4 2" /> */}
-              <Line type="monotone" dataKey="actual" stroke="#C20000" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="predicted" stroke="#C20000" strokeWidth={2} strokeDasharray="5 3" dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-          <div className="flex items-center gap-5 mt-2 pt-2 border-t border-gray-50 text-[10px] text-gray-400 flex-wrap">
-            <div className="flex items-center gap-1.5">
-              <span className="block w-6 h-0.5 bg-primary rounded" />
+
+          <div className="flex items-center gap-4 mb-3 text-xs text-gray-500">
+            <span className="flex items-center gap-1">
+              <span className="w-4 border-t-2 border-primary inline-block" />
               Actual
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="block w-6 h-0.5 bg-primary rounded" style={{ borderTop: '2px dashed #C20000', background: 'none' }} />
-              Predicted
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="block w-4 h-0.5 bg-red-400 rounded" style={{ borderTop: '2px dashed #EF4444', background: 'none' }} />
+            </span>
+
+            <span className="flex items-center gap-1">
+              <span className="w-4 border-t-2 border-primary border-dashed inline-block" />
+              Forecast
+            </span>
+
+            <span className="flex items-center gap-1">
+              <span className="w-4 border-t-2 border-red-400 border-dashed inline-block" />
               Threshold
-            </div>
+            </span>
+          </div>
+
+          <ResponsiveContainer width="100%" height={190}>
+            <ComposedChart
+              data={forecastData}
+              margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+            >
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 10, fill: '#9CA3AF' }}
+                tickLine={false}
+                axisLine={false}
+              />
+
+              <YAxis
+                tick={{ fontSize: 10, fill: '#9CA3AF' }}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(v) => v.toLocaleString()}
+                domain={([dataMin, dataMax]) => {
+                  const allValues = [
+                    dataMin,
+                    dataMax,
+                    riskThreshold,
+                  ].filter(v => v != null)
+
+                  const min = Math.min(...allValues)
+                  const max = Math.max(...allValues)
+
+                  const pad = (max - min) * 0.1
+
+                  return [
+                    Math.max(0, Math.floor(min - pad)),
+                    Math.ceil(max + pad),
+                  ]
+                }}
+              />
+
+              <Tooltip
+                contentStyle={{ fontSize: 11 }}
+                formatter={(value) => [
+                  value?.toLocaleString(),
+                ]}
+              />
+
+              {/* Risk threshold */}
+              <ReferenceLine
+                y={riskThreshold}
+                stroke="#EF4444"
+                strokeDasharray="4 2"
+                strokeWidth={1.5}
+              />
+
+              {/* Today marker */}
+              <ReferenceLine
+                x={new Date().toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                })}
+                stroke="#9CA3AF"
+                strokeDasharray="4 4"
+                label={{
+                  value: 'Today',
+                  position: 'top',
+                  fontSize: 10,
+                }}
+              />
+
+              {/* Actual */}
+              <Line
+                type="monotone"
+                dataKey="actual"
+                stroke="#C20000"
+                strokeWidth={2}
+                dot={false}
+                connectNulls={false}
+              />
+
+              {/* Forecast */}
+              <Line
+                type="monotone"
+                dataKey="predicted"
+                stroke="#C20000"
+                strokeWidth={2}
+                strokeDasharray="6 3"
+                dot={false}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+
+          <div className="flex items-center gap-1.5 mt-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
+            <span>◇</span>
+            Demand expected to exceed supply soon
           </div>
         </div>
 
