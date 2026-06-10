@@ -13,7 +13,7 @@ export default function PageLayout({ title, subtitle, breadcrumb, isHome, action
   )
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-[#e0e0e0]">
       {/* Mobile backdrop — closes sidebar on tap outside */}
       {sidebarOpen && (
         <div

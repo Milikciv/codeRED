@@ -49,7 +49,7 @@ export default function BloodTypeAnalytics() {
       <div className="relative">
         <button
           onClick={() => setOpenDropdown(openDropdown === 'bloodType' ? null : 'bloodType')}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
         >
           <IonIcon icon={waterOutline} style={{ fontSize: '0.875rem', color: '#C20000' }} />
           <span className="font-medium">{selectedType}</span>
@@ -72,7 +72,7 @@ export default function BloodTypeAnalytics() {
       <div className="relative">
         <button
           onClick={() => setOpenDropdown(openDropdown === 'hospital' ? null : 'hospital')}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
         >
           {hospital}
           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${openDropdown === 'hospital' ? 'rotate-180' : ''}`} />
@@ -91,7 +91,7 @@ export default function BloodTypeAnalytics() {
           </div>
         )}
       </div>
-      <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm p-0.5">
+      <div className="flex items-center gap-1 bg-white border border-gray-300 rounded-lg shadow-sm p-0.5">
         {[14, 30].map(d => (
           <button
             key={d}
@@ -108,7 +108,7 @@ export default function BloodTypeAnalytics() {
       <div className="relative">
         <button
           onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
         >
           <Calendar className="w-3.5 h-3.5 text-gray-500" />
           {formatDateRange(dateStart, dateEnd)}

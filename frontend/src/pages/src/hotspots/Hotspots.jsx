@@ -35,7 +35,7 @@ export default function Hotspots() {
     <div className="relative">
       <button
         onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
-        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
       >
         <Calendar className="w-3.5 h-3.5 text-gray-500" />
         {formatDateRange(dateStart, dateEnd)}

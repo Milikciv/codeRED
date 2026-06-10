@@ -110,7 +110,7 @@ export default function Forecasting() {
       <div className="relative w-40">
         <button
           onClick={() => setOpenDropdown(openDropdown === 'bloodType' ? null : 'bloodType')}
-          className="flex items-center justify-between w-full gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
+          className="flex items-center justify-between w-full gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs text-gray-700 hover:bg-white shadow-sm"
         >
           <div className="flex items-center gap-1.5">
             <IonIcon icon={waterOutline} style={{ fontSize: '0.875rem', color: '#C20000' }} />
@@ -163,7 +163,8 @@ export default function Forecasting() {
   )
 
   return (
-    <PageLayout title="Demand Forecasting" subtitle="AI powered predictions to stay ahead of shortages" actions={forecastingActions}>
+    <PageLayout title="Demand Forecasting" subtitle="AI powered predictions to stay ahead of shortages">
+      <div className="flex justify-start mb-3 -mt-2">{forecastingActions}</div>
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <div className="card p-4 flex gap-3">
@@ -203,7 +204,7 @@ export default function Forecasting() {
           <div className="min-w-0 flex-1">
             <div className="text-xs text-gray-500 font-medium">Forecast Accuracy</div>
             <div className="text-2xl font-bold text-gray-900 mt-0.5">{data.forecastAccuracy}%</div>
-            <div className="text-xs text-green-600 font-medium mt-0.5">High Confidence</div>
+            <div className="text-xs text-gray-600 font-medium mt-0.5">High Confidence</div>
           </div>
         </div>
       </div>

@@ -8,13 +8,13 @@ input[type=number] { -moz-appearance: textfield; }
 
 @layer base {
   body {
-    @apply font-sans text-gray-800 bg-gray-50;
+    @apply font-sans text-gray-800 bg-[#e0e0e0];
   }
 }
 
 @layer components {
   .card {
-    @apply bg-white rounded-xl border border-gray-100 shadow-sm;
+    @apply bg-white rounded-xl border border-gray-300 shadow-sm;
   }
 
   .btn-primary {
