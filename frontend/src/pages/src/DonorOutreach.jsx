@@ -546,6 +546,7 @@ const MESSAGE_VARIANTS = [
 ]
 
 const ALL_BLOOD_TYPES = ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+']
+const ALL_AGE_GROUPS = ['16-20', '21-30', '31-40', '41-50', '51-60', '60+']
 
 function TabPushNotifications({ drive, aiVariants = [], aiLoading = false, onRefresh }) {
   const driveBloodTypes = parseBloodTypes(drive?.bloodType)
@@ -553,6 +554,7 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false, onRef
 
   const [selectedBloodTypes, setSelectedBloodTypes] = useState(driveBloodTypes)
   const [selectedBloodType, setSelectedBloodType]   = useState(driveBloodTypes[0] ?? 'O-')
+  const [selectedAgeGroup, setSelectedAgeGroup]     = useState(ALL_AGE_GROUPS[0])
 
   const variants = aiVariants.length > 0 ? aiVariants : MESSAGE_VARIANTS
   const [variantIdx, setVariantIdx] = useState(0)
@@ -666,6 +668,13 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false, onRef
               value="> 12 weeks"
               options={['> 8 weeks', '> 12 weeks', '> 16 weeks', 'Any']}
               icon={<CalendarDays className="w-3.5 h-3.5" />}
+            />
+            <SelectDropdown
+              label="Age Group"
+              value={selectedAgeGroup}
+              options={ALL_AGE_GROUPS}
+              icon={<Users className="w-3.5 h-3.5" />}
+              onChange={setSelectedAgeGroup}
             />
           </div>
           <div className="mt-3 pt-3 border-t border-gray-100">
