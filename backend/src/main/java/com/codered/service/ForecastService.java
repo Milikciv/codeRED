@@ -63,7 +63,7 @@ public class ForecastService {
             "B-",   3800,
             "AB-",  6500
     );
-    private static final int RISK_THRESHOLD_ALL = 45000;
+    private static final int RISK_THRESHOLD_ALL = 42000;
 
     public Map<String, Object> buildForecast(String bloodTypeFilter) {
         return buildForecast(bloodTypeFilter, HISTORY_DAYS, FORECAST_DAYS, false);
@@ -310,7 +310,7 @@ public class ForecastService {
             int todayActual) {
 
         double startValue = todayActual;
-        double growthRate = 0.01;
+        double growthRate = 0.001;
         int futureOffset = Math.max(0, x - (HISTORY_DAYS - 1));
         double value = startValue * Math.exp(growthRate * futureOffset);
 

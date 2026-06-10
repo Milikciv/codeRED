@@ -220,8 +220,6 @@ export default function Forecasting() {
           <div className="flex items-center gap-4 mb-3 text-xs text-gray-500">
             <span className="flex items-center gap-1"><span className="w-4 border-t-2 border-primary inline-block" />Actual</span>
             <span className="flex items-center gap-1"><span className="w-4 border-t-2 border-primary border-dashed inline-block" />Forecast</span>
-            <span className="flex items-center gap-1"><span className="w-4 border-t border-gray-400 inline-block" />Upper Bound</span>
-            <span className="flex items-center gap-1"><span className="w-4 border-t border-gray-400 inline-block" />Lower Bound</span>
             <span className="flex items-center gap-1"><span className="w-4 h-3 bg-red-100 inline-block rounded" />Risk Threshold</span>
           </div>
           {data.chartData?.length > 0 ? (
@@ -234,7 +232,19 @@ export default function Forecasting() {
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="date" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
+                <YAxis
+                  tick={{ fontSize: 9 }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v) => v.toLocaleString()}
+                  domain={([dataMin, dataMax]) => {
+                    const allValues = [dataMin, dataMax, data.riskThreshold].filter(v => v != null);
+                    const min = Math.min(...allValues);
+                    const max = Math.max(...allValues);
+                    const pad = (max - min) * 0.1;
+                    return [Math.max(0, Math.floor(min - pad)), Math.ceil(max + pad)];
+                  }}
+                />
                 <Tooltip
                   contentStyle={{ fontSize: 11 }}
                   formatter={(value, name) => name === 'bandWidth' || name === 'lower' ? [null, null] : [value, name]}
@@ -254,12 +264,6 @@ export default function Forecasting() {
                     fontSize: 10,
                   }}
                 />
-                <Area type="monotone" dataKey="lower" stackId="band" stroke="none" fill="transparent" dot={false} legendType="none" />
-                {/* <Area type="monotone" dataKey="bandWidth" stackId="band" stroke="none" fill="url(#bandGrad)" dot={false} legendType="none" /> */}
-                Bound marker lines
-                {/* <Line type="monotone" dataKey="upper" stroke="#D1D5DB" strokeWidth={1} dot={false} />
-                <Line type="monotone" dataKey="lower" stroke="#D1D5DB" strokeWidth={1} dot={false} /> */}
-                {/* Main lines — rendered last so they sit on top of the fill */}
                 <Line type="monotone" dataKey="actual" stroke="#C20000" strokeWidth={2} dot={false} connectNulls={false} />
                 <Line type="monotone" dataKey="forecast" stroke="#C20000" strokeWidth={2} strokeDasharray="6 3" dot={false} />
               </ComposedChart>
