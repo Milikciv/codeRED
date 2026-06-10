@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
@@ -5,6 +6,7 @@ import {
   Settings, HelpCircle, LogOut, Users, Bell, CalendarDays, Send, Map,
   ChevronsLeft, ChevronsRight
 } from 'lucide-react'
+import api from '../../api/axios'
 
 const HSA_NAV = [
   { to: '/hsa/dashboard',   icon: Home,       label: 'Home' },
@@ -16,9 +18,9 @@ const ADMIN_NAV = [
   { to: '/admin/users', icon: Users, label: 'Users' },
 ]
 
-const SRC_NAV = [
+const BASE_SRC_NAV = [
   { to: '/src/home',              icon: Home,        label: 'Home' },
-  { to: '/src/alerts',            icon: Bell,        label: 'Alerts from HSA', badge: 4 },
+  { to: '/src/alerts',            icon: Bell,        label: 'Alerts from HSA', alertBadge: true },
   { to: '/src/donor-information', icon: Users,       label: 'Donor Information' },
   { to: '/src/drive-planning',    icon: Map,         label: 'Drive Planning' },
   { to: '/src/donation-drives',   icon: CalendarDays, label: 'Donation Drives' },
@@ -28,10 +30,18 @@ const SRC_NAV = [
 export default function Sidebar({ open = true, onToggle }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [alertCount, setAlertCount] = useState(null)
+
+  useEffect(() => {
+    if (user?.role === 'SRC_STAFF') {
+      api.get('/alerts/src').then(r => setAlertCount(r.data.length)).catch(() => {})
+    }
+  }, [user?.role])
+
   const navItems = user?.role === 'ADMIN'
     ? ADMIN_NAV
     : user?.role === 'SRC_STAFF'
-    ? SRC_NAV
+    ? BASE_SRC_NAV.map(item => item.alertBadge ? { ...item, badge: alertCount } : item)
     : user?.role === 'HSA'
     ? HSA_NAV
     : []

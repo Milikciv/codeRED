@@ -442,7 +442,8 @@ export default function DrivePlanning() {
     api.get('/alerts/src').then(r => {
       setAlerts(r.data)
       const paramId = searchParams.get('alertId')
-      const initialId = paramId ?? (r.data[0]?.id || null)
+      const DEFAULT_ALERT = 'ALT-2505-001'
+      const initialId = paramId ?? (r.data.find(a => a.id === DEFAULT_ALERT)?.id ?? r.data[0]?.id ?? null)
       setSelectedAlertId(initialId)
     }).catch(() => {}).finally(() => setLoading(false))
   }, [])
@@ -515,7 +516,7 @@ export default function DrivePlanning() {
             className="fixed w-64 bg-white border border-gray-200 rounded-xl shadow-xl z-[100] overflow-hidden"
             style={{ top: alertBtnRect.bottom + 6, left: alertBtnRect.right - 256 }}
           >
-            {alerts.map(a => (
+            {[...alerts].sort((a, b) => String(a.id).localeCompare(String(b.id))).map(a => (
               <button
                 key={a.id}
                 onClick={() => { setSelectedAlertId(a.id); setSelectedRank(1); setShowAlertDropdown(false) }}
