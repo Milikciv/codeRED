@@ -50,6 +50,13 @@ function BloodTypePip({ type }) {
   )
 }
 
+/** Normalise linkedAlerts — backend returns an array, but guard against legacy string */
+function getLinkedAlerts(drive) {
+  if (Array.isArray(drive.linkedAlerts) && drive.linkedAlerts.length > 0) return drive.linkedAlerts
+  if (drive.linkedAlert) return [drive.linkedAlert]
+  return []
+}
+
 function BloodTypePips({ value }) {
   const types = (value ?? '').split(',').map(t => t.trim()).filter(Boolean)
   if (types.length === 0) return null
@@ -311,14 +318,25 @@ function DriveDetailDrawer({ drive, onClose, onSave, onDelete, navigate, initial
               </div>
 
               <div>
-                <div className="text-xs font-medium text-gray-500 mb-1.5">Linked Alert</div>
-                <button
-                  onClick={() => { navigate(`/src/drive-planning?alertId=${drive.linkedAlert}`); onClose() }}
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
-                >
-                  <Droplets className="w-4 h-4" /> {drive.linkedAlert}
-                  <ExternalLink className="w-3 h-3" />
-                </button>
+                <div className="text-xs font-medium text-gray-500 mb-1.5">
+                  Linked Alert{getLinkedAlerts(drive).length !== 1 ? 's' : ''}
+                </div>
+                {getLinkedAlerts(drive).length === 0 ? (
+                  <span className="text-sm text-gray-400">None</span>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {getLinkedAlerts(drive).map(id => (
+                      <button
+                        key={id}
+                        onClick={() => { navigate(`/src/drive-planning?alertId=${id}`); onClose() }}
+                        className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+                      >
+                        <Droplets className="w-4 h-4" /> {id}
+                        <ExternalLink className="w-3 h-3" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -581,14 +599,20 @@ export default function DonationDrives() {
                     </div>
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[10px] text-gray-400 font-medium mb-1 whitespace-nowrap">Linked Alert</div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); navigate(`/src/drive-planning?alertId=${drive.linkedAlert}`) }}
-                      className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-                    >
-                      <Droplets className="w-3 h-3" /> {drive.linkedAlert}
-                      <ExternalLink className="w-2.5 h-2.5" />
-                    </button>
+                    <div className="text-[10px] text-gray-400 font-medium mb-1 whitespace-nowrap">Linked Alert{getLinkedAlerts(drive).length !== 1 ? 's' : ''}</div>
+                    <div className="flex flex-wrap gap-1">
+                      {getLinkedAlerts(drive).map(id => (
+                        <button
+                          key={id}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/src/drive-planning?alertId=${id}`) }}
+                          className="flex items-center gap-0.5 text-xs font-semibold text-primary hover:underline"
+                        >
+                          <Droplets className="w-3 h-3" /> {id}
+                          <ExternalLink className="w-2.5 h-2.5" />
+                        </button>
+                      ))}
+                      {getLinkedAlerts(drive).length === 0 && <span className="text-xs text-gray-400">—</span>}
+                    </div>
                   </div>
                   <div className="min-w-0">
                     <div className="text-[10px] text-gray-400 font-medium mb-1 whitespace-nowrap">Date</div>
@@ -682,12 +706,17 @@ export default function DonationDrives() {
                   </div>
                 </div>
                 <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                  <button
-                    onClick={() => navigate(`/src/drive-planning?alertId=${d.linkedAlert}`)}
-                    className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
-                  >
-                    <Droplets className="w-3 h-3" /> {d.linkedAlert}
-                  </button>
+                  <div className="flex flex-wrap gap-1.5">
+                    {getLinkedAlerts(d).map(id => (
+                      <button
+                        key={id}
+                        onClick={() => navigate(`/src/drive-planning?alertId=${id}`)}
+                        className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
+                      >
+                        <Droplets className="w-3 h-3" /> {id}
+                      </button>
+                    ))}
+                  </div>
                   <button className="p-1.5 rounded hover:bg-gray-100 text-gray-400">
                     <BarChart2 className="w-4 h-4" />
                   </button>
@@ -719,9 +748,14 @@ export default function DonationDrives() {
                     <td className="px-4 py-3 text-primary font-semibold">{d.unitsCollected} units</td>
                     <td className="px-4 py-3"><ConversionCell rate={d.conversionRate} /></td>
                     <td className="px-4 py-3">
-                      <button onClick={() => navigate(`/src/drive-planning?alertId=${d.linkedAlert}`)} className="text-primary font-medium hover:underline">
-                        {d.linkedAlert}
-                      </button>
+                      <div className="flex flex-wrap gap-1.5">
+                        {getLinkedAlerts(d).map(id => (
+                          <button key={id} onClick={() => navigate(`/src/drive-planning?alertId=${id}`)} className="text-primary font-medium hover:underline">
+                            {id}
+                          </button>
+                        ))}
+                        {getLinkedAlerts(d).length === 0 && <span className="text-gray-400">—</span>}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <button className="p-1.5 rounded hover:bg-gray-100 text-gray-400">

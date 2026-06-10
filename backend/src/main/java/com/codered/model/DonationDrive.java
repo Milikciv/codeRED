@@ -24,7 +24,8 @@ public class DonationDrive {
     private Integer expectedDonorsMin;
     private Integer expectedDonorsMax;
     private Integer confirmedDonors;
-    private String linkedAlertCode;
+    @Column(name = "linked_alert_code")
+    private String linkedAlertCodes;  // comma-separated, e.g. "ALRT-001, ALRT-007"
     private String date;
     private String startTime;
     private String endTime;

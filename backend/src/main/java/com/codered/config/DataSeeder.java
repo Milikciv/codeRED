@@ -66,6 +66,7 @@ public class DataSeeder implements CommandLineRunner {
         if (donorRepository.count() == 0)               seedDonors();
         if (donorDemographicRepository.count() == 0)    seedResponseRateTrend();
         seedRecommendedDrive();
+        backfillMultiAlertLinks();
         ensureCollaboratorsExist();
     }
 
@@ -111,7 +112,9 @@ public class DataSeeder implements CommandLineRunner {
     // ── donation_drives ──────────────────────────────────────────────────
 
     private void seedDonationDrives() {
-        // Upcoming drives
+        // ── Upcoming drives ──────────────────────────────────────────────────
+
+        // DD-001: single alert (O- only)
         seedDrive("DD-001", "Tampines Community Plaza",
             "Tampines Street 11, Singapore 529455", "O-",
             80, 100, 45, "ALT-2505-001",
@@ -122,27 +125,42 @@ public class DataSeeder implements CommandLineRunner {
             420, 180, 240, 43, 87, "30 May 2026, 08:15 AM", 86, 18, 180, 21,
             1.3540, 103.9440);
 
+        // DD-002: multi-alert — targets B+ and O+, addresses two active shortages
         seedDrive("DD-002", "Jurong East Sports Centre",
-            "21 Jurong East Street 31, Singapore 609517", "B+",
-            70, 90, 28, "ALT-2505-002",
+            "21 Jurong East Street 31, Singapore 609517", "B+, O+",
+            90, 120, 34, "ALT-2505-002, ALT-2505-004",
             "7 Jun 2026", "9:00 AM", "3:00 PM", "Planned",
-            true, 245, 2, true,
-            "B+ shortage drive. Second outreach wave scheduled for 3 Jun to boost registrations.",
+            true, 310, 3, true,
+            "Combined B+ and O+ drive addressing two active shortage alerts. Outreach sent to donors of both blood types; second wave scheduled for 3 Jun.",
             null, null, null,
-            260, 120, 140, 46, 82, "29 May 2026, 02:30 PM", 72, 15, 120, 21,
+            310, 150, 160, 48, 84, "29 May 2026, 02:30 PM", 98, 22, 150, 22,
             1.3329, 103.7436);
 
+        // DD-003: multi-alert — targets A- and O-, addressing both shortage windows
         seedDrive("DD-003", "Woodlands Galaxy CC",
-            "31 Woodlands Avenue 6, Singapore 738991", "A-",
-            60, 80, 61, "ALT-2505-003",
+            "31 Woodlands Avenue 6, Singapore 738991", "A-, O-",
+            75, 100, 61, "ALT-2505-003, ALT-2505-001",
             "14 Jun 2026", "10:00 AM", "5:00 PM", "Confirmed",
-            true, 198, 4, true,
-            "Drive confirmed. All logistics in place. Staff briefing scheduled for 13 Jun.",
+            true, 263, 4, true,
+            "Confirmed drive covering both A- and O- shortages. Donor outreach targeted both blood types. Staff briefing on 13 Jun.",
             null, null, null,
-            150, 90, 60, 60, 79, "28 May 2026, 11:00 AM", 65, 14, 90, 22,
+            420, 170, 250, 58, 81, "28 May 2026, 11:00 AM", 88, 19, 170, 22,
             1.4372, 103.7864);
 
-        // History drives (Completed)
+        // DD-004: triple-alert — broad community drive covering B+, O+ and A-
+        seedDrive("DD-004", "Bedok Community Centre",
+            "850 New Upper Changi Rd, Singapore 467352", "B+, O+, A-",
+            110, 150, 12, "ALT-2505-002, ALT-2505-004, ALT-2505-003",
+            "21 Jun 2026", "9:00 AM", "5:00 PM", "Planned",
+            false, 0, 4, true,
+            "Large community drive planned to simultaneously address three active shortage alerts — B+, O+ and A-. Outreach to be launched once venue logistics confirmed.",
+            null, null, null,
+            540, 240, 300, 5, 80, null, 120, 26, 200, 22,
+            1.3236, 103.9273);
+
+        // ── History drives (Completed) ───────────────────────────────────────
+
+        // DD-H001: single alert
         seedDrive("DD-H001", "Tampines Hub",
             "Tampines Avenue 4", "O-",
             80, 120, null, "ALT-2505-001",
@@ -152,24 +170,27 @@ public class DataSeeder implements CommandLineRunner {
             null, null, null, null, null, null, null, null, null, null,
             1.3527, 103.9453);
 
+        // DD-H002: multi-alert — B+ and O+ addressed together
         seedDrive("DD-H002", "Jurong East Sports Centre",
-            "21 Jurong East Street 31", "B+",
-            80, 120, null, "ALT-2505-002",
+            "21 Jurong East Street 31", "B+, O+",
+            80, 120, null, "ALT-2505-002, ALT-2505-004",
             "13 Apr 2026", "10:00 AM", "4:00 PM", "Completed",
             true, 0, 3, true, null,
-            98, 82, 42,
+            121, 103, 44,
             null, null, null, null, null, null, null, null, null, null,
             1.3329, 103.7436);
 
+        // DD-H003: multi-alert — A- and O- addressed together
         seedDrive("DD-H003", "Causeway Point Atrium",
-            "1 Woodlands Square", "A-",
-            70, 90, null, "ALT-2505-003",
+            "1 Woodlands Square", "A-, O-",
+            70, 90, null, "ALT-2505-003, ALT-2505-001",
             "30 Mar 2026", "10:00 AM", "4:00 PM", "Completed",
             true, 0, 2, true, null,
-            76, 63, 37,
+            84, 69, 39,
             null, null, null, null, null, null, null, null, null, null,
             1.4381, 103.7863);
 
+        // DD-H004: single alert
         seedDrive("DD-H004", "Bedok Community Centre",
             "850 New Upper Changi Rd", "O+",
             70, 90, null, "ALT-2505-004",
@@ -178,6 +199,50 @@ public class DataSeeder implements CommandLineRunner {
             85, 71, 40,
             null, null, null, null, null, null, null, null, null, null,
             1.3236, 103.9273);
+    }
+
+    /**
+     * Idempotent backfill: update existing drives that are still using a single alertCode
+     * to their correct multi-alert values so that re-seeded and migrated DBs look the same.
+     */
+    private void backfillMultiAlertLinks() {
+        Map<String, String> updates = Map.of(
+            "DD-002",  "ALT-2505-002, ALT-2505-004",
+            "DD-003",  "ALT-2505-003, ALT-2505-001",
+            "DD-004",  "ALT-2505-002, ALT-2505-004, ALT-2505-003",
+            "DD-H002", "ALT-2505-002, ALT-2505-004",
+            "DD-H003", "ALT-2505-003, ALT-2505-001"
+        );
+        donationDriveRepository.findAll().forEach(d -> {
+            String target = updates.get(d.getDriveCode());
+            if (target != null && !target.equals(d.getLinkedAlertCodes())) {
+                d.setLinkedAlertCodes(target);
+                // Also widen blood types to match if still single
+                if ("DD-002".equals(d.getDriveCode()) && !d.getBloodType().contains(","))
+                    d.setBloodType("B+, O+");
+                if ("DD-003".equals(d.getDriveCode()) && !d.getBloodType().contains(","))
+                    d.setBloodType("A-, O-");
+                if ("DD-004".equals(d.getDriveCode()) && !d.getBloodType().contains(","))
+                    d.setBloodType("B+, O+, A-");
+                if ("DD-H002".equals(d.getDriveCode()) && !d.getBloodType().contains(","))
+                    d.setBloodType("B+, O+");
+                if ("DD-H003".equals(d.getDriveCode()) && !d.getBloodType().contains(","))
+                    d.setBloodType("A-, O-");
+                donationDriveRepository.save(d);
+            }
+        });
+        // Seed DD-004 if it doesn't exist yet
+        if (donationDriveRepository.findByDriveCode("DD-004").isEmpty()) {
+            seedDrive("DD-004", "Bedok Community Centre",
+                "850 New Upper Changi Rd, Singapore 467352", "B+, O+, A-",
+                110, 150, 12, "ALT-2505-002, ALT-2505-004, ALT-2505-003",
+                "21 Jun 2026", "9:00 AM", "5:00 PM", "Planned",
+                false, 0, 4, true,
+                "Large community drive planned to simultaneously address three active shortage alerts — B+, O+ and A-. Outreach to be launched once venue logistics confirmed.",
+                null, null, null,
+                540, 240, 300, 5, 80, null, 120, 26, 200, 22,
+                1.3236, 103.9273);
+        }
     }
 
     private void seedDrive(String code, String location, String address, String bloodType,
@@ -199,7 +264,7 @@ public class DataSeeder implements CommandLineRunner {
         d.setExpectedDonorsMin(expMin);
         d.setExpectedDonorsMax(expMax);
         d.setConfirmedDonors(confirmed);
-        d.setLinkedAlertCode(alertCode);
+        d.setLinkedAlertCodes(alertCode);
         d.setDate(date);
         d.setStartTime(startTime);
         d.setEndTime(endTime);
@@ -574,6 +639,7 @@ public class DataSeeder implements CommandLineRunner {
             "DD-001",  new double[]{1.3540, 103.9440},
             "DD-002",  new double[]{1.3329, 103.7436},
             "DD-003",  new double[]{1.4372, 103.7864},
+            "DD-004",  new double[]{1.3236, 103.9273},
             "DD-H001", new double[]{1.3527, 103.9453},
             "DD-H002", new double[]{1.3329, 103.7436},
             "DD-H003", new double[]{1.4381, 103.7863},

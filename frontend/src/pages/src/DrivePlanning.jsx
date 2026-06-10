@@ -202,7 +202,7 @@ function recommendedStaff(eligibleDonors) {
   return Math.max(2, Math.round((eligibleDonors * 0.3) / 15))
 }
 
-function PlanDriveModal({ drive, alertId, onClose, onCreated }) {
+function PlanDriveModal({ drive, alertId, alerts, onClose, onCreated }) {
   const [bloodTypes, setBloodTypes] = useState(
     drive.bloodType ? [drive.bloodType] : ['O+']
   )
@@ -217,23 +217,31 @@ function PlanDriveModal({ drive, alertId, onClose, onCreated }) {
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }))
 
+  // Auto-match open alerts whose blood type is in the selected blood types.
+  // Always include the current alert context even if it doesn't match (e.g. user cleared its type).
+  const matchedAlerts = alerts.filter(a => bloodTypes.includes(a.bloodType))
+  const linkedAlertIds = Array.from(new Set([
+    ...matchedAlerts.map(a => a.id),
+    ...(alertId ? [alertId] : []),
+  ]))
+
   const handleSubmit = async () => {
     if (bloodTypes.length === 0) return
     setSaving(true)
     setError(null)
     try {
       await api.post('/drives', {
-        location:     drive.location ?? '',
-        address:      drive.address  ?? '',
-        bloodType:    bloodTypes.join(', '),
-        date:         form.date,
-        startTime:    form.startTime,
-        endTime:      form.endTime,
+        location:      drive.location ?? '',
+        address:       drive.address  ?? '',
+        bloodType:     bloodTypes.join(', '),
+        date:          form.date,
+        startTime:     form.startTime,
+        endTime:       form.endTime,
         staffAssigned: Number(form.staffAssigned) || 0,
-        expectedMin:  drive.eligibleDonors ? Math.round(drive.eligibleDonors * 0.25) : 0,
-        expectedMax:  drive.eligibleDonors ?? 0,
-        linkedAlert:  alertId ?? '',
-        notes:        '',
+        expectedMin:   drive.eligibleDonors ? Math.round(drive.eligibleDonors * 0.25) : 0,
+        expectedMax:   drive.eligibleDonors ?? 0,
+        linkedAlerts:  linkedAlertIds,
+        notes:         '',
       })
       onCreated()
     } catch {
@@ -265,6 +273,28 @@ function PlanDriveModal({ drive, alertId, onClose, onCreated }) {
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-2">Target Blood Type(s)</label>
             <BloodTypeCheckboxes selected={bloodTypes} onChange={setBloodTypes} />
+          </div>
+
+          {/* Linked alerts preview */}
+          <div className="bg-blue-50 rounded-xl p-3">
+            <div className="text-xs font-medium text-blue-700 mb-1.5">
+              Will be linked to {linkedAlertIds.length} alert{linkedAlertIds.length !== 1 ? 's' : ''}
+            </div>
+            {linkedAlertIds.length === 0 ? (
+              <p className="text-xs text-blue-400">No open alerts match the selected blood types.</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {linkedAlertIds.map(id => {
+                  const a = alerts.find(x => x.id === id)
+                  return (
+                    <span key={id} className="inline-flex items-center gap-1 bg-white border border-blue-200 text-blue-700 rounded-lg px-2 py-0.5 text-xs font-semibold">
+                      <Droplets className="w-3 h-3" />
+                      {id}{a ? ` · ${a.bloodType}` : ''}
+                    </span>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* Date */}
@@ -665,6 +695,28 @@ export default function DrivePlanning() {
                   Target: <span className="font-semibold ml-0.5">{drive.bloodType}</span>
                 </div>
               </div>
+
+              {/* Other active alerts this drive location can also address */}
+              {alerts.filter(a => a.id !== selectedAlertId).length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-xl p-3 mb-1">
+                  <div className="text-[10px] font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                    Also address these active alerts
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {alerts.filter(a => a.id !== selectedAlertId).map(a => (
+                      <span key={a.id} className="inline-flex items-center gap-1 bg-gray-50 border border-gray-200 text-gray-700 rounded-lg px-2 py-0.5 text-[10px] font-semibold">
+                        <Droplets className="w-2.5 h-2.5 text-primary" /> {a.id} · {a.bloodType}
+                        <span className={`ml-0.5 px-1 rounded text-[9px] font-bold ${a.severity === 'Critical' ? 'bg-red-100 text-red-600' : a.severity === 'High' ? 'bg-orange-100 text-orange-600' : 'bg-yellow-100 text-yellow-600'}`}>
+                          {a.severity}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-gray-400 leading-snug">
+                    Add their blood types when planning to address multiple shortages in one drive.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-3 gap-2 text-center">
@@ -740,6 +792,7 @@ export default function DrivePlanning() {
         <PlanDriveModal
           drive={drive}
           alertId={selectedAlertId}
+          alerts={alerts}
           onClose={() => setModal(null)}
           onCreated={() => { setModal(null); navigate('/src/donation-drives') }}
         />

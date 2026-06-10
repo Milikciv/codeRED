@@ -5,6 +5,7 @@ import com.codered.repository.DonationDriveRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +35,7 @@ public class DonationDriveService {
         drive.setStartTime((String) body.getOrDefault("startTime", "10:00 AM"));
         drive.setEndTime((String) body.getOrDefault("endTime", "4:00 PM"));
         drive.setStatus("Planned");
-        drive.setLinkedAlertCode((String) body.getOrDefault("linkedAlert", null));
+        drive.setLinkedAlertCodes(resolveLinkedAlerts(body));
         drive.setNotes((String) body.getOrDefault("notes", ""));
         drive.setStaffAssigned(toInt(body.get("staffAssigned"), 0));
         drive.setExpectedDonorsMin(toInt(body.get("expectedMin"), 0));
@@ -58,6 +59,8 @@ public class DonationDriveService {
         if (body.containsKey("staffAssigned")) drive.setStaffAssigned(toInt(body.get("staffAssigned"), drive.getStaffAssigned()));
         if (body.containsKey("expectedMin"))   drive.setExpectedDonorsMin(toInt(body.get("expectedMin"), drive.getExpectedDonorsMin()));
         if (body.containsKey("expectedMax"))   drive.setExpectedDonorsMax(toInt(body.get("expectedMax"), drive.getExpectedDonorsMax()));
+        if (body.containsKey("linkedAlerts") || body.containsKey("linkedAlert"))
+            drive.setLinkedAlertCodes(resolveLinkedAlerts(body));
         return toMap(driveRepository.save(drive));
     }
 
@@ -65,6 +68,20 @@ public class DonationDriveService {
         DonationDrive drive = driveRepository.findByDriveCode(driveCode)
             .orElseThrow(() -> new RuntimeException("Drive not found: " + driveCode));
         driveRepository.delete(drive);
+    }
+
+    /** Accepts either linkedAlerts (List<String>) or legacy linkedAlert (String) from request body. */
+    @SuppressWarnings("unchecked")
+    private static String resolveLinkedAlerts(Map<String, Object> body) {
+        Object list = body.get("linkedAlerts");
+        if (list instanceof List) {
+            return ((List<String>) list).stream()
+                .map(String::trim).filter(s -> !s.isBlank())
+                .collect(Collectors.joining(", "));
+        }
+        // fallback: legacy single-alert field
+        Object single = body.get("linkedAlert");
+        return single instanceof String s && !s.isBlank() ? s.trim() : null;
     }
 
     private static int toInt(Object val, Integer fallback) {
@@ -85,7 +102,12 @@ public class DonationDriveService {
         m.put("expectedDonorsMin",    d.getExpectedDonorsMin());
         m.put("expectedDonorsMax",    d.getExpectedDonorsMax());
         m.put("confirmedDonors",      d.getConfirmedDonors());
-        m.put("linkedAlert",          d.getLinkedAlertCode());
+        // Return as a list; split the comma-separated stored value
+        List<String> alertList = d.getLinkedAlertCodes() != null && !d.getLinkedAlertCodes().isBlank()
+            ? Arrays.stream(d.getLinkedAlertCodes().split(",")).map(String::trim).filter(s -> !s.isBlank()).collect(Collectors.toList())
+            : List.of();
+        m.put("linkedAlerts",         alertList);
+        m.put("linkedAlert",          alertList.isEmpty() ? null : alertList.get(0)); // backward compat
         m.put("date",                 d.getDate());
         m.put("startTime",            d.getStartTime());
         m.put("endTime",              d.getEndTime());
