@@ -85,6 +85,34 @@ public class AlertService {
         srcAlertRepository.save(src);
     }
 
+    public Alert sendExistingAlert(String alertId, String notes) {
+        Alert alert = alertRepository.findByAlertId(alertId)
+                .orElseThrow(() -> new IllegalArgumentException("Alert not found: " + alertId));
+        alert.setAlertStatus("Sent");
+        if (notes != null) {
+            alert.setMessage(notes);
+            alert.setDefaultNotes(notes);
+        }
+        Alert saved = alertRepository.save(alert);
+        crossCreateSrcAlertFromExisting(saved);
+        return saved;
+    }
+
+    private void crossCreateSrcAlertFromExisting(Alert alert) {
+        SrcAlert src = new SrcAlert();
+        src.setAlertCode(alert.getAlertId());
+        src.setBloodType(alert.getBloodType());
+        src.setSeverity(alert.getPriority().name());
+        src.setForecastedShortage(alert.getForecastedShortage() != null ? alert.getForecastedShortage() : 0);
+        String window = (alert.getWindowStart() != null && alert.getWindowEnd() != null)
+                ? alert.getWindowStart() + " – " + alert.getWindowEnd() : "TBD";
+        src.setShortageWindow(window);
+        src.setRecommendedAction(alert.getRecommendedAction() != null ? alert.getRecommendedAction() : alert.getMessage());
+        src.setReceivedAt(LocalDateTime.now().format(DateTimeFormatter.ofPattern("d MMM yyyy, hh:mm a")));
+        src.setStatus("ACTIVE");
+        srcAlertRepository.save(src);
+    }
+
     public void dismissAlert(Long id) {
         Alert alert = alertRepository.findById(id).orElseThrow();
         alert.setDismissed(true);

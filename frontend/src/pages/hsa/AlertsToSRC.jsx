@@ -102,26 +102,8 @@ export default function AlertsToSRC() {
       setConfirmSendOpen(false)
       return
     }
-    const priorityMap = { Critical: 'CRITICAL', High: 'HIGH', Medium: 'MEDIUM', Low: 'Low' }
     try {
-      await api.post('/alerts', {
-        title: `${selectedAlert.bloodType} Blood Shortage — ${selectedAlert.id}`,
-        message: currentNotes,
-        priority: priorityMap[selectedAlert.severity] ?? 'MEDIUM',
-        alertStatus: 'Sent',
-        bloodType: selectedAlert.bloodType,
-        forecastedShortage: selectedAlert.shortage,
-        windowStart: selectedAlert.windowStart,
-        windowEnd: selectedAlert.windowEnd,
-        safeSupplyThreshold: selectedAlert.safeSupplyThreshold,
-        projectedSupply: selectedAlert.projectedSupply,
-        forecastConfidence: selectedAlert.forecastConfidence,
-        recommendedDrives: selectedAlert.recommendedDrives,
-        reason: selectedAlert.reason,
-        recommendedAction: selectedAlert.recommendedAction,
-        supportingText: selectedAlert.supportingText,
-        defaultNotes: currentNotes,
-      })
+      await api.patch(`/alerts/${selectedAlert.id}/send`, { message: currentNotes })
       setAlerts(prev => prev.map(a => a.id === selectedId ? { ...a, status: 'Sent' } : a))
       setToast({ type: 'success', title: 'Alert sent to SRC', message: `${selectedAlert.id} has been sent for action.` })
     } catch {

@@ -36,6 +36,14 @@ public class AlertController {
         return ResponseEntity.ok(alertService.sendAlert(request));
     }
 
+    @PatchMapping("/{alertId}/send")
+    public ResponseEntity<Alert> sendExistingAlert(
+            @PathVariable String alertId,
+            @RequestBody(required = false) Map<String, String> body) {
+        String notes = body != null ? body.get("message") : null;
+        return ResponseEntity.ok(alertService.sendExistingAlert(alertId, notes));
+    }
+
     @PatchMapping("/{id}/dismiss")
     public ResponseEntity<Void> dismissAlert(@PathVariable Long id) {
         alertService.dismissAlert(id);
