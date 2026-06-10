@@ -365,8 +365,8 @@ export default function HsaDashboard() {
             </span>
 
             <span className="flex items-center gap-1">
-              <span className="w-4 border-t-2 border-red-400 border-dashed inline-block" />
-              Threshold
+              <span className="w-4 border-t-2 border-black border-dashed inline-block" />
+              Risk Threshold
             </span>
           </div>
 
@@ -416,8 +416,8 @@ export default function HsaDashboard() {
               {/* Risk threshold */}
               <ReferenceLine
                 y={riskThreshold}
-                stroke="#EF4444"
-                strokeDasharray="4 2"
+                stroke="#000000"
+                strokeDasharray="4 4"
                 strokeWidth={1.5}
               />
 

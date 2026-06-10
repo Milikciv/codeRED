@@ -215,12 +215,12 @@ export default function Forecasting() {
             <h3 className="font-semibold text-sm text-gray-800">
               {bloodType === 'All Blood Types' ? 'Overall Blood Demand Forecast' : `${bloodType} Blood Demand Forecast`}
             </h3>
-            <IonIcon icon={informationCircleOutline} style={{ fontSize: '0.875rem', color: '#9ca3af' }} />
+            {/* <IonIcon icon={informationCircleOutline} style={{ fontSize: '0.875rem', color: '#9ca3af' }} /> */}
           </div>
           <div className="flex items-center gap-4 mb-3 text-xs text-gray-500">
             <span className="flex items-center gap-1"><span className="w-4 border-t-2 border-primary inline-block" />Actual</span>
             <span className="flex items-center gap-1"><span className="w-4 border-t-2 border-primary border-dashed inline-block" />Forecast</span>
-            <span className="flex items-center gap-1"><span className="w-4 h-3 bg-red-100 inline-block rounded" />Risk Threshold</span>
+            <span className="flex items-center gap-1"><span className="w-4 border-t-2 border-black border-dashed inline-block" />Risk Threshold</span>
           </div>
           {data.chartData?.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -249,7 +249,7 @@ export default function Forecasting() {
                   contentStyle={{ fontSize: 11 }}
                   formatter={(value, name) => name === 'bandWidth' || name === 'lower' ? [null, null] : [value, name]}
                 />
-                <ReferenceLine y={data.riskThreshold} stroke="#EF4444" strokeDasharray="4 2" strokeWidth={1.5} />
+                <ReferenceLine y={data.riskThreshold} stroke="#000000" strokeDasharray="5 5" strokeWidth={1.5} />
                 {/* Confidence band: transparent base up to lower, pink fill for the width between lower and upper */}
                 <ReferenceLine
                   x={new Date().toLocaleDateString('en-US', {
