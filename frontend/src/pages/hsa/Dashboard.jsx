@@ -139,19 +139,18 @@ export default function HsaDashboard() {
 
       {/* Critical alert banner */}
       {criticalAlert && (
-        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 sm:px-5 sm:py-4 mb-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-          <div className="flex items-start gap-3 flex-1 min-w-0">
-            <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5 sm:mt-0">
-              <AlertTriangle className="w-4 h-4 text-red-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                <span className="text-xs font-bold text-red-700 uppercase">Critical alert active</span>
-              </div>
-              <p className="text-sm font-medium text-red-800">{criticalAlert.message}</p>
-              <p className="text-xs text-red-400 mt-0.5">{criticalAlert.title}</p>
-            </div>
+        <div className="bg-primary-100 border border-primary-200 rounded-xl px-4 py-3 sm:px-5 sm:py-4 mb-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">          <div className="flex items-start gap-3 flex-1 min-w-0">
+          <div className="w-9 h-9 rounded-full bg-white/70 flex items-center justify-center flex-shrink-0 mt-0.5 sm:mt-0">
+            <AlertTriangle className="w-4 h-4 text-primary" />
           </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+              <span className="text-xs font-bold text-primary uppercase">Critical alert active</span>
+            </div>
+            <p className="text-sm font-medium text-gray-900">{criticalAlert.message}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{criticalAlert.title}</p>
+          </div>
+        </div>
           <button
             onClick={() => navigate('/hsa/alerts')}
             className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition-colors sm:flex-shrink-0"
