@@ -5,6 +5,9 @@ import com.codered.repository.RecommendedDriveRepository;
 import com.codered.service.DonationDriveService;
 import com.codered.service.RecommendationReasoningService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -58,6 +61,7 @@ public class DriveController {
     }
 
     @GetMapping("/recommended")
+    @Cacheable(value = "recommendedDrives", key = "#alertCode + ':' + #rank")
     public ResponseEntity<Map<String, Object>> getRecommendedDrive(
             @RequestParam(required = false) String alertCode,
             @RequestParam(defaultValue = "1") int rank) {
@@ -120,6 +124,7 @@ public class DriveController {
     }
 
     @GetMapping("/recommended/locations")
+    @Cacheable(value = "driveLocations", key = "#alertCode")
     public ResponseEntity<List<Map<String, Object>>> getDriveLocations(
             @RequestParam String alertCode) {
         List<Map<String, Object>> locations = recommendedDriveRepository
@@ -148,6 +153,10 @@ public class DriveController {
     }
 
     @PostMapping("/recommended/{alertCode}/regenerate-reasoning")
+    @Caching(evict = {
+        @CacheEvict(value = "recommendedDrives", key = "#alertCode + ':1'"),
+        @CacheEvict(value = "driveLocations",    key = "#alertCode")
+    })
     public ResponseEntity<Map<String, Object>> regenerateRecommendedDriveReasoning(
             @PathVariable String alertCode,
             @RequestBody(required = false) Map<String, String> body) {

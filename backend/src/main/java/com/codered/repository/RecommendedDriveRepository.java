@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface RecommendedDriveRepository extends JpaRepository<RecommendedDrive, Long> {
+
     Optional<RecommendedDrive> findByAlertCodeAndRank(String alertCode, int rank);
     List<RecommendedDrive> findByAlertCodeAndRankGreaterThanOrderByRankAsc(String alertCode, int rank);
     List<RecommendedDrive> findByAlertCodeOrderByRankAsc(String alertCode);
