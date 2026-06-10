@@ -51,6 +51,20 @@ public class ForecastService {
     private static final DateTimeFormatter DAY_LABEL = DateTimeFormatter.ofPattern("MMM d", Locale.ENGLISH);
     private static final DateTimeFormatter FULL_DATE = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH);
 
+    // Hardcoded upper-bound risk thresholds per blood type (units/day).
+    // Null key = "All Blood Types" aggregate view.
+    private static final Map<String, Integer> RISK_THRESHOLDS = Map.of(
+            "O+",  8500,
+            "A+",  9500,
+            "B+",  5000,
+            "AB+",  2800,
+            "O-",   4200,
+            "A-",   3500,
+            "B-",   3800,
+            "AB-",  6500
+    );
+    private static final int RISK_THRESHOLD_ALL = 45000;
+
     public Map<String, Object> buildForecast(String bloodTypeFilter) {
         return buildForecast(bloodTypeFilter, HISTORY_DAYS, FORECAST_DAYS, false);
     }
@@ -70,18 +84,9 @@ public class ForecastService {
         int[] selectedStock = stockFor(stockByType, selectedBloodType);
         int totalCurrentSupply = selectedStock[0];
         int totalIdeal = selectedStock[1];
-        int hospitalCount = Math.max(selectedStock[2], 1);
-        int baseSupply = totalCurrentSupply;
-
-        double safetyMargin;
-
-        if (selectedBloodType == null) {
-            safetyMargin = 0.15; // system-level buffer
-        } else {
-            safetyMargin = 0.10; // stricter per blood type
-        }
-
-        int riskThreshold = (int) Math.round(baseSupply * (1 + safetyMargin));
+        int riskThreshold = selectedBloodType == null
+                ? RISK_THRESHOLD_ALL
+                : RISK_THRESHOLDS.getOrDefault(selectedBloodType, RISK_THRESHOLD_ALL);
 
         // 2. Historical daily demand from real requests
         Map<LocalDate, Integer> stockHistory = getHistoricalStock(today, selectedBloodType, historyDays);
