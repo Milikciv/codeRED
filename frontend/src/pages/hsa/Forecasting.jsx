@@ -216,14 +216,12 @@ export default function Forecasting() {
             <h3 className="font-semibold text-sm text-gray-800">
               {bloodType === 'All Blood Types' ? 'Overall Blood Demand Forecast' : `${bloodType} Blood Demand Forecast`}
             </h3>
-            <IonIcon icon={informationCircleOutline} style={{ fontSize: '0.875rem', color: '#9ca3af' }} />
+            {/* <IonIcon icon={informationCircleOutline} style={{ fontSize: '0.875rem', color: '#9ca3af' }} /> */}
           </div>
           <div className="flex items-center gap-4 mb-3 text-xs text-gray-500">
             <span className="flex items-center gap-1"><span className="w-4 border-t-2 border-primary inline-block" />Actual</span>
             <span className="flex items-center gap-1"><span className="w-4 border-t-2 border-primary border-dashed inline-block" />Forecast</span>
-            <span className="flex items-center gap-1"><span className="w-4 border-t border-gray-400 inline-block" />Upper Bound</span>
-            <span className="flex items-center gap-1"><span className="w-4 border-t border-gray-400 inline-block" />Lower Bound</span>
-            <span className="flex items-center gap-1"><span className="w-4 h-3 bg-red-100 inline-block rounded" />Risk Threshold</span>
+            <span className="flex items-center gap-1"><span className="w-4 border-t-2 border-black border-dashed inline-block" />Risk Threshold</span>
           </div>
           {data.chartData?.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -235,12 +233,24 @@ export default function Forecasting() {
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="date" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
+                <YAxis
+                  tick={{ fontSize: 9 }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v) => v.toLocaleString()}
+                  domain={([dataMin, dataMax]) => {
+                    const allValues = [dataMin, dataMax, data.riskThreshold].filter(v => v != null);
+                    const min = Math.min(...allValues);
+                    const max = Math.max(...allValues);
+                    const pad = (max - min) * 0.1;
+                    return [Math.max(0, Math.floor(min - pad)), Math.ceil(max + pad)];
+                  }}
+                />
                 <Tooltip
                   contentStyle={{ fontSize: 11 }}
                   formatter={(value, name) => name === 'bandWidth' || name === 'lower' ? [null, null] : [value, name]}
                 />
-                <ReferenceLine y={data.riskThreshold} stroke="#EF4444" strokeDasharray="4 2" strokeWidth={1.5} />
+                <ReferenceLine y={data.riskThreshold} stroke="#000000" strokeDasharray="5 5" strokeWidth={1.5} />
                 {/* Confidence band: transparent base up to lower, pink fill for the width between lower and upper */}
                 <ReferenceLine
                   x={new Date().toLocaleDateString('en-US', {
@@ -255,12 +265,6 @@ export default function Forecasting() {
                     fontSize: 10,
                   }}
                 />
-                <Area type="monotone" dataKey="lower" stackId="band" stroke="none" fill="transparent" dot={false} legendType="none" />
-                {/* <Area type="monotone" dataKey="bandWidth" stackId="band" stroke="none" fill="url(#bandGrad)" dot={false} legendType="none" /> */}
-                Bound marker lines
-                {/* <Line type="monotone" dataKey="upper" stroke="#D1D5DB" strokeWidth={1} dot={false} />
-                <Line type="monotone" dataKey="lower" stroke="#D1D5DB" strokeWidth={1} dot={false} /> */}
-                {/* Main lines — rendered last so they sit on top of the fill */}
                 <Line type="monotone" dataKey="actual" stroke="#C20000" strokeWidth={2} dot={false} connectNulls={false} />
                 <Line type="monotone" dataKey="forecast" stroke="#C20000" strokeWidth={2} strokeDasharray="6 3" dot={false} />
               </ComposedChart>

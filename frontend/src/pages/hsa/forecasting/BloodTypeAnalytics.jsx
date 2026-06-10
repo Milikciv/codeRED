@@ -29,13 +29,13 @@ const HOSPITAL_OPTIONS = [
 export default function BloodTypeAnalytics() {
   const [selectedType, setSelectedType] = useState('O-')
   const [openDropdown, setOpenDropdown] = useState(null)
-  const [hospital, setHospital]         = useState('All hospitals')
-  const [dateStart, setDateStart]       = useState(new Date(2026, 4, 14))
-  const [dateEnd, setDateEnd]           = useState(new Date(2026, 4, 17))
+  const [hospital, setHospital] = useState('All hospitals')
+  const [dateStart, setDateStart] = useState(new Date(2026, 4, 14))
+  const [dateEnd, setDateEnd] = useState(new Date(2026, 4, 17))
   const [activePreset, setActivePreset] = useState(null)
 
   const applyPreset = (days) => {
-    const end   = new Date()
+    const end = new Date()
     const start = new Date(); start.setDate(end.getDate() - days)
     setDateStart(start); setDateEnd(end); setActivePreset(days)
   }
@@ -91,7 +91,7 @@ export default function BloodTypeAnalytics() {
           </div>
         )}
       </div>
-      <div className="flex items-center gap-1 bg-white border border-gray-300 rounded-lg shadow-sm p-0.5">
+      {/* <div className="flex items-center gap-1 bg-white border border-gray-300 rounded-lg shadow-sm p-0.5">
         {[14, 30].map(d => (
           <button
             key={d}
@@ -104,7 +104,7 @@ export default function BloodTypeAnalytics() {
             {d}d
           </button>
         ))}
-      </div>
+      </div> */}
       <div className="relative">
         <button
           onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}

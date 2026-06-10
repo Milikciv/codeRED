@@ -54,16 +54,15 @@ public class ForecastService {
     // Hardcoded upper-bound risk thresholds per blood type (units/day).
     // Null key = "All Blood Types" aggregate view.
     private static final Map<String, Integer> RISK_THRESHOLDS = Map.of(
-            "O+",  8500,
-            "A+",  9500,
-            "B+",  5000,
-            "AB+",  2800,
-            "O-",   4200,
-            "A-",   3500,
-            "B-",   3800,
-            "AB-",  6500
-    );
-    private static final int RISK_THRESHOLD_ALL = 45000;
+            "O+", 8500,
+            "A+", 9500,
+            "B+", 5000,
+            "AB+", 6000,
+            "O-", 4200,
+            "A-", 3500,
+            "B-", 3800,
+            "AB-", 2000);
+    private static final int RISK_THRESHOLD_ALL = 42000;
 
     public Map<String, Object> buildForecast(String bloodTypeFilter) {
         return buildForecast(bloodTypeFilter, HISTORY_DAYS, FORECAST_DAYS, false);
@@ -95,25 +94,33 @@ public class ForecastService {
         List<Map<String, Object>> chartData = buildChart(today, stockHistory, fit, historyDays);
 
         // 4. Summary metrics derived from the forecast + a depletion model
-        int safetyBuffer = (int) Math.round(totalIdeal * 0.25); // treat <25% of ideal as risk
         int predictedPeakDemand = 0;
-        LocalDate peakDate = today.plusDays(1);
-        int runningBalance = totalCurrentSupply;
-        int todayActual = stockHistory.getOrDefault(today, 0);
-        int forecastX = historyDays - 1;
+
+        LocalDate peakDate = today.plusDays(forecastDays);
+
         List<LocalDate> riskDays = new ArrayList<>();
-        for (int i = 1; i <= FORECAST_DAYS; i++) {
-            LocalDate d = today.plusDays(i);
-            int forecast = forecastValue(fit, forecastX, todayActual);
-            if (forecast > predictedPeakDemand) {
-                predictedPeakDemand = forecast;
-                peakDate = d;
+
+        for (Map<String, Object> point : chartData) {
+
+            Integer forecast = (Integer) point.get("forecast");
+
+            if (forecast == null)
+                continue;
+
+            predictedPeakDemand = forecast;
+
+            if (forecast > riskThreshold) {
+
+                LocalDate date = LocalDate.parse(
+                        point.get("rawDate").toString());
+
+                riskDays.add(date);
             }
-            runningBalance -= forecast;
-            if (runningBalance < safetyBuffer)
-                riskDays.add(d);
         }
-        int expectedShortfall = Math.max(0, safetyBuffer - runningBalance);
+
+        int expectedShortfall = Math.max(
+                0,
+                predictedPeakDemand - riskThreshold);
         int forecastAccuracy = computeAccuracy(today, stockHistory, fit);
 
         String highRiskPeriod;
@@ -310,7 +317,7 @@ public class ForecastService {
             int todayActual) {
 
         double startValue = todayActual;
-        double growthRate = 0.01;
+        double growthRate = 0.001;
         int futureOffset = Math.max(0, x - (HISTORY_DAYS - 1));
         double value = startValue * Math.exp(growthRate * futureOffset);
 
