@@ -161,9 +161,9 @@ function ScoreModal({ drive, onClose }) {
 }
 
 const FALLBACK_HOTSPOTS = [
-  { rank: 1, location: 'Bishan Community Club',     address: '51 Bishan St 13, Singapore 579799',          lat: 1.3521, lng: 103.8484, confidenceScore: 68, eligibleDonors: 312, highResponseDonors: 87, pastSuccessRate: 74 },
-  { rank: 2, location: 'Tampines Hub',              address: '1 Tampines Walk, Singapore 528523',          lat: 1.3530, lng: 103.9440, confidenceScore: 61, eligibleDonors: 278, highResponseDonors: 74, pastSuccessRate: 69 },
-  { rank: 3, location: 'Woodlands Civic Centre',   address: '900 South Woodlands Dr, Singapore 730900',   lat: 1.4362, lng: 103.7860, confidenceScore: 54, eligibleDonors: 241, highResponseDonors: 62, pastSuccessRate: 65 },
+  { rank: 1, location: 'Bishan Community Club',   address: '51 Bishan St 13, Singapore 579799',        lat: 1.3521, lng: 103.8484, confidenceScore: 68, eligibleDonors: 312, highResponseDonors: 87, pastSuccessRate: 74 },
+  { rank: 2, location: 'Tampines Hub',             address: '1 Tampines Walk, Singapore 528523',        lat: 1.3530, lng: 103.9440, confidenceScore: 61, eligibleDonors: 278, highResponseDonors: 74, pastSuccessRate: 69 },
+  { rank: 3, location: 'Woodlands Civic Centre',  address: '900 South Woodlands Dr, Singapore 730900', lat: 1.4362, lng: 103.7860, confidenceScore: 54, eligibleDonors: 241, highResponseDonors: 62, pastSuccessRate: 65 },
 ]
 
 const ALL_BLOOD_TYPES = ['O-', 'O+', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']
@@ -482,6 +482,7 @@ export default function DrivePlanning() {
   // Re-fetch displayed drive when alert or rank changes
   useEffect(() => {
     if (!selectedAlertId) return
+    setRecommendedDrive(null)
     api.get(`/drives/recommended?alertCode=${selectedAlertId}&rank=${selectedRank}`)
       .then(r => setRecommendedDrive(r.data))
       .catch(() => {})
@@ -509,18 +510,19 @@ export default function DrivePlanning() {
     </PageLayout>
   )
 
-  const selectedAlert  = alerts.find(a => a.id === selectedAlertId) ?? alerts[0]
+  const selectedAlert   = alerts.find(a => a.id === selectedAlertId) ?? alerts[0]
   const visibleHotspots = hotspots.length > 0 ? hotspots : FALLBACK_HOTSPOTS
-  const drive = recommendedDrive ?? (selectedAlert ? {
+  const activeHotspot   = selectedHotspot ?? visibleHotspots[0] ?? null
+  const drive = recommendedDrive ?? (selectedAlert && activeHotspot ? {
     bloodType:          selectedAlert.bloodType ?? 'O+',
-    location:           'Bishan Community Club',
-    address:            '51 Bishan St 13, Singapore 579799',
+    location:           activeHotspot.location,
+    address:            activeHotspot.address ?? '',
     date:               'Sat, 28 Jun 2026',
     time:               '10:00 AM – 4:00 PM',
-    eligibleDonors:     312,
-    highResponseDonors: 87,
-    pastSuccessRate:    74,
-    confidenceScore:    68,
+    eligibleDonors:     activeHotspot.eligibleDonors,
+    highResponseDonors: activeHotspot.highResponseDonors,
+    pastSuccessRate:    activeHotspot.pastSuccessRate,
+    confidenceScore:    activeHotspot.confidenceScore,
     impact:             'This location has historically attracted strong donor turnout and is well-positioned to address the current shortage.',
     reasons:            [],
     scoreBreakdown:     [],
