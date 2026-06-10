@@ -82,7 +82,7 @@ const OUTREACH_TONES = [
 ]
 
 const TABS = [
-  { id: 'ai',     label: 'AI Recommended',     icon: <Sparkles className="w-4 h-4" /> },
+  { id: 'ai',     label: 'Outreach Strategy',  icon: <Sparkles className="w-4 h-4" /> },
   { id: 'push',   label: 'Push Notifications', icon: <MessageSquare className="w-4 h-4" /> },
   { id: 'youth',  label: 'Youth Campaigns',    icon: <Zap className="w-4 h-4" /> },
   { id: 'collab', label: 'Collaborations',     icon: <Building2 className="w-4 h-4" /> },
@@ -94,6 +94,23 @@ const AI_STEPS = [
   'Applying brand guidelines...',
   'Finalising campaign assets...',
 ]
+
+const FEATURED_PARTNER = {
+  name: 'NTUC FairPrice Co-operative',
+  sector: 'Retail & Community',
+  reach: '2,400+ employees near Tampines',
+  distance: '1.2 km',
+  csr: 'FairPrice Foundation – active community giving programme',
+  matchScore: 94,
+  initials: 'NF',
+  iconColor: 'bg-blue-100 text-blue-700',
+  whyRecommended: [
+    'Highest match score (94%) among nearby companies',
+    'Established employee blood donation programme via FairPrice Foundation',
+    'Community-first mission closely aligned with SRC values',
+    'Under 1.5 km from the drive venue — minimal commute for staff donors',
+  ],
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -286,231 +303,180 @@ function CombinedPlanModal({ onClose }) {
   )
 }
 
-// ─── Donor Demographics Card ──────────────────────────────────────────────────
+// ─── Tab 1: Outreach Strategy ─────────────────────────────────────────────────
 
-function DonorDemographicsCard({ demographics }) {
-  if (!demographics) return null
+function TabOutreachStrategy({ drive, onNavigate }) {
+  // Binary youth recommendation: recommend if drive targets blood types common in young donors
+  const youthRecommended = (() => {
+    const types = (drive?.bloodType ?? '').split(',').map(s => s.trim()).filter(Boolean)
+    const youthTypes = new Set(['O-', 'O+', 'A-', 'A+', 'B+'])
+    return types.length === 0 || types.some(t => youthTypes.has(t))
+  })()
 
-  const byAge      = demographics.byAge      ?? []
-  const byGender   = demographics.byGender   ?? []
-  const byLocation = demographics.byLocation ?? []
+  const youthReasons = youthRecommended
+    ? [
+        'O and A blood types are more prevalent among donors aged 18–30',
+        'Youth Challenge saw the highest response rate (36%) of all campaign themes',
+        'Social-media-first outreach aligns with youth discovery patterns',
+        'First-time donors respond strongly to gamified challenge formats',
+      ]
+    : [
+        'Blood type profile skews toward an older, regular donor pool',
+        'Older donors respond better to push notifications and community appeals',
+        'Youth campaign spend is better reallocated to collaborations here',
+      ]
 
-  const maxAgePct = Math.max(...byAge.map(r => r.pct), 1)
-
-  return (
-    <div className="card p-5">
-      <div className="flex items-center gap-2.5 mb-5">
-        <div className="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-          <Users className="w-4 h-4 text-primary" />
-        </div>
-        <div>
-          <h3 className="font-bold text-sm text-gray-900">Donor Demographics</h3>
-          <p className="text-xs text-gray-400">Eligible donor pool filtered to this drive's blood type</p>
-        </div>
-      </div>
-
-      {/* KPIs */}
-      <div className="grid grid-cols-3 gap-3 mb-5">
-        {[
-          { label: 'Matched Donors',  value: demographics.activeCount?.toLocaleString()   ?? '—', color: 'text-gray-900' },
-          { label: 'Eligible Now',    value: demographics.totalEligible?.toLocaleString()  ?? '—', color: 'text-primary'  },
-          { label: 'Avg Donations',   value: demographics.avgDonations != null ? demographics.avgDonations.toFixed(1) : '—', color: 'text-green-600' },
-        ].map(stat => (
-          <div key={stat.label} className="bg-gray-50 rounded-xl p-3 text-center">
-            <div className={`text-2xl font-bold leading-none ${stat.color}`}>{stat.value}</div>
-            <div className="text-[10px] text-gray-400 mt-1">{stat.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Age + Gender bars */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
-        <div>
-          <div className="text-xs font-semibold text-gray-700 mb-3">By Age Group</div>
-          <div className="space-y-2">
-            {byAge.map(row => (
-              <div key={row.group} className="flex items-center gap-2">
-                <span className="text-[10px] text-gray-500 w-11 flex-shrink-0">{row.group}</span>
-                <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full" style={{ width: `${(row.pct / maxAgePct) * 100}%` }} />
-                </div>
-                <span className="text-[10px] font-semibold text-gray-600 w-8 text-right tabular-nums">{row.pct}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <div className="text-xs font-semibold text-gray-700 mb-3">By Gender</div>
-          <div className="space-y-3">
-            {byGender.map(row => (
-              <div key={row.gender} className="flex items-center gap-2">
-                <span className="text-[10px] text-gray-500 w-11 flex-shrink-0">{row.gender}</span>
-                <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full" style={{ width: `${row.pct}%` }} />
-                </div>
-                <span className="text-[10px] font-semibold text-gray-600 w-8 text-right tabular-nums">{row.pct}%</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Top donor regions */}
-          {byLocation.length > 0 && (
-            <div className="mt-4">
-              <div className="text-xs font-semibold text-gray-700 mb-2">Top Regions</div>
-              <div className="flex flex-col gap-1.5">
-                {byLocation.slice(0, 5).map((loc, i) => (
-                  <div key={loc.region} className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-gray-400 w-4">#{i + 1}</span>
-                    <span className="text-xs font-semibold text-gray-700 flex-1">{loc.region}</span>
-                    <span className="text-[10px] text-gray-400 tabular-nums">{loc.count?.toLocaleString()}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Tab 1: AI Recommended ────────────────────────────────────────────────────
-
-function TabAIRecommended({ drive, outreachStrategy, strategyLoading, onRefresh, onViewCombined }) {
-  const strategy   = outreachStrategy?.strategy
-  const confidence = strategy?.confidence ?? null
-
-  const confLabel  = confidence == null ? '—' : confidence >= 80 ? 'High' : confidence >= 60 ? 'Medium' : 'Low'
-  const confColor  = confidence >= 80 ? 'text-green-600' : confidence >= 60 ? 'text-amber-600' : 'text-gray-500'
-  const confBg     = confidence >= 80 ? 'bg-green-50 border-green-100' : confidence >= 60 ? 'bg-amber-50 border-amber-100' : 'bg-gray-50 border-gray-100'
-  const confBadge  = confidence >= 80 ? 'bg-green-100 text-green-700' : confidence >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
-
-  const stats = [
-    { label: 'Target Blood Type',     value: drive?.bloodType ?? '—',                                                  color: 'text-primary'    },
-    { label: 'Eligible Donors',       value: outreachStrategy?.demographics?.totalEligible?.toLocaleString() ?? '—',   color: 'text-gray-900'   },
-    { label: 'Recommended Audience',  value: strategy?.audience ?? '—',                                                color: 'text-amber-600'  },
-    { label: 'Expected Response Rate', value: strategy?.expectedResponseRate != null ? `${strategy.expectedResponseRate}%` : '—', color: 'text-green-600' },
-  ]
-
-  const reasons = strategy?.reasons ?? []
+  const pushMessage = `Urgent ${drive?.bloodType ?? 'O-'} donors needed near ${drive?.location ?? 'Tampines Community Plaza'} this ${drive?.date ?? 'Saturday'}.\n\nYour donation can help prevent an upcoming shortage.\n\nBook your slot today — tap to register: bit.ly/sav3lives`
 
   return (
     <div className="space-y-4">
-      {/* AI strategy card */}
+
+      {/* Push Notification */}
       <div className="card p-5">
-        <div className="flex items-center justify-between gap-2 mb-5">
+        <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-4 h-4 text-primary" />
+              <MessageSquare className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-gray-900">AI Recommended Strategy</h3>
-              <p className="text-xs text-gray-400">Analysed from eligible donor demographics for this drive</p>
+              <h3 className="font-bold text-sm text-gray-900">Push Notification</h3>
+              <p className="text-xs text-gray-400">Alert nearby eligible donors about this drive</p>
             </div>
           </div>
-          <button
-            onClick={onRefresh}
-            disabled={strategyLoading}
-            className="flex items-center gap-1 text-xs text-gray-500 hover:text-primary flex-shrink-0 disabled:opacity-40"
-            title="Regenerate AI analysis"
-          >
-            <RefreshCw className={`w-3 h-3 ${strategyLoading ? 'animate-spin' : ''}`} />
-            {strategyLoading ? 'Analysing…' : 'Regenerate'}
-          </button>
+          <span className="flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-semibold rounded-full flex-shrink-0">
+            <Check className="w-2.5 h-2.5" />Sent · 86 donors
+          </span>
         </div>
 
-        {strategyLoading ? (
-          <SectionLoader variant="donorOutreach" message="AI analysing donor demographics for this drive…" />
-        ) : (
-          <>
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_108px] gap-4 mb-5">
-              <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
-                {stats.map(stat => (
-                  <div key={stat.label} className="flex items-center justify-between px-4 py-2.5 bg-white">
-                    <span className="text-xs text-gray-500">{stat.label}</span>
-                    <span className={`text-sm font-bold ${stat.color}`}>{stat.value}</span>
-                  </div>
-                ))}
-              </div>
-              <div className={`border rounded-xl p-3 text-center flex flex-col justify-center gap-1 ${confBg}`}>
-                <div className="text-xs text-gray-400">Confidence</div>
-                <div className={`text-3xl font-bold ${confColor}`}>{confidence != null ? `${confidence}%` : '—'}</div>
-                <span className={`inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full ${confBadge}`}>{confLabel}</span>
-              </div>
-            </div>
+        <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-4">
+          <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{pushMessage}</p>
+          <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
+            <span className={`text-[10px] ${pushMessage.length > 160 ? 'text-amber-700 font-medium' : 'text-gray-400'}`}>
+              {pushMessage.length} / 160 chars{pushMessage.length > 160 ? ' · 2 segments' : ''}
+            </span>
+            <span className="text-[10px] text-gray-400">Life-Saving Focus · 24% response rate</span>
+          </div>
+        </div>
 
-            {strategy?.message && (
-              <div className="mb-5 bg-primary/5 border border-primary/10 rounded-xl px-4 py-3">
-                <div className="text-xs font-semibold text-primary mb-1">AI Insight</div>
-                <p className="text-xs text-gray-700 leading-relaxed">{strategy.message}</p>
-              </div>
-            )}
-
-            {reasons.length > 0 && (
-              <div className="pt-4 border-t border-gray-100">
-                <div className="text-xs font-semibold text-gray-700 mb-3">Why this strategy?</div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {reasons.map(r => (
-                    <div key={r} className="flex items-start gap-2">
-                      <span className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" aria-hidden="true">
-                        <Check className="w-2.5 h-2.5 text-green-700" />
-                      </span>
-                      <span className="text-xs text-gray-600">{r}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
+        <button
+          onClick={() => onNavigate('push')}
+          className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          Go to Push Notifications
+          <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
 
-      {/* Donor demographics */}
-      <DonorDemographicsCard demographics={outreachStrategy?.demographics} />
-
-      {/* Strategy comparison */}
+      {/* Youth Campaign Binary Recommendation */}
       <div className="card p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-sm text-gray-900">Strategy Comparison</h3>
-          <button
-            onClick={onViewCombined}
-            className="flex items-center gap-1.5 btn-primary px-4 py-2 text-xs rounded-lg"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            View Combined Plan
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
+        <div className="flex items-center justify-between gap-3 mb-5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Zap className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-gray-900">Youth Campaign</h3>
+              <p className="text-xs text-gray-400">Should SRC run a youth-targeted campaign for this drive?</p>
+            </div>
+          </div>
+          <span className="px-2 py-0.5 bg-gray-100 text-gray-400 text-[10px] font-semibold rounded-full flex-shrink-0">
+            Pending
+          </span>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-3">
-          {STRATEGY_COMPARISON.map(s => (
-            <div
-              key={s.id}
-              className={`relative rounded-xl border-2 p-4 ${s.border} ${s.bg} ${
-                s.best ? 'ring-2 ring-green-300/50' : ''
-              }`}
-            >
-              {s.best && (
-                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
-                  <span className="flex items-center gap-0.5 px-2 py-0.5 bg-green-500 text-white text-[9px] font-bold rounded-full whitespace-nowrap">
-                    Best
-                  </span>
-                </div>
-              )}
-              {s.recommended && !s.best && (
-                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
-                  <span className="flex items-center gap-0.5 px-2 py-0.5 bg-amber-400 text-white text-[9px] font-bold rounded-full whitespace-nowrap">
-                    <Star className="w-2.5 h-2.5 fill-white" /> AI Pick
-                  </span>
-                </div>
-              )}
-              <div className="text-xs font-semibold text-gray-700 mb-1">{s.label}</div>
-              <div className={`text-3xl font-bold leading-none ${s.color}`}>{s.donors}</div>
-              <div className="text-[10px] text-gray-400 mt-0.5">expected donors</div>
-            </div>
-          ))}
+        <div className="flex items-start gap-4 mb-4">
+          <div className={`flex-shrink-0 w-20 h-20 rounded-2xl flex flex-col items-center justify-center font-bold text-2xl ${
+            youthRecommended ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+          }`}>
+            {youthRecommended ? 'YES' : 'NO'}
+            <span className="text-[9px] font-semibold mt-1 opacity-60 uppercase tracking-wide">Run It</span>
+          </div>
+          <div className="flex-1 space-y-2">
+            {youthReasons.map(r => (
+              <div key={r} className="flex items-start gap-2">
+                <span className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                  youthRecommended ? 'bg-green-100' : 'bg-gray-100'
+                }`} aria-hidden="true">
+                  {youthRecommended
+                    ? <Check className="w-2.5 h-2.5 text-green-700" />
+                    : <X className="w-2.5 h-2.5 text-gray-500" />
+                  }
+                </span>
+                <span className="text-xs text-gray-600">{r}</span>
+              </div>
+            ))}
+          </div>
         </div>
+
+        <button
+          onClick={() => onNavigate('youth')}
+          className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          Go to Youth Campaigns
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Featured Company Recommendation */}
+      <div className="card p-5">
+        <div className="flex items-center justify-between gap-3 mb-5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Building2 className="w-4 h-4 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-gray-900">Recommended Partner</h3>
+              <p className="text-xs text-gray-400">Top collaboration match for this drive</p>
+            </div>
+          </div>
+          <span className="px-2 py-0.5 bg-gray-100 text-gray-400 text-[10px] font-semibold rounded-full flex-shrink-0">
+            Pending
+          </span>
+        </div>
+
+        <div className="flex items-start gap-4 p-4 bg-blue-50 border border-blue-100 rounded-xl mb-3">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-sm ${FEATURED_PARTNER.iconColor}`}>
+            {FEATURED_PARTNER.initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="font-bold text-gray-900 text-sm">{FEATURED_PARTNER.name}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{FEATURED_PARTNER.sector} · {FEATURED_PARTNER.distance} away</div>
+              </div>
+              <span className="flex-shrink-0 px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">
+                {FEATURED_PARTNER.matchScore}% match
+              </span>
+            </div>
+            <div className="text-xs text-blue-700 mt-2 font-medium">{FEATURED_PARTNER.csr}</div>
+            <div className="mt-3 space-y-1.5">
+              {FEATURED_PARTNER.whyRecommended.map(r => (
+                <div key={r} className="flex items-start gap-2">
+                  <span className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" aria-hidden="true">
+                    <Check className="w-2.5 h-2.5 text-green-700" />
+                  </span>
+                  <span className="text-xs text-gray-600">{r}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+          <span className="text-gray-400">Reach</span>
+          <span className="font-semibold text-gray-700">{FEATURED_PARTNER.reach}</span>
+          <span className="w-px h-3 bg-gray-200 flex-shrink-0" />
+          <span className="text-gray-400">Distance</span>
+          <span className="font-semibold text-gray-700">{FEATURED_PARTNER.distance} from drive</span>
+        </div>
+
+        <button
+          onClick={() => onNavigate('collab')}
+          className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          Go to Collaborations
+          <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
     </div>
   )
@@ -1518,8 +1484,6 @@ export default function DonorOutreach() {
   const [loading, setLoading]           = useState(true)
   const [messageVariants, setMessageVariants] = useState([])
   const [aiLoading, setAiLoading]       = useState(false)
-  const [outreachStrategy, setOutreachStrategy] = useState(null)
-  const [strategyLoading, setStrategyLoading]   = useState(false)
 
   useEffect(() => {
     api.get('/drives')
@@ -1556,18 +1520,6 @@ export default function DonorOutreach() {
   useEffect(() => { fetchMessages() }, [selectedDriveId, drives]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const drive = drives.find(d => d.id === selectedDriveId) ?? drives[0]
-
-  const fetchStrategy = (refresh = false) => {
-    if (!drive) return
-    setStrategyLoading(true)
-    const qs = refresh ? '&refresh=true' : ''
-    api.get(`/donor-outreach/strategy?driveCode=${drive.id}${qs}`)
-      .then(r => setOutreachStrategy(r.data))
-      .catch(() => setOutreachStrategy(null))
-      .finally(() => setStrategyLoading(false))
-  }
-
-  useEffect(() => { fetchStrategy(false) }, [drive?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return (
     <PageLayout title="Donor Outreach" subtitle="How should SRC maximise donor turnout for this drive?">
@@ -1674,7 +1626,7 @@ export default function DonorOutreach() {
 
       {/* Tab content */}
       <div key={activeTab} className="page-enter-animate">
-        {activeTab === 'ai'     && <TabAIRecommended drive={drive} outreachStrategy={outreachStrategy} strategyLoading={strategyLoading} onRefresh={() => fetchStrategy(true)} onViewCombined={() => setShowCombined(true)} />}
+        {activeTab === 'ai'     && <TabOutreachStrategy drive={drive} onNavigate={setActiveTab} />}
         {activeTab === 'push'   && <TabPushNotifications drive={drive} aiVariants={messageVariants} aiLoading={aiLoading} onRefresh={() => fetchMessages(true)} />}
         {activeTab === 'youth'  && <TabYouthCampaigns drive={drive} />}
         {activeTab === 'collab' && <TabCollaborations drive={drive} />}
