@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId, useContext, createContext } from 'react'
 import PageLayout from '../../components/layout/PageLayout'
 import LoadingScreen, { SectionLoader } from '../../components/common/LoadingScreen'
 import EmptyState from '../../components/common/EmptyState'
@@ -44,10 +44,10 @@ const CAMPAIGN_THEMES = [
 ]
 
 const STRATEGY_COMPARISON = [
-  { id: 'push',     label: 'Push Notifications', donors: 18, color: 'text-gray-700',  bg: 'bg-gray-50',   border: 'border-gray-200' },
-  { id: 'youth',    label: 'Youth Campaigns',    donors: 31, color: 'text-amber-700', bg: 'bg-amber-50',  border: 'border-amber-200', recommended: true },
-  { id: 'collab',   label: 'Collaborations',     donors: 42, color: 'text-blue-700',  bg: 'bg-blue-50',   border: 'border-blue-200' },
-  { id: 'combined', label: 'Combined Approach',  donors: 68, color: 'text-green-700', bg: 'bg-green-50',  border: 'border-green-200', best: true },
+  { id: 'push', label: 'Push Notifications', donors: 18, color: 'text-gray-700', bg: 'bg-gray-50', border: 'border-gray-200' },
+  { id: 'youth', label: 'Youth Campaigns', donors: 31, color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', recommended: true },
+  { id: 'collab', label: 'Collaborations', donors: 42, color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
+  { id: 'combined', label: 'Combined Approach', donors: 68, color: 'text-green-700', bg: 'bg-green-50', border: 'border-green-200', best: true },
 ]
 
 
@@ -82,10 +82,10 @@ const OUTREACH_TONES = [
 ]
 
 const TABS = [
-  { id: 'ai',     label: 'Outreach Strategy',  icon: <Sparkles className="w-4 h-4" /> },
-  { id: 'push',   label: 'Push Notifications', icon: <MessageSquare className="w-4 h-4" /> },
-  { id: 'youth',  label: 'Youth Campaigns',    icon: <Zap className="w-4 h-4" /> },
-  { id: 'collab', label: 'Collaborations',     icon: <Building2 className="w-4 h-4" /> },
+  { id: 'ai', label: 'Outreach Strategy', icon: <Sparkles className="w-4 h-4" /> },
+  { id: 'push', label: 'Push Notifications', icon: <MessageSquare className="w-4 h-4" /> },
+  { id: 'youth', label: 'Youth Campaigns', icon: <Zap className="w-4 h-4" /> },
+  { id: 'collab', label: 'Collaborations', icon: <Building2 className="w-4 h-4" /> },
 ]
 
 const AI_STEPS = [
@@ -122,8 +122,18 @@ function parseBloodTypes(bloodType) {
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
 
+// Tracks which dropdown (by id) is currently open so opening one closes any other
+const DropdownGroupContext = createContext(null)
+
 function SelectDropdown({ label, value, options, icon, onChange }) {
-  const [open, setOpen] = useState(false)
+  const id = useId()
+  const group = useContext(DropdownGroupContext)
+  const [localOpen, setLocalOpen] = useState(false)
+  const open = group ? group.openId === id : localOpen
+  const setOpen = (next) => {
+    if (group) group.setOpenId(next ? id : null)
+    else setLocalOpen(next)
+  }
   const [selected, setSelected] = useState(value)
   const labelId = label ? `label-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined
 
@@ -165,7 +175,14 @@ function SelectDropdown({ label, value, options, icon, onChange }) {
 }
 
 function MultiSelectDropdown({ label, values, options, icon, onChange }) {
-  const [open, setOpen] = useState(false)
+  const id = useId()
+  const group = useContext(DropdownGroupContext)
+  const [localOpen, setLocalOpen] = useState(false)
+  const open = group ? group.openId === id : localOpen
+  const setOpen = (next) => {
+    if (group) group.setOpenId(next ? id : null)
+    else setLocalOpen(next)
+  }
   const labelId = label ? `label-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined
 
   const toggle = (opt) => {
@@ -174,7 +191,7 @@ function MultiSelectDropdown({ label, values, options, icon, onChange }) {
 
   const displayText = values.length === 0 ? 'None'
     : values.length === 1 ? values[0]
-    : `${values.length} types selected`
+      : `${values.length} types selected`
 
   return (
     <div className="relative">
@@ -204,9 +221,8 @@ function MultiSelectDropdown({ label, values, options, icon, onChange }) {
                 onClick={() => toggle(opt)}
                 className="w-full flex items-center gap-2.5 text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg transition-colors duration-100 focus-visible:outline-none focus-visible:bg-gray-50"
               >
-                <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
-                  checked ? 'bg-primary border-primary' : 'border-2 border-gray-300 bg-white'
-                }`}>
+                <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors ${checked ? 'bg-primary border-primary' : 'border-2 border-gray-300 bg-white'
+                  }`}>
                   {checked && <Check className="w-2.5 h-2.5 text-white" />}
                 </div>
                 {opt}
@@ -225,8 +241,8 @@ function MultiSelectDropdown({ label, values, options, icon, onChange }) {
 function CombinedPlanModal({ onClose }) {
   const [selected, setSelected] = useState({ push: true, youth: true, collab: false })
   const strategies = [
-    { key: 'push',  label: 'Push Notifications',   donors: 18, icon: <MessageSquare className="w-4 h-4" /> },
-    { key: 'youth', label: 'Youth Campaign',        donors: 31, icon: <Zap className="w-4 h-4" /> },
+    { key: 'push', label: 'Push Notifications', donors: 18, icon: <MessageSquare className="w-4 h-4" /> },
+    { key: 'youth', label: 'Youth Campaign', donors: 31, icon: <Zap className="w-4 h-4" /> },
     { key: 'collab', label: 'School Collaboration', donors: 42, icon: <GraduationCap className="w-4 h-4" /> },
   ]
   const allThree = selected.push && selected.youth && selected.collab
@@ -252,13 +268,11 @@ function CombinedPlanModal({ onClose }) {
               <button
                 key={s.key}
                 onClick={() => setSelected(prev => ({ ...prev, [s.key]: !prev[s.key] }))}
-                className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200 text-left ${
-                  on ? 'border-primary bg-primary/5' : 'border-gray-100 bg-gray-50 hover:border-gray-200'
-                }`}
+                className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200 text-left ${on ? 'border-primary bg-primary/5' : 'border-gray-100 bg-gray-50 hover:border-gray-200'
+                  }`}
               >
-                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                  on ? 'bg-primary border-primary' : 'border-gray-300'
-                }`}>
+                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${on ? 'bg-primary border-primary' : 'border-gray-300'
+                  }`}>
                   {on && <Check className="w-3 h-3 text-white" />}
                 </div>
                 <span className={`flex-shrink-0 ${on ? 'text-primary' : 'text-gray-400'}`}>{s.icon}</span>
@@ -315,16 +329,16 @@ function TabOutreachStrategy({ drive, onNavigate }) {
 
   const youthReasons = youthRecommended
     ? [
-        'O and A blood types are more prevalent among donors aged 18–30',
-        'Youth Challenge saw the highest response rate (36%) of all campaign themes',
-        'Social-media-first outreach aligns with youth discovery patterns',
-        'First-time donors respond strongly to gamified challenge formats',
-      ]
+      'O and A blood types are more prevalent among donors aged 18–30',
+      'Youth Challenge saw the highest response rate (36%) of all campaign themes',
+      'Social-media-first outreach aligns with youth discovery patterns',
+      'First-time donors respond strongly to gamified challenge formats',
+    ]
     : [
-        'Blood type profile skews toward an older, regular donor pool',
-        'Older donors respond better to push notifications and community appeals',
-        'Youth campaign spend is better reallocated to collaborations here',
-      ]
+      'Blood type profile skews toward an older, regular donor pool',
+      'Older donors respond better to push notifications and community appeals',
+      'Youth campaign spend is better reallocated to collaborations here',
+    ]
 
   const pushMessage = `Urgent ${drive?.bloodType ?? 'O-'} donors needed near ${drive?.location ?? 'Tampines Community Plaza'} this ${drive?.date ?? 'Saturday'}.\n\nYour donation can help prevent an upcoming shortage.\n\nBook your slot today — tap to register: bit.ly/sav3lives`
 
@@ -385,18 +399,16 @@ function TabOutreachStrategy({ drive, onNavigate }) {
         </div>
 
         <div className="flex items-start gap-4 mb-4">
-          <div className={`flex-shrink-0 w-20 h-20 rounded-2xl flex flex-col items-center justify-center font-bold text-2xl ${
-            youthRecommended ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-          }`}>
+          <div className={`flex-shrink-0 w-20 h-20 rounded-2xl flex flex-col items-center justify-center font-bold text-2xl ${youthRecommended ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+            }`}>
             {youthRecommended ? 'YES' : 'NO'}
             <span className="text-[9px] font-semibold mt-1 opacity-60 uppercase tracking-wide">Run It</span>
           </div>
           <div className="flex-1 space-y-2">
             {youthReasons.map(r => (
               <div key={r} className="flex items-start gap-2">
-                <span className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                  youthRecommended ? 'bg-green-100' : 'bg-gray-100'
-                }`} aria-hidden="true">
+                <span className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${youthRecommended ? 'bg-green-100' : 'bg-gray-100'
+                  }`} aria-hidden="true">
                   {youthRecommended
                     ? <Check className="w-2.5 h-2.5 text-green-700" />
                     : <X className="w-2.5 h-2.5 text-gray-500" />
@@ -519,12 +531,12 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false, onRef
   const isMultiBloodType = driveBloodTypes.length > 1
 
   const [selectedBloodTypes, setSelectedBloodTypes] = useState(driveBloodTypes)
-  const [selectedBloodType, setSelectedBloodType]   = useState(driveBloodTypes[0] ?? 'O-')
-  const [selectedAgeGroup, setSelectedAgeGroup]     = useState(ALL_AGE_GROUPS[0])
+  const [selectedBloodType, setSelectedBloodType] = useState(driveBloodTypes[0] ?? 'O-')
+  const [selectedAgeGroup, setSelectedAgeGroup] = useState(ALL_AGE_GROUPS[0])
 
   const variants = aiVariants.length > 0 ? aiVariants : MESSAGE_VARIANTS
   const [variantIdx, setVariantIdx] = useState(0)
-  const [sent, setSent]     = useState(false)
+  const [sent, setSent] = useState(false)
   const [sending, setSending] = useState(false)
   const [prevRespondersOnly, setPrevRespondersOnly] = useState(true)
   const [donorsReached, setDonorsReached] = useState(null)
@@ -587,9 +599,9 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false, onRef
       {/* KPI row */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Eligible Donors',      value: 86,    color: 'text-gray-900' },
-          { label: 'Estimated Responders', value: 18,    color: 'text-primary' },
-          { label: 'Response Rate',        value: '21%', color: 'text-green-600' },
+          { label: 'Eligible Donors', value: 283, color: 'text-gray-900' },
+          { label: 'Estimated Responders', value: 178, color: 'text-primary' },
+          { label: 'Estimated Response Rate', value: '63%', color: 'text-green-600' },
         ].map(stat => (
           <div key={stat.label} className="card p-4 text-center">
             <div className={`text-3xl font-bold ${stat.color}`}>{stat.value}</div>
@@ -651,9 +663,8 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false, onRef
                 onChange={e => setPrevRespondersOnly(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-1 ${
-                prevRespondersOnly ? 'bg-primary' : 'border-2 border-gray-300 bg-white'
-              }`}>
+              <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-1 ${prevRespondersOnly ? 'bg-primary' : 'border-2 border-gray-300 bg-white'
+                }`}>
                 {prevRespondersOnly && <Check className="w-2.5 h-2.5 text-white" />}
               </div>
               <span className="text-sm text-gray-700">Previous Responders Only</span>
@@ -706,11 +717,10 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false, onRef
                     <button
                       key={v.id}
                       onClick={() => handlePickVariant(i)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
-                        i === variantIdx
-                          ? 'bg-gray-900 text-white focus-visible:ring-gray-900'
-                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200 focus-visible:ring-gray-400'
-                      }`}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${i === variantIdx
+                        ? 'bg-gray-900 text-white focus-visible:ring-gray-900'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200 focus-visible:ring-gray-400'
+                        }`}
                     >
                       {v.name}
                     </button>
@@ -741,10 +751,10 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false, onRef
                         {variant.badge}
                       </span>
                     </div>
-                    <div className="flex items-baseline gap-1 flex-shrink-0">
+                    {/* <div className="flex items-baseline gap-1 flex-shrink-0">
                       <span className="text-2xl font-bold text-green-600">{variant.responseRate}%</span>
                       <span className="text-[10px] text-gray-400">response rate</span>
-                    </div>
+                    </div> */}
                   </div>
 
                   {/* Message editor */}
@@ -776,11 +786,10 @@ function TabPushNotifications({ drive, aiVariants = [], aiLoading = false, onRef
                     <button
                       onClick={handleSend}
                       disabled={sending || sent}
-                      className={`w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
-                        sent
-                          ? 'bg-success text-white cursor-default focus-visible:ring-success'
-                          : 'btn-primary disabled:opacity-60 focus-visible:ring-primary'
-                      }`}
+                      className={`w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${sent
+                        ? 'bg-success text-white cursor-default focus-visible:ring-success'
+                        : 'btn-primary disabled:opacity-60 focus-visible:ring-primary'
+                        }`}
                     >
                       {sent ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
                       {sent ? `Sent to ${donorsReached ?? 86} donors` : sending ? 'Sending…' : 'Send Push Notification'}
@@ -954,16 +963,14 @@ function TabYouthCampaigns({ drive }) {
             <button
               key={theme.id}
               onClick={() => { setSelected(theme); setGenerated(false) }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium whitespace-nowrap transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
-                active
-                  ? 'border-primary text-primary'
-                  : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium whitespace-nowrap transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${active
+                ? 'border-primary text-primary'
+                : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
             >
               {theme.name}
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${
-                active ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-400'
-              }`}>{theme.responseRate}%</span>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${active ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-400'
+                }`}>{theme.responseRate}%</span>
             </button>
           )
         })}
@@ -1043,11 +1050,10 @@ function TabYouthCampaigns({ drive }) {
                 <button
                   onClick={handleGenerate}
                   disabled={generating || generated}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
-                    generated
-                      ? 'bg-success text-white cursor-default focus-visible:ring-success'
-                      : 'btn-primary disabled:opacity-60 focus-visible:ring-primary'
-                  }`}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${generated
+                    ? 'bg-success text-white cursor-default focus-visible:ring-success'
+                    : 'btn-primary disabled:opacity-60 focus-visible:ring-primary'
+                    }`}
                 >
                   {generated ? <Check className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
                   {generated ? 'Campaign Launched' : generating ? 'Launching…' : 'Launch Campaign'}
@@ -1078,8 +1084,8 @@ function OutreachPreview({ partner, subTab, invited, onInvite }) {
       const c = subTab === 'Companies'
         ? { noun: 'employees', type: 'workplace giving programme', team: 'HR / CSR Team' }
         : subTab === 'Schools'
-        ? { noun: 'students', type: 'campus blood drive', team: 'Student Affairs Office' }
-        : { noun: 'members', type: 'community outreach event', team: 'Community Leaders' }
+          ? { noun: 'students', type: 'campus blood drive', team: 'Student Affairs Office' }
+          : { noun: 'members', type: 'community outreach event', team: 'Community Leaders' }
       return [t.id, t.getBody(partner, c)]
     }))
   )
@@ -1091,8 +1097,8 @@ function OutreachPreview({ partner, subTab, invited, onInvite }) {
     const ctx = subTab === 'Companies'
       ? { noun: 'employees', type: 'workplace giving programme', team: 'HR / CSR Team' }
       : subTab === 'Schools'
-      ? { noun: 'students', type: 'campus blood drive', team: 'Student Affairs Office' }
-      : { noun: 'members', type: 'community outreach event', team: 'Community Leaders' }
+        ? { noun: 'students', type: 'campus blood drive', team: 'Student Affairs Office' }
+        : { noun: 'members', type: 'community outreach event', team: 'Community Leaders' }
     setEditedBodies(Object.fromEntries(OUTREACH_TONES.map(t => [t.id, t.getBody(partner, ctx)])))
     setEditedSubjects(Object.fromEntries(OUTREACH_TONES.map(t => [t.id, t.getSubject(partner)])))
   }, [partner.name, subTab]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -1100,8 +1106,8 @@ function OutreachPreview({ partner, subTab, invited, onInvite }) {
   const ctx = subTab === 'Companies'
     ? { noun: 'employees', type: 'workplace giving programme', team: 'HR / CSR Team' }
     : subTab === 'Schools'
-    ? { noun: 'students', type: 'campus blood drive', team: 'Student Affairs Office' }
-    : { noun: 'members', type: 'community outreach event', team: 'Community Leaders' }
+      ? { noun: 'students', type: 'campus blood drive', team: 'Student Affairs Office' }
+      : { noun: 'members', type: 'community outreach event', team: 'Community Leaders' }
 
   const body = editedBodies[tone.id]
   const subject = editedSubjects[tone.id]
@@ -1120,11 +1126,11 @@ function OutreachPreview({ partner, subTab, invited, onInvite }) {
     setSending(true)
     try {
       const { data } = await api.post('/donor-outreach/invitation', {
-        partnerName:     partner.name,
+        partnerName: partner.name,
         partnerCategory: subTab,
-        recipientEmail:  partner.email,
-        subject:         subject,
-        message:         body,
+        recipientEmail: partner.email,
+        subject: subject,
+        message: body,
       })
       console.log('Invitation sent:', data)
       onInvite(partner.name)  // marks as invited in parent state
@@ -1156,11 +1162,10 @@ function OutreachPreview({ partner, subTab, invited, onInvite }) {
             <button
               key={t.id}
               onClick={() => setToneIdx(i)}
-              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
-                i === toneIdx
-                  ? 'bg-gray-900 text-white focus-visible:ring-gray-900'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200 focus-visible:ring-gray-400'
-              }`}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${i === toneIdx
+                ? 'bg-gray-900 text-white focus-visible:ring-gray-900'
+                : 'bg-gray-100 text-gray-500 hover:bg-gray-200 focus-visible:ring-gray-400'
+                }`}
             >
               {t.name}
             </button>
@@ -1222,11 +1227,10 @@ function OutreachPreview({ partner, subTab, invited, onInvite }) {
         <button
           onClick={handleSendInvitation}
           disabled={isInvited || sending}
-          className={`w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
-            isInvited
-              ? 'bg-success text-white cursor-default focus-visible:ring-success'
-              : 'btn-primary disabled:opacity-60 focus-visible:ring-primary'
-          }`}
+          className={`w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${isInvited
+            ? 'bg-success text-white cursor-default focus-visible:ring-success'
+            : 'btn-primary disabled:opacity-60 focus-visible:ring-primary'
+            }`}
         >
           {isInvited ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
           {isInvited ? 'Invitation Sent' : sending ? 'Sending…' : 'Send Invitation'}
@@ -1238,9 +1242,9 @@ function OutreachPreview({ partner, subTab, invited, onInvite }) {
 
 function TabCollaborations({ drive }) {
   const SUB_TABS = [
-    { label: 'Nearby Companies',         category: 'Companies' },
+    { label: 'Nearby Companies', category: 'Companies' },
     { label: 'Educational Institutions', category: 'Schools' },
-    { label: 'Community Groups',         category: 'Community Groups' },
+    { label: 'Community Groups', category: 'Community Groups' },
   ]
 
   const [subTab, setSubTab] = useState('Nearby Companies')
@@ -1261,7 +1265,7 @@ function TabCollaborations({ drive }) {
         const firstCategory = SUB_TABS[0].category
         if (data[firstCategory]?.length > 0) setSelectedPartner(data[firstCategory][0])
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoadingPartners(false))
   }, [drive?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1300,9 +1304,9 @@ function TabCollaborations({ drive }) {
   const sentCount = allPartners.filter(p => invited.has(p.name)).length
 
   const getMatch = (score) =>
-    score >= 80 ? { label: 'High Match',   cls: 'text-green-700 bg-green-50' }
-    : score >= 65 ? { label: 'Medium Match', cls: 'text-amber-700 bg-amber-50' }
-    :               { label: 'Low Match',    cls: 'text-gray-500 bg-gray-100' }
+    score >= 80 ? { label: 'High Match', cls: 'text-green-700 bg-green-50' }
+      : score >= 65 ? { label: 'Medium Match', cls: 'text-amber-700 bg-amber-50' }
+        : { label: 'Low Match', cls: 'text-gray-500 bg-gray-100' }
 
   const getIconColor = (name) => {
     const palette = [
@@ -1315,17 +1319,17 @@ function TabCollaborations({ drive }) {
 
   const viewMoreLabel =
     subTab === 'Nearby Companies' ? 'View More Companies' :
-    subTab === 'Educational Institutions' ? 'View More Institutions' :
-    'View More Groups'
+      subTab === 'Educational Institutions' ? 'View More Institutions' :
+        'View More Groups'
 
   return (
     <div className="space-y-4">
       {/* KPI row */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Potential Reach',  value: currentReach.toLocaleString(), color: 'text-gray-900' },
-          { label: 'Recommended',      value: recommendedCount,              color: 'text-green-600' },
-          { label: 'Invitations Sent', value: sentCount,                     color: 'text-primary' },
+          { label: 'Potential Reach', value: currentReach.toLocaleString(), color: 'text-gray-900' },
+          { label: 'Recommended', value: recommendedCount, color: 'text-green-600' },
+          { label: 'Invitations Sent', value: sentCount, color: 'text-primary' },
         ].map(stat => (
           <div key={stat.label} className="card p-4 text-center">
             <div className={`text-3xl font-bold ${stat.color}`}>{stat.value}</div>
@@ -1351,11 +1355,10 @@ function TabCollaborations({ drive }) {
               <button
                 key={t.label}
                 onClick={() => handleSubTabChange(t.label)}
-                className={`px-3 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-all duration-150 -mb-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
-                  subTab === t.label
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`px-3 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-all duration-150 -mb-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${subTab === t.label
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
               >
                 {t.label}
               </button>
@@ -1415,9 +1418,8 @@ function TabCollaborations({ drive }) {
                     <div
                       key={partner.name}
                       onClick={() => setSelectedPartner(partner)}
-                      className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors duration-150 ${
-                        isSelected ? 'bg-primary/5' : 'hover:bg-gray-50'
-                      }`}
+                      className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors duration-150 ${isSelected ? 'bg-primary/5' : 'hover:bg-gray-50'
+                        }`}
                     >
                       {/* Logo / initials */}
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-sm ${iconColor}`}>
@@ -1485,14 +1487,16 @@ function TabCollaborations({ drive }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function DonorOutreach() {
-  const [drives, setDrives]             = useState([])
+  const [drives, setDrives] = useState([])
   const [selectedDriveId, setSelectedDriveId] = useState(null)
   const [showDriveDropdown, setShowDriveDropdown] = useState(false)
-  const [activeTab, setActiveTab]       = useState('ai')
+  const [activeTab, setActiveTab] = useState('ai')
   const [showCombined, setShowCombined] = useState(false)
-  const [loading, setLoading]           = useState(true)
+  const [loading, setLoading] = useState(true)
   const [messageVariants, setMessageVariants] = useState([])
-  const [aiLoading, setAiLoading]       = useState(false)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [openDropdownId, setOpenDropdownId] = useState(null)
+  const dropdownGroup = { openId: openDropdownId, setOpenId: setOpenDropdownId }
 
   useEffect(() => {
     api.get('/drives')
@@ -1501,7 +1505,7 @@ export default function DonorOutreach() {
         setDrives(upcoming)
         if (upcoming.length > 0) setSelectedDriveId(upcoming[0].id)
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false))
   }, [])
 
@@ -1567,81 +1571,82 @@ export default function DonorOutreach() {
   )
 
   return (
-    <PageLayout
-      title="Donor Outreach"
-      subtitle="How should SRC maximise donor turnout for this drive?"
-    >
-      {/* Drive summary card */}
-      {drive && (
-        <div className="card p-4 mb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
-            <div className="flex items-start gap-2.5 flex-1 min-w-0">
-              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <MapPin className="w-4 h-4 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <div className="font-bold text-gray-900 text-sm truncate">{drive.location}</div>
-                <div className="flex flex-wrap items-center gap-3 mt-0.5 text-xs text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <CalendarDays className="w-3.5 h-3.5 flex-shrink-0" />{drive.date}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 flex-shrink-0" />{drive.time}
-                  </span>
+    <DropdownGroupContext.Provider value={dropdownGroup}>
+      <PageLayout
+        title="Donor Outreach"
+        subtitle="How should SRC maximise donor turnout for this drive?"
+      >
+        {/* Drive summary card */}
+        {drive && (
+          <div className="card p-4 mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
+              <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-4 h-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold text-gray-900 text-sm truncate">{drive.location}</div>
+                  <div className="flex flex-wrap items-center gap-3 mt-0.5 text-xs text-gray-500">
+                    <span className="flex items-center gap-1">
+                      <CalendarDays className="w-3.5 h-3.5 flex-shrink-0" />{drive.date}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 flex-shrink-0" />{drive.time}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center justify-between sm:justify-start gap-4 sm:gap-5">
-              <div className="flex items-center gap-4 sm:gap-5">
-                <div>
-                  <div className="text-xs text-gray-400 mb-0.5">Target Blood Type</div>
-                  <div className="flex items-center gap-1.5">
-                    <Droplets className="w-3.5 h-3.5 text-primary" />
-                    <span className="font-bold text-primary text-sm">{drive.bloodType}</span>
+              <div className="flex items-center justify-between sm:justify-start gap-4 sm:gap-5">
+                <div className="flex items-center gap-4 sm:gap-5">
+                  <div>
+                    <div className="text-xs text-gray-400 mb-0.5">Target Blood Type</div>
+                    <div className="flex items-center gap-1.5">
+                      <Droplets className="w-3.5 h-3.5 text-primary" />
+                      <span className="font-bold text-primary text-sm">{drive.bloodType}</span>
+                    </div>
+                  </div>
+                  <div className="w-px h-7 bg-gray-100 hidden sm:block" />
+                  <div>
+                    <div className="text-xs text-gray-400 mb-0.5">Linked Alert</div>
+                    <div className="flex items-center gap-1 text-primary text-sm font-semibold">
+                      {drive.linkedAlert}<ExternalLink className="w-3 h-3" />
+                    </div>
                   </div>
                 </div>
                 <div className="w-px h-7 bg-gray-100 hidden sm:block" />
-                <div>
-                  <div className="text-xs text-gray-400 mb-0.5">Linked Alert</div>
-                  <div className="flex items-center gap-1 text-primary text-sm font-semibold">
-                    {drive.linkedAlert}<ExternalLink className="w-3 h-3" />
-                  </div>
-                </div>
+                {changeDriveButton}
               </div>
-              <div className="w-px h-7 bg-gray-100 hidden sm:block" />
-              {changeDriveButton}
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Tab navigation */}
-      <div className="flex gap-0 mb-4 border-b border-gray-200">
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 sm:flex-none flex items-center justify-center sm:justify-start gap-1.5 px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-all duration-150 -mb-px ${
-              activeTab === tab.id
+        {/* Tab navigation */}
+        <div className="flex gap-0 mb-4 border-b border-gray-200">
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 sm:flex-none flex items-center justify-center sm:justify-start gap-1.5 px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-all duration-150 -mb-px ${activeTab === tab.id
                 ? 'border-primary text-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <span className={activeTab === tab.id ? 'text-primary' : 'text-gray-400'}>{tab.icon}</span>
-            <span className="hidden sm:inline">{tab.label}</span>
-          </button>
-        ))}
-      </div>
+                }`}
+            >
+              <span className={activeTab === tab.id ? 'text-primary' : 'text-gray-400'}>{tab.icon}</span>
+              <span className="hidden sm:inline">{tab.label}</span>
+            </button>
+          ))}
+        </div>
 
-      {/* Tab content */}
-      <div key={activeTab} className="page-enter-animate">
-        {activeTab === 'ai'     && <TabOutreachStrategy drive={drive} onNavigate={setActiveTab} />}
-        {activeTab === 'push'   && <TabPushNotifications drive={drive} aiVariants={messageVariants} aiLoading={aiLoading} onRefresh={() => fetchMessages(true)} />}
-        {activeTab === 'youth'  && <TabYouthCampaigns drive={drive} />}
-        {activeTab === 'collab' && <TabCollaborations drive={drive} />}
-      </div>
+        {/* Tab content */}
+        <div key={activeTab} className="page-enter-animate">
+          {activeTab === 'ai' && <TabOutreachStrategy drive={drive} onNavigate={setActiveTab} />}
+          {activeTab === 'push' && <TabPushNotifications drive={drive} aiVariants={messageVariants} aiLoading={aiLoading} onRefresh={() => fetchMessages(true)} />}
+          {activeTab === 'youth' && <TabYouthCampaigns drive={drive} />}
+          {activeTab === 'collab' && <TabCollaborations drive={drive} />}
+        </div>
 
-      {showCombined && <CombinedPlanModal onClose={() => setShowCombined(false)} />}
-    </PageLayout>
+        {showCombined && <CombinedPlanModal onClose={() => setShowCombined(false)} />}
+      </PageLayout>
+    </DropdownGroupContext.Provider>
   )
 }
