@@ -20,9 +20,10 @@ public class ForecastController {
     @GetMapping
     public ResponseEntity<Map<String, Object>> getForecast(
             @RequestParam(required = false) String bloodType,
-            @RequestParam(defaultValue = "14") int historyDays,
+            @RequestParam(defaultValue = "30") int historyDays,
+            @RequestParam(defaultValue = "60") int forecastDays,
             @RequestParam(defaultValue = "false") boolean refresh) {
-        return ResponseEntity.ok(forecastService.buildForecast(bloodType, historyDays, refresh));
+        return ResponseEntity.ok(forecastService.buildForecast(bloodType, historyDays, forecastDays, refresh));
     }
 
     @GetMapping("/outreach-messages")

@@ -73,7 +73,8 @@ export default function Forecasting() {
   const [error, setError] = useState(false)
   const [openDropdown, setOpenDropdown] = useState(null)
   const [bloodType, setBloodType] = useState('All Blood Types')
-  const [historyDays, setHistoryDays] = useState(14)
+  const [historyDays, setHistoryDays] = useState(30)
+  const [forecastDays, setForecastDays] = useState(60)
   const [earlyWarningLoading, setEarlyWarningLoading] = useState(false)
 
   const fetchData = () => {
@@ -82,6 +83,7 @@ export default function Forecasting() {
     const params = {
       ...(bloodType !== 'All Blood Types' && { bloodType }),
       historyDays,
+      forecastDays,
     }
     api.get('/forecast', { params })
       .then(r => setData(r.data))
@@ -94,6 +96,7 @@ export default function Forecasting() {
     const params = {
       ...(bloodType !== 'All Blood Types' && { bloodType }),
       historyDays,
+      forecastDays,
       refresh: true,
     }
     api.get('/forecast', { params })
@@ -101,8 +104,7 @@ export default function Forecasting() {
       .finally(() => setEarlyWarningLoading(false))
   }
 
-  useEffect(() => { fetchData() }, [bloodType, historyDays])
-
+  useEffect(() => { fetchData() }, [bloodType, historyDays, forecastDays])
   const forecastingActions = (
     <div className="flex items-center gap-2">
       <div className="relative w-40">
@@ -130,7 +132,7 @@ export default function Forecasting() {
           </div>
         )}
       </div>
-      <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm p-0.5">
+      {/* <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm p-0.5">
         {[14, 30].map(d => (
           <button
             key={d}
@@ -144,7 +146,7 @@ export default function Forecasting() {
             {d}d
           </button>
         ))}
-      </div>
+      </div> */}
     </div>
   )
 
@@ -239,11 +241,24 @@ export default function Forecasting() {
                 />
                 <ReferenceLine y={data.riskThreshold} stroke="#EF4444" strokeDasharray="4 2" strokeWidth={1.5} />
                 {/* Confidence band: transparent base up to lower, pink fill for the width between lower and upper */}
+                <ReferenceLine
+                  x={new Date().toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                  stroke="#9CA3AF"
+                  strokeDasharray="4 4"
+                  label={{
+                    value: 'Today',
+                    position: 'top',
+                    fontSize: 10,
+                  }}
+                />
                 <Area type="monotone" dataKey="lower" stackId="band" stroke="none" fill="transparent" dot={false} legendType="none" />
-                <Area type="monotone" dataKey="bandWidth" stackId="band" stroke="none" fill="url(#bandGrad)" dot={false} legendType="none" />
-                {/* Bound marker lines */}
-                <Line type="monotone" dataKey="upper" stroke="#D1D5DB" strokeWidth={1} dot={false} />
-                <Line type="monotone" dataKey="lower" stroke="#D1D5DB" strokeWidth={1} dot={false} />
+                {/* <Area type="monotone" dataKey="bandWidth" stackId="band" stroke="none" fill="url(#bandGrad)" dot={false} legendType="none" /> */}
+                Bound marker lines
+                {/* <Line type="monotone" dataKey="upper" stroke="#D1D5DB" strokeWidth={1} dot={false} />
+                <Line type="monotone" dataKey="lower" stroke="#D1D5DB" strokeWidth={1} dot={false} /> */}
                 {/* Main lines — rendered last so they sit on top of the fill */}
                 <Line type="monotone" dataKey="actual" stroke="#C20000" strokeWidth={2} dot={false} connectNulls={false} />
                 <Line type="monotone" dataKey="forecast" stroke="#C20000" strokeWidth={2} strokeDasharray="6 3" dot={false} />

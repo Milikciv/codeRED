@@ -20,12 +20,12 @@ import { listItem, listItemX } from '../../lib/motion'
 const BLOOD_TYPES = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']
 const HOSPITALS = ['SGH', 'NUH', 'KKH', 'CGH', 'NGH', 'TTSH']
 
-const FORECAST_DATA = [
-  { date: 'May 21', actual: 1050 }, { date: 'May 22', actual: 1100 },
-  { date: 'May 23', predicted: 1200 }, { date: 'May 24', predicted: 1350 },
-  { date: 'May 25', predicted: 1300 }, { date: 'May 26', predicted: 1100 },
-  { date: 'May 27', predicted: 900 },
-]
+// const FORECAST_DATA = [
+//   { date: 'May 21', actual: 1050 }, { date: 'May 22', actual: 1100 },
+//   { date: 'May 23', predicted: 1200 }, { date: 'May 24', predicted: 1350 },
+//   { date: 'May 25', predicted: 1300 }, { date: 'May 26', predicted: 1100 },
+//   { date: 'May 27', predicted: 900 },
+// ]
 
 const EXPIRING = [
   { name: '0-2 days', value: 40, color: '#EF4444' },
@@ -34,18 +34,36 @@ const EXPIRING = [
 ]
 
 export default function HsaDashboard() {
-  const [stock, setStock]       = useState({})
-  const [alerts, setAlerts]     = useState([])
-  const [summary, setSummary]   = useState({ percentage: 85, criticalTypeCount: 3, totalUnits: 0 })
+  const [stock, setStock] = useState({})
+  const [alerts, setAlerts] = useState([])
+  const [summary, setSummary] = useState({ percentage: 85, criticalTypeCount: 3, totalUnits: 0 })
   const [showAlerts, setShowAlerts] = useState(false)
-  const [loading, setLoading]   = useState(true)
+  const [loading, setLoading] = useState(true)
   const [dismissTarget, setDismissTarget] = useState(null)
+  const [forecastData, setForecastData] = useState([])
+  const [riskThreshold, setRiskThreshold] = useState(1000)
 
   useEffect(() => {
     Promise.allSettled([
       api.get('/blood-stock').then(r => setStock(r.data)),
       api.get('/alerts').then(r => setAlerts(r.data)),
       api.get('/blood-stock/summary').then(r => setSummary(r.data)),
+
+      api.get('/forecast', {
+        params: {
+          historyDays: 30,
+          forecastDays: 60,
+        }
+      }).then(r => {
+        const mapped = (r.data.chartData || []).map(item => ({
+          date: item.date,
+          actual: item.actual,
+          predicted: item.forecast,
+        }))
+
+        setForecastData(mapped)
+        setRiskThreshold(r.data.riskThreshold || 1000)
+      }),
     ]).finally(() => setLoading(false))
   }, [])
 
@@ -266,10 +284,10 @@ export default function HsaDashboard() {
           )}
           <div className="flex items-center gap-5 mt-3 pt-2 border-t border-gray-100 flex-wrap">
             {[
-              ['dot-good',     'Good (70–100%)'],
-              ['dot-low',      'Low (40–69%)'],
+              ['dot-good', 'Good (70–100%)'],
+              ['dot-low', 'Low (40–69%)'],
               ['dot-critical', 'Critical (0–39%)'],
-              ['dot-none',     'No data'],
+              ['dot-none', 'No data'],
             ].map(([cls, label]) => (
               <div key={label} className="flex items-center gap-1.5">
                 <span className={`${cls} inline-block`} />
@@ -330,11 +348,11 @@ export default function HsaDashboard() {
             </button>
           </div>
           <ResponsiveContainer width="100%" height={160}>
-            <LineChart data={FORECAST_DATA} margin={{ top: 8, right: 5, left: -30, bottom: 0 }}>
+            <LineChart data={forecastData} margin={{ top: 8, right: 5, left: -30, bottom: 0 }}>
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9CA3AF' }} tickLine={false} axisLine={false} />
               <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} tickLine={false} axisLine={false} />
               <Tooltip contentStyle={{ fontSize: 11 }} />
-              <ReferenceLine y={1000} stroke="#EF4444" strokeDasharray="4 2" />
+              {/* <ReferenceLine y={riskThreshold} stroke="#EF4444" strokeDasharray="4 2" /> */}
               <Line type="monotone" dataKey="actual" stroke="#C20000" strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="predicted" stroke="#C20000" strokeWidth={2} strokeDasharray="5 3" dot={false} />
             </LineChart>

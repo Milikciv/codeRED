@@ -45,21 +45,22 @@ public class ForecastService {
         this.bloodStockHistoryRepository = bloodStockHistoryRepository;
     }
 
-    private static final int HISTORY_DAYS = 14;
-    private static final int FORECAST_DAYS = 14;
+    private static final int HISTORY_DAYS = 30;
+    private static final int FORECAST_DAYS = 60;
     private static final List<String> CANONICAL_ORDER = List.of("O+", "A+", "B+", "AB+", "O-", "A-", "B-", "AB-");
     private static final DateTimeFormatter DAY_LABEL = DateTimeFormatter.ofPattern("MMM d", Locale.ENGLISH);
     private static final DateTimeFormatter FULL_DATE = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH);
 
     public Map<String, Object> buildForecast(String bloodTypeFilter) {
-        return buildForecast(bloodTypeFilter, HISTORY_DAYS, false);
+        return buildForecast(bloodTypeFilter, HISTORY_DAYS, FORECAST_DAYS, false);
     }
 
-    public Map<String, Object> buildForecast(String bloodTypeFilter, int historyDays) {
-        return buildForecast(bloodTypeFilter, historyDays, false);
+    public Map<String, Object> buildForecast(String bloodTypeFilter, int historyDays, int forecastDays) {
+        return buildForecast(bloodTypeFilter, historyDays, forecastDays, false);
     }
 
-    public Map<String, Object> buildForecast(String bloodTypeFilter, int historyDays, boolean forceRefresh) {
+    public Map<String, Object> buildForecast(String bloodTypeFilter, int historyDays, int forecastDays,
+            boolean forceRefresh) {
         LocalDate today = LocalDate.now();
         String selectedBloodType = normalizeBloodType(bloodTypeFilter);
 
@@ -70,7 +71,17 @@ public class ForecastService {
         int totalCurrentSupply = selectedStock[0];
         int totalIdeal = selectedStock[1];
         int hospitalCount = Math.max(selectedStock[2], 1);
-        int riskThreshold = (int) Math.round((totalIdeal / (double) hospitalCount) * 0.40);
+        int baseSupply = totalCurrentSupply;
+
+        double safetyMargin;
+
+        if (selectedBloodType == null) {
+            safetyMargin = 0.15; // system-level buffer
+        } else {
+            safetyMargin = 0.10; // stricter per blood type
+        }
+
+        int riskThreshold = (int) Math.round(baseSupply * (1 + safetyMargin));
 
         // 2. Historical daily demand from real requests
         Map<LocalDate, Integer> stockHistory = getHistoricalStock(today, selectedBloodType, historyDays);
@@ -83,10 +94,12 @@ public class ForecastService {
         int predictedPeakDemand = 0;
         LocalDate peakDate = today.plusDays(1);
         int runningBalance = totalCurrentSupply;
+        int todayActual = stockHistory.getOrDefault(today, 0);
+        int forecastX = historyDays - 1;
         List<LocalDate> riskDays = new ArrayList<>();
         for (int i = 1; i <= FORECAST_DAYS; i++) {
             LocalDate d = today.plusDays(i);
-            int forecast = forecastValue(fit, historyDays - 1 + i);
+            int forecast = forecastValue(fit, forecastX, todayActual);
             if (forecast > predictedPeakDemand) {
                 predictedPeakDemand = forecast;
                 peakDate = d;
@@ -286,68 +299,185 @@ public class ForecastService {
         return new double[] { slope, intercept, Math.sqrt(sse / n) };
     }
 
-    private int forecastValue(double[] fit, int x) {
-        return (int) Math.max(0, Math.round(fit[0] * x + fit[1]));
+    private int forecastValue(
+            double[] fit,
+            int x,
+            int todayActual) {
+
+        double startValue = todayActual;
+        double growthRate = 0.01;
+        int futureOffset = Math.max(0, x - (HISTORY_DAYS - 1));
+        double value = startValue * Math.exp(growthRate * futureOffset);
+
+        return (int) Math.max(0, Math.round(value));
     }
 
-    private List<Map<String, Object>> buildChart(LocalDate today,
+    // private List<Map<String, Object>> buildChart(LocalDate today,
+    // Map<LocalDate, Integer> stockHistory,
+    // double[] fit,
+    // int historyDays) {
+    // List<Map<String, Object>> chart = new ArrayList<>();
+    // // Use at least 12% of the starting forecast value so the band is always
+    // visible
+    // double baseBand = Math.abs(fit[1]) > 0 ? Math.abs(fit[1]) * 0.12 : 50;
+    // double band = Math.max(fit[2] * 1.5, baseBand);
+    // LocalDate cutoff = today.minusDays(historyDays - 1);
+
+    // for (Map.Entry<LocalDate, Integer> entry : stockHistory.entrySet()) {
+    // LocalDate d = entry.getKey();
+
+    // Map<String, Object> p = new LinkedHashMap<>();
+    // p.put("date", d.format(DAY_LABEL));
+    // p.put("actual", entry.getValue());
+
+    // // mark today for frontend
+    // p.put("isToday", d.equals(today));
+
+    // if (d.equals(today)) {
+    // p.put("isToday", true);
+    // } else {
+    // p.put("isToday", false);
+    // }
+
+    // chart.add(p);
+    // }
+    // for (int j = 0; j <= FORECAST_DAYS; j++) {
+    // LocalDate d = today.plusDays(j);
+    // int forecastX = historyDays - 1 + j;
+    // int forecast = forecastValue(fit, forecastX);
+    // double futureBand = band * (1 + 0.1 * j);
+    // int upper = forecast + (int) Math.round(futureBand);
+    // int lower = Math.max(0, forecast - (int) Math.round(futureBand));
+    // Map<String, Object> p = new LinkedHashMap<>();
+    // p.put("date", d.format(DAY_LABEL));
+    // p.put("forecast", forecast);
+    // p.put("upper", upper);
+    // p.put("lower", lower);
+    // p.put("bandWidth", upper - lower);
+    // chart.add(p);
+    // }
+    // return chart;
+    // }
+    private List<Map<String, Object>> buildChart(
+            LocalDate today,
             Map<LocalDate, Integer> stockHistory,
             double[] fit,
             int historyDays) {
-        List<Map<String, Object>> chart = new ArrayList<>();
-        // Use at least 12% of the starting forecast value so the band is always visible
-        double baseBand = Math.abs(fit[1]) > 0 ? Math.abs(fit[1]) * 0.12 : 50;
-        double band = Math.max(fit[2] * 1.5, baseBand);
-        LocalDate cutoff = today.minusDays(historyDays - 1);
 
+        List<Map<String, Object>> chart = new ArrayList<>();
+
+        double baseBand = Math.abs(fit[1]) > 0
+                ? Math.abs(fit[1]) * 0.12
+                : 50;
+
+        double band = Math.max(fit[2] * 1.5, baseBand);
+
+        LocalDate cutoff = today.minusDays(historyDays - 1);
+        int todayActual = stockHistory.getOrDefault(today, 0);
+
+        // HISTORY DATA
         for (Map.Entry<LocalDate, Integer> entry : stockHistory.entrySet()) {
+
             LocalDate d = entry.getKey();
-            int x = (int) (d.toEpochDay() - cutoff.toEpochDay());
-            int forecast = forecastValue(fit, x);
-            int upper = forecast + (int) Math.round(band);
-            int lower = Math.max(0, forecast - (int) Math.round(band));
+
             Map<String, Object> p = new LinkedHashMap<>();
+
             p.put("date", d.format(DAY_LABEL));
             p.put("actual", entry.getValue());
-            p.put("forecast", forecast);
-            p.put("upper", upper);
-            p.put("lower", lower);
-            p.put("bandWidth", upper - lower);
+
+            boolean isToday = d.equals(today);
+            p.put("isToday", isToday);
+
+            // ADD forecast ONLY for today
+            if (isToday) {
+
+                int forecastX = historyDays - 1;
+
+                int forecast = forecastValue(fit, forecastX, todayActual);
+                ;
+
+                int upper = forecast + (int) Math.round(band);
+                int lower = Math.max(0, forecast - (int) Math.round(band));
+
+                p.put("forecast", forecast);
+                p.put("upper", upper);
+                p.put("lower", lower);
+                p.put("bandWidth", upper - lower);
+            }
+
             chart.add(p);
         }
+
+        // FUTURE FORECAST
         for (int j = 1; j <= FORECAST_DAYS; j++) {
+
             LocalDate d = today.plusDays(j);
-            int forecast = forecastValue(fit, historyDays - 1 + j);
+
+            int forecastX = historyDays - 1 + j;
+
+            int forecast = forecastValue(fit, forecastX, todayActual);
+            ;
+
             double futureBand = band * (1 + 0.1 * j);
+
             int upper = forecast + (int) Math.round(futureBand);
+
             int lower = Math.max(0, forecast - (int) Math.round(futureBand));
+
             Map<String, Object> p = new LinkedHashMap<>();
+
             p.put("date", d.format(DAY_LABEL));
+
             p.put("forecast", forecast);
             p.put("upper", upper);
             p.put("lower", lower);
             p.put("bandWidth", upper - lower);
+
             chart.add(p);
         }
+
         return chart;
     }
 
-    private int computeAccuracy(LocalDate today, Map<LocalDate, Integer> demand, double[] fit) {
+    private int computeAccuracy(
+            LocalDate today,
+            Map<LocalDate, Integer> stockHistory,
+            double[] fit) {
+
+        int todayActual = stockHistory.getOrDefault(today, 0);
+
         double totalPctErr = 0;
         int count = 0;
+
         for (int i = 0; i < HISTORY_DAYS; i++) {
+
             LocalDate d = today.minusDays(HISTORY_DAYS - 1 - i);
-            Integer actual = demand.get(d);
-            if (actual == null || actual == 0)
+
+            Integer actual = stockHistory.get(d);
+
+            if (actual == null || actual == 0) {
                 continue;
-            int pred = forecastValue(fit, i);
-            totalPctErr += Math.abs(actual - pred) / (double) actual;
+            }
+
+            int predicted = forecastValue(fit, i, todayActual);
+
+            double pctError = Math.abs(actual - predicted) / (double) actual;
+
+            totalPctErr += pctError;
             count++;
         }
-        if (count == 0)
-            return 85; // not enough history yet
-        int acc = (int) Math.round((1 - totalPctErr / count) * 100);
-        return Math.max(50, Math.min(99, acc));
+
+        // fallback when insufficient data
+        if (count == 0) {
+            return 85;
+        }
+
+        double meanPctError = totalPctErr / count;
+
+        int accuracy = (int) Math.round((1 - meanPctError) * 100);
+
+        // keep UI stable
+        return Math.max(50, Math.min(99, accuracy));
     }
 
     // ---------- demand drivers ----------
@@ -432,7 +562,7 @@ public class ForecastService {
     // ---------- helpers ----------
 
     public Map<String, Object> buildForecast() {
-        return buildForecast(null, HISTORY_DAYS, false);
+        return buildForecast(null, HISTORY_DAYS, FORECAST_DAYS, false);
     }
 
     private String normalizeBloodType(String bloodType) {
